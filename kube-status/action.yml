@@ -1,0 +1,25 @@
+name: kube-status
+description: Watch the deployment status using FluxCD and Kubernetes APIs
+inputs:
+  app:
+    description: App name
+    required: true
+  namespace:
+    description: Kubernetes namespace for the app
+    required: false
+    default: apps
+  kind:
+    description: Kubernetes manifest type (daemonset or deployment)
+    required: false
+    default: deployment
+  cluster-name:
+    description: Kubernetes cluster name
+    required: false
+    default: rss
+  kibana-host:
+    description: Kibana host where the logs reside
+    required: false
+    default: https://logs.risksafety.io
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

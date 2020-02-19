@@ -1,0 +1,34 @@
+name: docker-build
+description: Build and push Docker images with environment specific tags
+inputs:
+  repo:
+    description: Repository name
+    required: true
+  username:
+    description: Username for the repo
+    required: true
+  password:
+    description: Password/token for the repo
+    required: true
+  app:
+    description: App name
+    required: true
+  path:
+    description: Docker build directory (default '.')
+    required: false
+    default: '.'
+  build:
+    description: Build Dockerfile
+    required: false
+    default: 'true'
+  dry-run:
+    description: Don't pull or push images to Docker repository
+    required: false
+    default: 'false'
+  registry:
+    description: Docker registry
+    required: false
+    default: 'docker.pkg.github.com'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

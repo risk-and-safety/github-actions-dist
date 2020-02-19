@@ -1,0 +1,22 @@
+name: s3-deploy
+description: Upload static website assets to an S3 website
+inputs:
+  app:
+    description: App name
+    required: true
+  context:
+    description: Webapp context path (eg /app-path)
+    required: true
+  path:
+    description: Path to the source code
+    required: true
+  build-dir:
+    description: Path to the compiled client side code (eg webpack build/)
+    required: true
+  domain:
+    description: Root domain for the website
+    required: false
+    default: 'riskandsafety.com'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

@@ -1,0 +1,16 @@
+name: lambda-deploy
+description: Deploy the Lambda function zip file to S3 and AWS Lambda
+inputs:
+  function-name:
+    description: Function name
+    required: true
+  path:
+    description: Path to the source code
+    required: true
+  s3-bucket-prefix:
+    description: The S3 bucket name excluding env suffix (eg "dev", "qa", "prod")
+    required: false
+    default: 'rss-config-'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

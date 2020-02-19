@@ -1,3 +1,9 @@
-# Compile Github Actions
+# GitHub Actions 
 
-Compiled GitHub Actions written by Risk and Safety Solutions
+Common GitHub Actions for Risk and Safety Solution.
+
+* docker-build
+* kube-status
+* lambda-deploy
+* s3-deploy
+* version
