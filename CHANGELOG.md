@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.4.0](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.3.0...github-actions@1.4.0) (2020-02-21)
+
+
+### Features
+
+* **github-actions:** add action for pushing compiled action to different git repo ([0146f8d](https://github.com/risk-and-safety/kube-nodejs/commit/0146f8d4ed58c45311b4371da6e9cbd99662a39c))
+
+
+
+
+
 # [1.3.0](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.1.0...github-actions@1.3.0) (2020-02-19)
 
 
