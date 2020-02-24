@@ -1,14 +1,13 @@
 {
   "name": "github-actions",
-  "version": "1.4.0",
+  "version": "1.4.8",
   "description": "GitHub Actions",
-  "main": "dist/index.js",
   "author": "Risk and Safety Solutions",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "lint": "eslint .",
-    "compile": "sh ./compile.sh",
+    "compile": "bash ./compile.sh",
     "test": "node jest.setup.js && jest"
   },
   "dependencies": {

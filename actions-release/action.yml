@@ -1,0 +1,20 @@
+name: actions-release
+description: Push compiled GitHub Action assets (eg action.yml) to different git repository
+inputs:
+  repo:
+    description: Git repository for the compiled assets
+    required: true
+  build-dir:
+    description: The directory containing the compiled assets
+    required: false
+    default: 'build/'
+  ssh-deploy-key:
+    description: SSH key for writing to the git repository
+    required: false
+  dry-run:
+    description: Don't push to git repository
+    required: false
+    default: 'false'
+runs:
+  using: 'node12'
+  main: 'index.js'

@@ -3,6 +3,76 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.4.8](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.7...github-actions@1.4.8) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [1.4.7](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.6...github-actions@1.4.7) (2020-02-24)
+
+
+### Bug Fixes
+
+* **github-actions:** fix ssh config for actions.git in actions-release ([39e43f1](https://github.com/risk-and-safety/kube-nodejs/commit/39e43f18fa3f1f64934b9141c86cc58c6d2fa0c6))
+
+
+
+
+
+## [1.4.6](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.5...github-actions@1.4.6) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [1.4.5](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.4...github-actions@1.4.5) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [1.4.4](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.3...github-actions@1.4.4) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [1.4.3](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.2...github-actions@1.4.3) (2020-02-24)
+
+
+### Bug Fixes
+
+* **github-actions:** fix validateRepo for git@ syntax ([97acc04](https://github.com/risk-and-safety/kube-nodejs/commit/97acc042f4a24475c79dc24d77a8ee215ea7e313))
+
+
+
+
+
+## [1.4.2](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.1...github-actions@1.4.2) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [1.4.1](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.0...github-actions@1.4.1) (2020-02-24)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
 # [1.4.0](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.3.0...github-actions@1.4.0) (2020-02-21)
 
 
