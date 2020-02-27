@@ -17,10 +17,6 @@ inputs:
     description: Docker build directory (default '.')
     required: false
     default: '.'
-  build:
-    description: Build Dockerfile
-    required: false
-    default: 'true'
   dry-run:
     description: Don't pull or push images to Docker repository
     required: false

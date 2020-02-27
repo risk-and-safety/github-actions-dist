@@ -1,22 +1,21 @@
 name: s3-deploy
-description: Upload static website assets to an S3 website
+description: Upload static assets to the S3 website
 inputs:
   app:
-    description: App name
+    description: Client app name or comma separated list of apps
     required: true
-  context:
-    description: Webapp context path (eg /app-path)
-    required: true
-  path:
-    description: Path to the source code
-    required: true
-  build-dir:
-    description: Path to the compiled client side code (eg webpack build/)
-    required: true
+  staging-bucket-prefix:
+    description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)
+    required: false
+    default: 'rss-config-'
   domain:
     description: Root domain for the website
     required: false
     default: 'riskandsafety.com'
+  dry-run:
+    description: Preview the S3 delete and put commands
+    required: false
+    default: 'false'
 runs:
   using: 'node12'
   main: 'index.js'

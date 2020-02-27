@@ -1,0 +1,20 @@
+name: s3-stage
+description: Upload zip to S3 config bucket for staging
+inputs:
+  app:
+    description: App or Lambda function name
+    required: true
+  context:
+    description: Webapp context path (eg app-path/) to add to the zip
+    required: false
+    default: ''
+  build-dir:
+    description: Path to the directory to zip and upload to S3
+    required: true
+  staging-bucket-prefix:
+    description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)
+    required: false
+    default: 'rss-config-'
+runs:
+  using: 'node12'
+  main: 'index.js'

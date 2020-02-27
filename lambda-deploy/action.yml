@@ -1,18 +1,11 @@
 name: lambda-deploy
-description: Deploy the Lambda function zip file to S3 and AWS Lambda
+description: Deploy the S3 zip files to AWS Lambda
 inputs:
-  function-name:
-    description: Function name
+  function:
+    description: Function name or comma separated list of functions
     required: true
-  path:
-    description: Path to the source code
-    required: true
-  deploy:
-    description: Indicates if the uploaded zip should be deployed to AWS Lambda
-    required: false
-    default: 'true'
-  s3-bucket-prefix:
-    description: The S3 bucket name excluding env suffix (eg "dev", "qa", "prod")
+  staging-bucket-prefix:
+    description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)
     required: false
     default: 'rss-config-'
 runs:

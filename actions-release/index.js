@@ -9096,7 +9096,7 @@ module.exports = {
 /***/ (function(module) {
 
 module.exports.validateRepo = function validateRepo(repo) {
-  if (!/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
     throw new Error(`Invalid repo name [${repo}]`);
   }
 
@@ -9104,7 +9104,7 @@ module.exports.validateRepo = function validateRepo(repo) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!/^[a-z-]{2,20}$/g.test(name)) {
+  if (!name || !/^[0-9a-z-]{2,20}$/g.test(name)) {
     throw new Error(`Invalid app name [${name}]`);
   }
 
@@ -9112,11 +9112,21 @@ module.exports.validateAppName = function validateAppName(name) {
 };
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!/^[a-z-]{2,20}$/g.test(namespace)) {
+  if (!namespace || !/^[a-z-]{2,20}$/g.test(namespace)) {
     throw new Error(`Invalid namespace name [${namespace}]`);
   }
 
   return namespace;
+};
+
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
+
+  if (zipPath !== '.' && !/^[\w-]{2,30}\/[\w-]{2,30}\/[\w-.]{2,30}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+  }
+
+  return zipPath;
 };
 
 module.exports.cleanPath = function cleanPath(uncleanPath) {
@@ -9132,7 +9142,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
 module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
-  if (!buildDir || !/^(..\/)*([\w-]{2,30}\/?)+\/?$/g.test(buildDir)) {
+  if (!buildDir || !/^(..\/|\/)*([\w-_]{2,30}\/?)+\/?$/g.test(buildDir)) {
     throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
@@ -9145,11 +9155,6 @@ module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
 
   // Remove leading dot
   if (buildDir.startsWith('.')) {
-    buildDir = buildDir.substring(1);
-  }
-
-  // Remove leading slash
-  if (buildDir.startsWith('/')) {
     buildDir = buildDir.substring(1);
   }
 
@@ -9896,8 +9901,14 @@ const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
 
-async function findGitVersion(app, commit) {
-  const tag = await exec(`git tag --points-at ${commit}`);
+async function findGitTags(commitish = 'HEAD') {
+  const tags = await exec(`git tag -l --points-at ${commitish}`);
+
+  return tags.split('\n').filter(Boolean);
+}
+
+async function findGitVersion(app, commitish) {
+  const tag = await exec(`git tag --points-at ${commitish}`);
 
   const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[a-z0-9.]+)?)`, 'g');
   const matches = regExp.exec(tag);
@@ -9952,6 +9963,7 @@ async function trueUpGitHistory() {
   }
 }
 
+module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
 module.exports.setGitUser = setGitUser;

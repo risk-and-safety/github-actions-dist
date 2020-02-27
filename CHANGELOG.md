@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.4.9](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.8...github-actions@1.4.9) (2020-02-24)
+
+
+### Bug Fixes
+
+* **github-actions:** use full path for build dir in actions-release ([ee5fac7](https://github.com/risk-and-safety/kube-nodejs/commit/ee5fac7744af50053f2c5b0832ed5f1271fd8f65))
+
+
+
+
+
 ## [1.4.8](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.7...github-actions@1.4.8) (2020-02-24)
 
 **Note:** Version bump only for package github-actions

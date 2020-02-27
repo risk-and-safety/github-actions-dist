@@ -131,7 +131,6 @@ const fs = __webpack_require__(747);
 
 const { cleanEnv, cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
 const { exec, sh } = __webpack_require__(686);
-const { findGitVersion } = __webpack_require__(564);
 
 async function dockerBuild(params) {
   const env = cleanEnv(github.context.ref);
@@ -139,7 +138,7 @@ async function dockerBuild(params) {
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const path = cleanPath(params.path);
-  const { username, password, build = true, dryRun = false, registry = 'docker.pkg.github.com' } = params;
+  const { username, password, dryRun = false, registry = 'docker.pkg.github.com' } = params;
 
   const commit = github.context.sha.substr(0, 8);
 
@@ -161,7 +160,7 @@ async function dockerBuild(params) {
       // Try to pull image first for Docker layer caching
       await sh(`docker pull ${dockerImage}:${env}`);
     } catch (err) {
-      if (build && err.message.includes('not found: manifest unknown:')) {
+      if (err.message.includes('not found: manifest unknown:')) {
         console.info('Existing docker image not found; building ...');
       } else {
         throw err;
@@ -169,28 +168,11 @@ async function dockerBuild(params) {
     }
   }
 
-  if (build) {
-    await sh(`docker build -t ${dockerImage}:${env}-${commit} ${path}`);
-  }
+  await sh(`docker build -t ${dockerImage}:${commit} ${path}`);
 
   if (!dryRun) {
-    if (build) {
-      await sh(`docker push ${dockerImage}:${env}-${commit}`);
-    }
-
-    await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${env}`);
+    await sh(`docker push ${dockerImage}:${commit}`);
     await sh(`docker push ${dockerImage}:${env}`);
-
-    if (env === 'qa' || env === 'prod') {
-      const version = await findGitVersion(app, commit);
-
-      if (version) {
-        await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
-        await sh(`docker push ${dockerImage}:${version}`);
-      } else {
-        console.warn(`WARN: No git version tag found for app [${app}] and commit [${commit}]`);
-      }
-    }
   }
 }
 
@@ -7423,7 +7405,7 @@ function addHook (state, kind, name, hook) {
 /***/ (function(module) {
 
 module.exports.validateRepo = function validateRepo(repo) {
-  if (!/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
     throw new Error(`Invalid repo name [${repo}]`);
   }
 
@@ -7431,7 +7413,7 @@ module.exports.validateRepo = function validateRepo(repo) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!/^[a-z-]{2,20}$/g.test(name)) {
+  if (!name || !/^[0-9a-z-]{2,20}$/g.test(name)) {
     throw new Error(`Invalid app name [${name}]`);
   }
 
@@ -7439,11 +7421,21 @@ module.exports.validateAppName = function validateAppName(name) {
 };
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!/^[a-z-]{2,20}$/g.test(namespace)) {
+  if (!namespace || !/^[a-z-]{2,20}$/g.test(namespace)) {
     throw new Error(`Invalid namespace name [${namespace}]`);
   }
 
   return namespace;
+};
+
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
+
+  if (zipPath !== '.' && !/^[\w-]{2,30}\/[\w-]{2,30}\/[\w-.]{2,30}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+  }
+
+  return zipPath;
 };
 
 module.exports.cleanPath = function cleanPath(uncleanPath) {
@@ -7459,7 +7451,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
 module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
-  if (!buildDir || !/^(..\/)*([\w-]{2,30}\/?)+\/?$/g.test(buildDir)) {
+  if (!buildDir || !/^(..\/|\/)*([\w-_]{2,30}\/?)+\/?$/g.test(buildDir)) {
     throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
@@ -7472,11 +7464,6 @@ module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
 
   // Remove leading dot
   if (buildDir.startsWith('.')) {
-    buildDir = buildDir.substring(1);
-  }
-
-  // Remove leading slash
-  if (buildDir.startsWith('/')) {
     buildDir = buildDir.substring(1);
   }
 
@@ -8216,77 +8203,6 @@ function getPreviousPage (octokit, link, headers) {
 
 /***/ }),
 
-/***/ 564:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const github = __webpack_require__(469);
-
-const { exec, sh } = __webpack_require__(686);
-
-async function findGitVersion(app, commit) {
-  const tag = await exec(`git tag --points-at ${commit}`);
-
-  const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[a-z0-9.]+)?)`, 'g');
-  const matches = regExp.exec(tag);
-
-  if (!matches || matches.length < 3) {
-    return null;
-  }
-
-  return matches[2];
-}
-
-async function getGitUser() {
-  const user = {
-    username: github.context.actor,
-    email: github.context.payload.pusher ? github.context.payload.pusher.email : null,
-  };
-
-  if (!user.username) {
-    user.username = await exec(`git show -s --format=%an HEAD`);
-  }
-
-  if (!user.email) {
-    user.email = await exec(`git show -s --format=%ae HEAD`);
-  }
-
-  return user;
-}
-
-async function setGitUser(user, dir = '.') {
-  const currentUsername = await exec(`git -C "${dir}" config user.name || true`);
-  if (!currentUsername) {
-    await sh(`git -C "${dir}" config user.name "${user.username}"`);
-  }
-
-  const currentEmail = await exec(`git -C "${dir}" config user.email || true`);
-  if (!currentEmail) {
-    await sh(`git -C "${dir}" config user.email "${user.email}"`);
-  }
-}
-
-// If GitHub Actions did a shallow fetch (the default), set user and pull history
-async function trueUpGitHistory() {
-  console.info('True up git history since GitHub Actions does a shallow fetch');
-
-  await setGitUser(await getGitUser());
-
-  const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
-  if (isShallowFetch) {
-    await sh('git fetch --prune --unshallow');
-  } else {
-    await sh('git fetch --tags');
-  }
-}
-
-module.exports.findGitVersion = findGitVersion;
-module.exports.getGitUser = getGitUser;
-module.exports.setGitUser = setGitUser;
-module.exports.trueUpGitHistory = trueUpGitHistory;
-
-
-/***/ }),
-
 /***/ 568:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -8854,8 +8770,7 @@ const params = {
   password: core.getInput('password'),
   app: core.getInput('app'),
   path: core.getInput('path'),
-  build: core.getInput('build'),
-  dryRun: core.getInput('dry-run'),
+  dryRun: core.getInput('dry-run') === 'true',
   registry: core.getInput('registry'),
 };
 

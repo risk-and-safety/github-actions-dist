@@ -1,0 +1,34 @@
+name: version
+description: Use Lerna version to increment, tag and create a changelog for all or individual packages
+inputs:
+  packages:
+    description: The comma or newline delimited list of packages to bump (* or all)
+    required: true
+  prod-branch:
+    description: The branch for production releases
+    required: false
+    default: 'prod'
+  dry-run:
+    description: Bump version and tag but don't push
+    required: false
+    default: 'false'
+  log-level:
+    description: The logging level for Lerna version command
+    required: false
+    default: 'info'
+outputs:
+  KUBE_CRONJOB:
+    description: Kubernetes cronjobs that changed (comma separated)
+  KUBE_DEPLOYMENT:
+    description: Kubernetes deployments that changed (comma separated)
+  LAMBDA:
+    description: AWS Lambda functions that changed (comma separated)
+  MAVEN:
+    description: Maven jars that changed (comma separated)
+  NPM:
+    description: npm packages that changed (comma separated)
+  S3:
+    description: S3 static asset bundles that changed (comma separated)
+runs:
+  using: 'node12'
+  main: 'index.js'
