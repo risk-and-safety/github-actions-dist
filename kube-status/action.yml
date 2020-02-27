@@ -19,7 +19,7 @@ inputs:
   kibana-host:
     description: Kibana host where the logs reside
     required: false
-    default: https://logs.risksafety.io
+    default: 'https://logs.risksafety.io'
 runs:
   using: 'node12'
   main: 'index.js'

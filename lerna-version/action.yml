@@ -4,6 +4,9 @@ inputs:
   packages:
     description: The comma or newline delimited list of packages to bump (* or all)
     required: true
+  exclude:
+    description: The comma or newline delimited list of packages to exclude
+    required: false
   prod-branch:
     description: The branch for production releases
     required: false
@@ -17,6 +20,8 @@ inputs:
     required: false
     default: 'info'
 outputs:
+  GIT:
+    description: Packages pushed to a remove git, that changed (eg GitHub Actions)
   KUBE_CRONJOB:
     description: Kubernetes cronjobs that changed (comma separated)
   KUBE_DEPLOYMENT:

@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.5.0](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.9...github-actions@1.5.0) (2020-02-27)
+
+
+### Bug Fixes
+
+* **github-runner:** allow leading slash on buildDir ([2211bc4](https://github.com/risk-and-safety/kube-nodejs/commit/2211bc411343a7f4690476071a5a764e696a0d30))
+
+
+### Features
+
+* **github-actions:** add deploy workflow for multiple apps ([01e22c7](https://github.com/risk-and-safety/kube-nodejs/commit/01e22c7476d0851577e1ff6a814e940be1284f8b))
+
+
+
+
+
 ## [1.4.9](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.4.8...github-actions@1.4.9) (2020-02-24)
 
 
