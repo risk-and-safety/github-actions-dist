@@ -1798,7 +1798,7 @@ async function dockerReleaseOne(params) {
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const { username, password, registry = 'docker.pkg.github.com' } = params;
-  const commit = github.context.sha.substr(0, 8);
+  const commit = await exec('git rev-parse --short HEAD');
   const env = cleanEnv(github.context.ref);
   const dockerImage = `${registry}/${repo}/${app}`;
 
