@@ -4,8 +4,9 @@ Common GitHub Actions for Risk and Safety Solution.
 
 * actions-release
 * docker-build
-* docker-tag-version
+* docker-release
 * kube-status
 * lambda-deploy
+* lerna-version
 * s3-deploy
-* version
+* s3-stage

@@ -1,12 +1,14 @@
 {
   "name": "github-actions",
-  "version": "1.5.0",
+  "version": "1.5.2-dev.0",
   "description": "GitHub Actions",
   "author": "Risk and Safety Solutions",
   "license": "UNLICENSED",
   "private": true,
   "rss": {
-    "deployTypes": ["GIT"]
+    "deployTypes": [
+      "GIT"
+    ]
   },
   "scripts": {
     "lint": "eslint .",

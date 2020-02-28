@@ -8815,7 +8815,7 @@ async function actionsRelease(params) {
       await sh(`chmod 600 ${HOME}/.ssh/actions_repo_deploy_key`);
     }
 
-    await fs.writeFile(
+    await fs.outputFile(
       `${HOME}/.ssh/config`,
       `Host ${repoName}
   HostName github.com
