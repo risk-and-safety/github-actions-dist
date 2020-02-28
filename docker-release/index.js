@@ -1809,16 +1809,16 @@ async function dockerReleaseOne(params) {
   // Do not run in "sh()" as it would expose the password
   await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
 
-  await sh(`docker pull ${dockerImage}:${commit}`);
+  await sh(`docker pull ${dockerImage}:${env}`);
 
-  await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${env}-${commit}`);
+  await sh(`docker tag ${dockerImage}:${env} ${dockerImage}:${env}-${commit}`);
   await sh(`docker push ${dockerImage}:${env}-${commit}`);
 
   if (env === 'qa' || env === 'prod') {
     const version = await findGitVersion(app, commit);
 
     if (version) {
-      await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${version}`);
+      await sh(`docker tag ${dockerImage}:${env} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
       throw new Error(`No git version tag found for app [${app}] and commit [${commit}]`);
