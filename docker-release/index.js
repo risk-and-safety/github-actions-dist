@@ -8200,7 +8200,6 @@ async function getBranch() {
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
 	console.log('git rev-parse --abbrev-ref HEAD', await exec('git rev-parse --abbrev-ref HEAD'));
-	console.log('pull_request', pull_request);
 	console.log('pull_request.base.ref', pull_request.base.ref);
 	console.log('github.context.ref', github.context.ref);
   /* eslint-enable camelcase */
