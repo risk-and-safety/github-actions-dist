@@ -129,12 +129,12 @@ module.exports = osName;
 const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 
-const { cleanEnv, cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
+const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
+const { getEnv } = __webpack_require__(564);
 const { exec, sh } = __webpack_require__(686);
 
 async function dockerBuild(params) {
-  const env = cleanEnv(github.context.ref);
-
+  const env = await getEnv();
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const path = cleanPath(params.path);
@@ -7492,16 +7492,6 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
   return context;
 };
 
-module.exports.cleanEnv = function validateEnv(uncleanEnv) {
-  let env = uncleanEnv ? uncleanEnv.split('/').pop() : uncleanEnv;
-
-  if (env !== 'qa' && env !== 'prod') {
-    env = 'dev';
-  }
-
-  return env;
-};
-
 
 /***/ }),
 
@@ -8199,6 +8189,105 @@ const getPage = __webpack_require__(265)
 function getPreviousPage (octokit, link, headers) {
   return getPage(octokit, link, 'prev', headers)
 }
+
+
+/***/ }),
+
+/***/ 564:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const github = __webpack_require__(469);
+
+const { exec, sh } = __webpack_require__(686);
+
+async function getBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
+async function getEnv() {
+  const branch = await getBranch();
+
+  if (branch === 'qa' && branch === 'prod') {
+    return branch;
+  }
+
+  return 'dev';
+}
+
+async function findGitTags(commitish = 'HEAD') {
+  const tags = await exec(`git tag -l --points-at ${commitish}`);
+
+  return tags.split('\n').filter(Boolean);
+}
+
+async function findGitVersion(app, commitish) {
+  const tag = await exec(`git tag --points-at ${commitish}`);
+
+  const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[a-z0-9.]+)?)`, 'g');
+  const matches = regExp.exec(tag);
+
+  if (!matches || matches.length < 3) {
+    return null;
+  }
+
+  return matches[2];
+}
+
+async function getGitUser() {
+  const user = {
+    username: github.context.actor,
+    email: github.context.payload.pusher ? github.context.payload.pusher.email : null,
+  };
+
+  if (!user.username) {
+    user.username = await exec(`git show -s --format=%an HEAD`);
+  }
+
+  if (!user.email) {
+    user.email = await exec(`git show -s --format=%ae HEAD`);
+  }
+
+  return user;
+}
+
+async function setGitUser(user, dir = '.') {
+  const currentUsername = await exec(`git -C "${dir}" config user.name || true`);
+  if (!currentUsername) {
+    await sh(`git -C "${dir}" config user.name "${user.username}"`);
+  }
+
+  const currentEmail = await exec(`git -C "${dir}" config user.email || true`);
+  if (!currentEmail) {
+    await sh(`git -C "${dir}" config user.email "${user.email}"`);
+  }
+}
+
+// If GitHub Actions did a shallow fetch (the default), set user and pull history
+async function trueUpGitHistory() {
+  console.info('True up git history since GitHub Actions does a shallow fetch');
+
+  await setGitUser(await getGitUser());
+
+  const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
+  if (isShallowFetch) {
+    await sh('git fetch --prune --unshallow');
+  } else {
+    await sh('git fetch --tags');
+  }
+}
+
+module.exports.getBranch = getBranch;
+module.exports.getEnv = getEnv;
+module.exports.findGitTags = findGitTags;
+module.exports.findGitVersion = findGitVersion;
+module.exports.getGitUser = getGitUser;
+module.exports.setGitUser = setGitUser;
+module.exports.trueUpGitHistory = trueUpGitHistory;
 
 
 /***/ }),

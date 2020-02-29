@@ -9183,16 +9183,6 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
   return context;
 };
 
-module.exports.cleanEnv = function validateEnv(uncleanEnv) {
-  let env = uncleanEnv ? uncleanEnv.split('/').pop() : uncleanEnv;
-
-  if (env !== 'qa' && env !== 'prod') {
-    env = 'dev';
-  }
-
-  return env;
-};
-
 
 /***/ }),
 
@@ -9901,6 +9891,25 @@ const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
 
+async function getBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
+async function getEnv() {
+  const branch = await getBranch();
+
+  if (branch === 'qa' && branch === 'prod') {
+    return branch;
+  }
+
+  return 'dev';
+}
+
 async function findGitTags(commitish = 'HEAD') {
   const tags = await exec(`git tag -l --points-at ${commitish}`);
 
@@ -9963,6 +9972,8 @@ async function trueUpGitHistory() {
   }
 }
 
+module.exports.getBranch = getBranch;
+module.exports.getEnv = getEnv;
 module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
