@@ -1,6 +1,10 @@
 name: s3-stage
 description: Upload zip to S3 config bucket for staging
 inputs:
+  action:
+    description: Either "upload" or "download" the zip to S3 staging
+    required: false
+    default: upload
   app:
     description: App or Lambda function name
     required: true
@@ -9,7 +13,7 @@ inputs:
     required: false
     default: ''
   build-dir:
-    description: Path to the directory to zip and upload to S3
+    description: Path to the source code directory
     required: true
   staging-bucket-prefix:
     description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)

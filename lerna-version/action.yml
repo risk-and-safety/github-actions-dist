@@ -21,19 +21,19 @@ inputs:
     default: 'info'
 outputs:
   GIT:
-    description: Packages pushed to a remove git, that changed (eg GitHub Actions)
+    description: Changed packages for pushing to a remote git repo (eg GitHub Actions)
   KUBE_CRONJOB:
-    description: Kubernetes cronjobs that changed (comma separated)
+    description: Changed Kubernetes cronjobs (comma separated)
   KUBE_DEPLOYMENT:
-    description: Kubernetes deployments that changed (comma separated)
+    description: Changed Kubernetes deployments (comma separated)
   LAMBDA:
-    description: AWS Lambda functions that changed (comma separated)
+    description: Changed AWS Lambda functions (comma separated)
   MAVEN:
-    description: Maven jars that changed (comma separated)
+    description: Change Maven jars (comma separated)
   NPM:
-    description: npm packages that changed (comma separated)
+    description: Changed npm packages (comma separated)
   S3:
-    description: S3 static asset bundles that changed (comma separated)
+    description: Changed S3 web asset bundles (comma separated)
 runs:
   using: 'node12'
   main: 'index.js'
