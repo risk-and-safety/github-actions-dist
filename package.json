@@ -1,1 +1,72 @@
-{"name":"github-actions","version":"1.5.10-dev.1","description":"GitHub Actions","author":"Risk and Safety Solutions","license":"UNLICENSED","private":true,"rss":{"deployTypes":["GIT"]},"scripts":{"lint":"eslint .","compile":"bash ./compile.sh","test":"node jest.setup.js && jest"},"dependencies":{"@actions/core":"1.2.2","@actions/github":"2.1.0","@kubernetes/client-node":"0.11.1","@lerna/project":"3.18.0","@lerna/version":"3.20.2","@rss/common-nodejs":"0.3.60","aws-sdk":"2.613.0","conventional-changelog-angular":"5.0.6","fs-extra":"8.1.0","uuid":"3.4.0","yargs":"15.1.0"},"devDependencies":{"@zeit/ncc":"0.21.0","cross-env":"6.0.3","eslint":"6.8.0","eslint-config-airbnb-base":"14.0.0","eslint-config-prettier":"6.9.0","eslint-plugin-import":"2.19.1","eslint-plugin-prettier":"3.1.2","jest":"24.9.0","prettier":"1.19.1"},"prettier":{"arrowParens":"always","printWidth":120,"singleQuote":true,"trailingComma":"all"},"eslintConfig":{"env":{"jest":true},"extends":["airbnb-base","prettier"],"plugins":["prettier"],"rules":{"no-console":"off","prettier/prettier":["error"]}},"jest":{"testEnvironment":"node","testMatch":["**/*.(spec|integration).js"]}}
+{
+  "name": "github-actions",
+  "version": "1.5.10-dev.1",
+  "description": "GitHub Actions",
+  "author": "Risk and Safety Solutions",
+  "license": "UNLICENSED",
+  "private": true,
+  "rss": {
+    "deployTypes": [
+      "GIT"
+    ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "compile": "bash ./compile.sh",
+    "test": "node jest.setup.js && jest"
+  },
+  "dependencies": {
+    "@actions/core": "1.2.2",
+    "@actions/github": "2.1.0",
+    "@kubernetes/client-node": "0.11.1",
+    "@lerna/project": "3.18.0",
+    "@lerna/version": "3.20.2",
+    "@rss/common-nodejs": "0.3.60",
+    "aws-sdk": "2.613.0",
+    "conventional-changelog-angular": "5.0.6",
+    "fs-extra": "8.1.0",
+    "uuid": "3.4.0",
+    "yargs": "15.1.0"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "0.21.0",
+    "cross-env": "6.0.3",
+    "eslint": "6.8.0",
+    "eslint-config-airbnb-base": "14.0.0",
+    "eslint-config-prettier": "6.9.0",
+    "eslint-plugin-import": "2.19.1",
+    "eslint-plugin-prettier": "3.1.2",
+    "jest": "24.9.0",
+    "prettier": "1.19.1"
+  },
+  "prettier": {
+    "arrowParens": "always",
+    "printWidth": 120,
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
+  "eslintConfig": {
+    "env": {
+      "jest": true
+    },
+    "extends": [
+      "airbnb-base",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier"
+    ],
+    "rules": {
+      "no-console": "off",
+      "prettier/prettier": [
+        "error"
+      ]
+    }
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.(spec|integration).js"
+    ]
+  }
+}
