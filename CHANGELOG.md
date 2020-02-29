@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.10-dev.1](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.9...github-actions@1.5.10-dev.1) (2020-02-29)
+
+
+### Bug Fixes
+
+* **github-actions:** missing build dir on s3 stage download ([b3af945](https://github.com/risk-and-safety/kube-nodejs/commit/b3af945deefa38b85d337e7ed2c3678311c02d85))
+
+
+
+
+
 ## [1.5.10-dev.0](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.9...github-actions@1.5.10-dev.0) (2020-02-29)
 
 **Note:** Version bump only for package github-actions

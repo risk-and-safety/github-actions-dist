@@ -24266,7 +24266,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
 module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
-  if (!buildDir || !/^(..\/|\/)*([\w-_]{2,30}\/?)+\/?$/g.test(buildDir)) {
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,30}\/?)+\/?$/g.test(buildDir)) {
     throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
@@ -24275,11 +24275,6 @@ module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   // Append trailing slash
   if (!buildDir.endsWith('/')) {
     buildDir = `${buildDir}/`;
-  }
-
-  // Remove leading dot
-  if (buildDir.startsWith('.')) {
-    buildDir = buildDir.substring(1);
   }
 
   return buildDir;
