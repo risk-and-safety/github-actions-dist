@@ -7,10 +7,6 @@ inputs:
   exclude:
     description: The comma or newline delimited list of packages to exclude
     required: false
-  prod-branch:
-    description: The branch for production releases
-    required: false
-    default: 'prod'
   dry-run:
     description: Bump version and tag but don't push
     required: false

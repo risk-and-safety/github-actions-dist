@@ -22497,6 +22497,12 @@ module.exports = function (iconv) {
 /***/ 673:
 /***/ (function(module) {
 
+module.exports.inputList = function inputList(input) {
+  const list = typeof input === 'string' ? input.split(/[,\s\r\n]/g) : input;
+
+  return list.map((item) => item.trim()).filter(Boolean);
+};
+
 module.exports.validateRepo = function validateRepo(repo) {
   if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
     throw new Error(`Invalid repo name [${repo}]`);

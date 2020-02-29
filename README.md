@@ -9,4 +9,4 @@ Common GitHub Actions for Risk and Safety Solution.
 * lambda-deploy
 * lerna-version
 * s3-deploy
-* s3-stage
+* s3-stage (upload or download)

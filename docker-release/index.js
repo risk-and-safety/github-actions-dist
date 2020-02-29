@@ -83,12 +83,7 @@ async function dockerReleaseOne(params) {
 }
 
 async function dockerRelease(params) {
-  const apps = params.app
-    .split(', ')
-    .map((app) => app.trim())
-    .filter(Boolean);
-
-  return Promise.all(apps.map(async (app) => dockerReleaseOne({ ...params, app })));
+  return Promise.all(params.app.map(async (app) => dockerReleaseOne({ ...params, app })));
 }
 
 module.exports.dockerRelease = dockerRelease;
@@ -20899,12 +20894,13 @@ module.exports = [["0","\u0000",127],["8ea1","｡",62],["a1a1","　、。，．�
 const core = __webpack_require__(852);
 
 const { dockerRelease } = __webpack_require__(9);
+const { inputList } = __webpack_require__(673);
 
 const params = {
   repo: core.getInput('repo'),
   username: core.getInput('username'),
   password: core.getInput('password'),
-  app: core.getInput('app'),
+  app: inputList(core.getInput('app')),
   registry: core.getInput('registry'),
 };
 
@@ -22556,6 +22552,12 @@ module.exports = function (iconv) {
 
 /***/ 673:
 /***/ (function(module) {
+
+module.exports.inputList = function inputList(input) {
+  const list = typeof input === 'string' ? input.split(/[,\s\r\n]/g) : input;
+
+  return list.map((item) => item.trim()).filter(Boolean);
+};
 
 module.exports.validateRepo = function validateRepo(repo) {
   if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
