@@ -8199,6 +8199,9 @@ async function getBranch() {
   /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+	console.log('pull_request', pull_request);
+	console.log('pull_request.base.ref', pull_request.base.ref);
+	console.log('github.context.ref', github.context.ref);
   /* eslint-enable camelcase */
 
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
@@ -8207,9 +8210,13 @@ async function getBranch() {
 async function getEnv() {
   const branch = await getBranch();
 
+  console.log('branch', branch);
+
   if (branch === 'qa' && branch === 'prod') {
     return branch;
   }
+
+	console.log('env', 'dev');
 
   return 'dev';
 }
