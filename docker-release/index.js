@@ -8210,7 +8210,7 @@ async function getBranch() {
 async function getEnv() {
   const branch = await getBranch();
 
-  console.log('branch', branch);
+  console.log(`branch [${branch}],  branch === 'qa' => `, branch === 'qa');
 
   if (branch === 'qa' && branch === 'prod') {
     return branch;
