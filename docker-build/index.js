@@ -130,8 +130,26 @@ const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 
 const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
-const { getEnv } = __webpack_require__(731);
+const { getEnv, getPrevEnv } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
+
+async function tryDockerPull(dockerImage, env) {
+  try {
+    // Try to pull image first for Docker layer caching
+    await sh(`docker pull ${dockerImage}:${env}`);
+  } catch (err) {
+    if (err.message.includes('not found: manifest unknown:')) {
+      console.info('Existing docker image not found ...');
+      const prevEnv = getPrevEnv(env);
+
+      if (prevEnv !== env) {
+        await tryDockerPull(dockerImage, prevEnv);
+      }
+    } else {
+      throw err;
+    }
+  }
+}
 
 async function dockerBuild(params) {
   const env = await getEnv();
@@ -156,22 +174,15 @@ async function dockerBuild(params) {
     // Do not run in "sh()" as it would expose the password
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
 
-    try {
-      // Try to pull image first for Docker layer caching
-      await sh(`docker pull ${dockerImage}:${env}`);
-    } catch (err) {
-      if (err.message.includes('not found: manifest unknown:')) {
-        console.info('Existing docker image not found; building ...');
-      } else {
-        throw err;
-      }
-    }
+    await tryDockerPull(dockerImage, env);
   }
 
   await sh(`docker build -t ${dockerImage}:${commit} ${path}`);
 
   if (!dryRun) {
     await sh(`docker push ${dockerImage}:${commit}`);
+
+    await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${env}`);
     await sh(`docker push ${dockerImage}:${env}`);
   }
 }

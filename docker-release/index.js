@@ -1816,7 +1816,7 @@ async function dockerReleaseOne(params) {
     const version = await findGitVersion(app, commit);
 
     if (version) {
-      await sh(`docker tag ${dockerImage}:${env} ${dockerImage}:${version}`);
+      await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
       throw new Error(`No git version tag found for app [${app}] and commit [${commit}]`);
