@@ -8794,7 +8794,7 @@ const { getGitUser, setGitUser } = __webpack_require__(731);
 
 const HOME = os.homedir();
 
-const TEMP_GIT_DIR = `${os.tmpdir()}/actions.release.${uuid()}/`;
+const TEMP_GIT_DIR = `${os.tmpdir()}/actions-release-${uuid()}/`;
 
 async function actionsRelease(params) {
   const repo = validateRepo(params.repo);

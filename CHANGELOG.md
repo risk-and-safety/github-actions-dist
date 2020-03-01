@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.10-dev.2](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.1...github-actions@1.5.10-dev.2) (2020-02-29)
+
+
+### Bug Fixes
+
+* **github-actions:** fix build dir validator ([8a17838](https://github.com/risk-and-safety/kube-nodejs/commit/8a1783813a19ec5fc4e8b4070ae7094f30931c98))
+
+
+
+
+
 ## [1.5.10-dev.1](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.9...github-actions@1.5.10-dev.1) (2020-02-29)
 
 
