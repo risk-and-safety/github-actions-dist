@@ -32,6 +32,6 @@ outputs:
     description: Changed S3 web asset bundles (comma separated)
 runs:
   using: node12
-  main: main/index.js
+  main: index.js
   post: post/index.js
   post-if: success()
