@@ -1426,7 +1426,9 @@ async function tryDockerPull(dockerImage, env) {
     // Try to pull image first for Docker layer caching
     await sh(`docker pull ${dockerImage}:${env}`);
   } catch (err) {
-    if (err.message.includes('not found: manifest unknown:')) {
+		if (err.message.includes('not found: name unknown: docker package')) {
+			console.info('Existing docker repo not found ...');
+		} else if (err.message.includes('not found: manifest unknown:')) {
       console.info('Existing docker image not found ...');
       const prevEnv = getPrevEnv(env);
 
