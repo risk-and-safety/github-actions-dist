@@ -1,0 +1,30 @@
+name: docker-stage
+description: Build and push Docker image for staging and caching
+inputs:
+  repo:
+    description: Repository name
+    required: true
+  username:
+    description: Username for the repo
+    required: true
+  password:
+    description: Password/token for the repo
+    required: true
+  app:
+    description: App name
+    required: true
+  path:
+    description: Docker build directory (default '.')
+    required: false
+    default: '.'
+  dry-run:
+    description: Don't pull or push images to Docker repository
+    required: false
+    default: 'false'
+  registry:
+    description: Docker registry
+    required: false
+    default: 'docker.pkg.github.com'
+runs:
+  using: 'node12'
+  main: 'index.js'

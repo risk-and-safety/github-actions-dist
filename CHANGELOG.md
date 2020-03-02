@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.10-dev.4](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.3...github-actions@1.5.10-dev.4) (2020-03-01)
+
+
+### Bug Fixes
+
+* **github-actions:** fix docker {env} tagging on build ([f4c622c](https://github.com/risk-and-safety/kube-nodejs/commit/f4c622c49af07ba394573604fbbb1ff17181d82e))
+* **github-actions:** lerna-version actions.yml has incorrect main script ([79133d8](https://github.com/risk-and-safety/kube-nodejs/commit/79133d8febaacdae0366b92aa323d0a1b4908e1b))
+
+
+
+
+
 ## [1.5.10-dev.3](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.2...github-actions@1.5.10-dev.3) (2020-03-01)
 
 **Note:** Version bump only for package github-actions
