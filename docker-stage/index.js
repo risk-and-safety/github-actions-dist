@@ -7485,7 +7485,7 @@ module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
 module.exports.cleanPath = function cleanPath(uncleanPath) {
   const path = uncleanPath || '.';
 
-  if (path !== '.' && !/^[\w-]{2,30}\/[\w-]{2,30}\/?$/g.test(path)) {
+  if (path !== '.' && !/^([\w-]{2,30}\/?)+$/g.test(path)) {
     throw new Error(`Invalid path [${uncleanPath}]`);
   }
 
