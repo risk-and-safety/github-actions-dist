@@ -7447,7 +7447,7 @@ module.exports.inputList = function inputList(input) {
 };
 
 module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,20}\/[\w-]{2,20}(.git)?$/g.test(repo)) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,40}\/[\w-]{2,40}(.git)?$/g.test(repo)) {
     throw new Error(`Invalid repo name [${repo}]`);
   }
 
