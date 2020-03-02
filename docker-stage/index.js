@@ -7455,7 +7455,7 @@ module.exports.validateRepo = function validateRepo(repo) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,20}$/g.test(name)) {
+  if (!name || !/^[0-9a-z-]{2,40}$/g.test(name)) {
     throw new Error(`Invalid app name [${name}]`);
   }
 
