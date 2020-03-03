@@ -1426,9 +1426,9 @@ async function tryDockerPull(dockerImage, env) {
     // Try to pull image first for Docker layer caching
     await sh(`docker pull ${dockerImage}:${env}`);
   } catch (err) {
-		if (err.message.includes('not found: name unknown: docker package')) {
-			console.info('Existing docker repo not found ...');
-		} else if (err.message.includes('not found: manifest unknown:')) {
+    if (err.message.includes('not found: name unknown: docker package')) {
+      console.info('Existing docker repo not found ...');
+    } else if (err.message.includes('not found: manifest unknown:')) {
       console.info('Existing docker image not found ...');
       const prevEnv = getPrevEnv(env);
 
@@ -7449,7 +7449,7 @@ module.exports.inputList = function inputList(input) {
 };
 
 module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,40}\/[\w-]{2,40}(.git)?$/g.test(repo)) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
     throw new Error(`Invalid repo name [${repo}]`);
   }
 
@@ -7457,7 +7457,7 @@ module.exports.validateRepo = function validateRepo(repo) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,40}$/g.test(name)) {
+  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
     throw new Error(`Invalid app name [${name}]`);
   }
 
@@ -7465,7 +7465,7 @@ module.exports.validateAppName = function validateAppName(name) {
 };
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!namespace || !/^[a-z-]{2,20}$/g.test(namespace)) {
+  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
     throw new Error(`Invalid namespace name [${namespace}]`);
   }
 
@@ -7475,7 +7475,7 @@ module.exports.validateNamespace = function validateNamespace(namespace) {
 module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
   const zipPath = uncleanZipPath || '.';
 
-  if (zipPath !== '.' && !/^[\w-]{2,30}\/[\w-]{2,30}\/[\w-.]{2,30}.zip$/g.test(zipPath)) {
+  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
     throw new Error(`Invalid zip path [${uncleanZipPath}]`);
   }
 
@@ -7485,7 +7485,7 @@ module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
 module.exports.cleanPath = function cleanPath(uncleanPath) {
   const path = uncleanPath || '.';
 
-  if (path !== '.' && !/^(\.\/)?([\w-]{2,40}\/?)+$/g.test(path)) {
+  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
     throw new Error(`Invalid path [${uncleanPath}]`);
   }
 
@@ -7495,7 +7495,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
 module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
-  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,30}\/?)+\/?$/g.test(buildDir)) {
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
     throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
@@ -7513,7 +7513,7 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
   let context = uncleanContext === '/' ? '' : uncleanContext;
 
   if (context !== '') {
-    if (!/^\/?[\w-]{2,30}\/?$/g.test(context)) {
+    if (!/^\/?[\w-]{2,50}\/?$/g.test(context)) {
       throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
     }
 
