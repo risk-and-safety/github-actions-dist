@@ -34,7 +34,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(203);
+/******/ 		return __webpack_require__(400);
 /******/ 	};
 /******/
 /******/ 	// run startup
@@ -50,34 +50,7 @@ module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 203:
-/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
-
-const { sh } = __webpack_require__(686);
-
-async function gitPush() {
-  await sh(
-    `git pull
-    git push --follow-tags`,
-  );
-}
-
-gitPush().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-
-
-/***/ }),
-
-/***/ 669:
-/***/ (function(module) {
-
-module.exports = require("util");
-
-/***/ }),
-
-/***/ 686:
+/***/ 286:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const childProcess = __webpack_require__(129);
@@ -141,6 +114,33 @@ async function exec(cmd, { echo = false } = {}) {
 module.exports.sh = sh;
 module.exports.exec = exec;
 
+
+/***/ }),
+
+/***/ 400:
+/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
+
+const { sh } = __webpack_require__(286);
+
+async function gitPush() {
+  await sh(
+    `git pull
+    git push --follow-tags`,
+  );
+}
+
+gitPush().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+
+
+/***/ }),
+
+/***/ 669:
+/***/ (function(module) {
+
+module.exports = require("util");
 
 /***/ })
 

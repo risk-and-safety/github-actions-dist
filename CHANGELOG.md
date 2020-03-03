@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.10-dev.7](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.6...github-actions@1.5.10-dev.7) (2020-03-03)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
 ## [1.5.10-dev.6](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.5...github-actions@1.5.10-dev.6) (2020-03-03)
 
 **Note:** Version bump only for package github-actions

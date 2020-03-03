@@ -1,0 +1,10 @@
+name: branch-env
+description: Return environment (dev, qa, prod) for the current git branch
+outputs:
+  branch:
+    description: Current branch or target branch for a pull request
+  env:
+    description: Environment for current branch
+runs:
+  using: 'node12'
+  main: 'index.js'
