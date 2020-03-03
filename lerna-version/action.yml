@@ -7,10 +7,6 @@ inputs:
   exclude:
     description: The comma or newline delimited list of packages to exclude
     required: false
-  dry-run:
-    description: Bump version and tag but don't push
-    required: false
-    default: 'false'
   log-level:
     description: The logging level for Lerna version command
     required: false
