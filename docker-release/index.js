@@ -1829,11 +1829,11 @@ async function tryFindCommit() {
   try {
     return exec('git rev-parse --short HEAD');
   } catch (err) {
-    console.warn('No local git found, using GitHub context payload');
     if (!err.message.includes('not a git repository')) {
       throw err;
     }
 
+    console.warn('No local git found, using GitHub context payload');
     return github.context.sha.substring(0, 9);
   }
 }
