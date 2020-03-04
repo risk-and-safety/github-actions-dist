@@ -1449,7 +1449,7 @@ const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 
 const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
-const { getSrcBranch } = __webpack_require__(731);
+const { getEnv, getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 async function tryDockerPull(dockerImage, tag) {
@@ -1468,6 +1468,7 @@ async function tryDockerPull(dockerImage, tag) {
 }
 
 async function dockerStage(params) {
+  const env = await getEnv();
   const branch = await getSrcBranch();
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
@@ -1497,6 +1498,9 @@ async function dockerStage(params) {
 
   if (!dryRun) {
     await sh(`docker push ${dockerImage}:${commit}`);
+
+    await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${env}`);
+    await sh(`docker push ${dockerImage}:${env}`);
 
     await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${branch}`);
     await sh(`docker push ${dockerImage}:${branch}`);
