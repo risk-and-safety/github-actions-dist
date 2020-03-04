@@ -1827,7 +1827,9 @@ const { findGitVersion, getEnv, getSrcBranch } = __webpack_require__(731);
 
 async function tryFindCommit() {
   try {
-    return exec('git rev-parse --short HEAD');
+    const commit = await exec('git rev-parse --short HEAD');
+
+    return commit;
   } catch (err) {
   	console.log(err.message);
     console.warn('No local git found, using GitHub context payload');
