@@ -1819,15 +1819,31 @@ function paginatePlugin(octokit) {
 /***/ 167:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const github = __webpack_require__(469);
+
 const { validateAppName, validateRepo } = __webpack_require__(521);
 const { exec, sh } = __webpack_require__(686);
-const { findGitVersion, getEnv } = __webpack_require__(731);
+const { findGitVersion, getEnv, getSrcBranch } = __webpack_require__(731);
+
+async function tryFindCommit() {
+  try {
+    return exec('git rev-parse --short HEAD');
+  } catch (err) {
+    if (!err.message.includes('not a git repository')) {
+      throw err;
+    }
+
+    console.warn('No local git found, using GitHub context payload');
+    return github.context.sha.substring(0, 9);
+  }
+}
 
 async function dockerReleaseOne(params) {
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const { username, password, registry = 'docker.pkg.github.com' } = params;
-  const commit = await exec('git rev-parse --short HEAD');
+  const commit = await tryFindCommit();
+  const branch = await getSrcBranch();
   const env = await getEnv();
   const dockerImage = `${registry}/${repo}/${app}`;
 
@@ -1838,9 +1854,9 @@ async function dockerReleaseOne(params) {
   // Do not run in "sh()" as it would expose the password
   await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
 
-  await sh(`docker pull ${dockerImage}:${env}`);
+  await sh(`docker pull ${dockerImage}:${branch}`);
 
-  await sh(`docker tag ${dockerImage}:${env} ${dockerImage}:${env}-${commit}`);
+  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${env}-${commit}`);
   await sh(`docker push ${dockerImage}:${env}-${commit}`);
 
   if (env === 'qa' || env === 'prod') {
@@ -1850,7 +1866,7 @@ async function dockerReleaseOne(params) {
       await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
-      throw new Error(`No git version tag found for app [${app}] and commit [${commit}]`);
+      throw new Error(`No git tag found for app [${app}] and commit [${commit}]`);
     }
   }
 }
@@ -8853,7 +8869,7 @@ const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
 
-async function getBranch() {
+async function getDestBranch() {
   /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
@@ -8862,8 +8878,17 @@ async function getBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
+async function getSrcBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.head && pull_request.head.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
 async function getEnv() {
-  const branch = await getBranch();
+  const branch = await getDestBranch();
 
   if (branch === 'qa' || branch === 'prod') {
     return branch;
@@ -8942,7 +8967,8 @@ async function trueUpGitHistory() {
   }
 }
 
-module.exports.getBranch = getBranch;
+module.exports.getSrcBranch = getSrcBranch;
+module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
 module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;

@@ -11498,7 +11498,7 @@ const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
 
-async function getBranch() {
+async function getDestBranch() {
   /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
@@ -11507,8 +11507,17 @@ async function getBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
+async function getSrcBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.head && pull_request.head.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
 async function getEnv() {
-  const branch = await getBranch();
+  const branch = await getDestBranch();
 
   if (branch === 'qa' || branch === 'prod') {
     return branch;
@@ -11587,7 +11596,8 @@ async function trueUpGitHistory() {
   }
 }
 
-module.exports.getBranch = getBranch;
+module.exports.getSrcBranch = getSrcBranch;
+module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
 module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;

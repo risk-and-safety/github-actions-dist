@@ -1449,23 +1449,18 @@ const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 
 const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
-const { getEnv, getPrevEnv } = __webpack_require__(731);
+const { getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
-async function tryDockerPull(dockerImage, env) {
+async function tryDockerPull(dockerImage, tag) {
   try {
     // Try to pull image first for Docker layer caching
-    await sh(`docker pull ${dockerImage}:${env}`);
+    await sh(`docker pull ${dockerImage}:${tag}`);
   } catch (err) {
     if (err.message.includes('not found: name unknown: docker package')) {
       console.info('Existing docker repo not found ...');
     } else if (err.message.includes('not found: manifest unknown:')) {
       console.info('Existing docker image not found ...');
-      const prevEnv = getPrevEnv(env);
-
-      if (prevEnv !== env) {
-        await tryDockerPull(dockerImage, prevEnv);
-      }
     } else {
       throw err;
     }
@@ -1473,7 +1468,7 @@ async function tryDockerPull(dockerImage, env) {
 }
 
 async function dockerStage(params) {
-  const env = await getEnv();
+  const branch = await getSrcBranch();
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const path = cleanPath(params.path);
@@ -1495,7 +1490,7 @@ async function dockerStage(params) {
     // Do not run in "sh()" as it would expose the password
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
 
-    await tryDockerPull(dockerImage, env);
+    await tryDockerPull(dockerImage, branch);
   }
 
   await sh(`docker build -t ${dockerImage}:${commit} ${path}`);
@@ -1503,8 +1498,8 @@ async function dockerStage(params) {
   if (!dryRun) {
     await sh(`docker push ${dockerImage}:${commit}`);
 
-    await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${env}`);
-    await sh(`docker push ${dockerImage}:${env}`);
+    await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${branch}`);
+    await sh(`docker push ${dockerImage}:${branch}`);
   }
 }
 
@@ -8877,7 +8872,7 @@ const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
 
-async function getBranch() {
+async function getDestBranch() {
   /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
@@ -8886,8 +8881,17 @@ async function getBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
+async function getSrcBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.head && pull_request.head.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
 async function getEnv() {
-  const branch = await getBranch();
+  const branch = await getDestBranch();
 
   if (branch === 'qa' || branch === 'prod') {
     return branch;
@@ -8966,7 +8970,8 @@ async function trueUpGitHistory() {
   }
 }
 
-module.exports.getBranch = getBranch;
+module.exports.getSrcBranch = getSrcBranch;
+module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
 module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;
