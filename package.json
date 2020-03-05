@@ -16,8 +16,8 @@
     "test": "node jest.setup.js && jest"
   },
   "dependencies": {
-    "@actions/core": "1.2.2",
-    "@actions/github": "2.1.0",
+    "@actions/core": "1.2.3",
+    "@actions/github": "2.1.1",
     "@kubernetes/client-node": "0.11.1",
     "@lerna/project": "3.18.0",
     "@lerna/version": "3.20.2",

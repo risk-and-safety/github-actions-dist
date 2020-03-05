@@ -6934,9 +6934,6 @@ exports.RequestError = RequestError;
 
 "use strict";
 
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -6947,13 +6944,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Originally pulled from https://github.com/JasonEtco/actions-toolkit/blob/master/src/github.ts
 const graphql_1 = __webpack_require__(898);
-const rest_1 = __importDefault(__webpack_require__(0));
+const rest_1 = __webpack_require__(0);
 const Context = __importStar(__webpack_require__(262));
 const httpClient = __importStar(__webpack_require__(539));
 // We need this in order to extend Octokit
-rest_1.default.prototype = new rest_1.default();
+rest_1.Octokit.prototype = new rest_1.Octokit();
 exports.context = new Context.Context();
-class GitHub extends rest_1.default {
+class GitHub extends rest_1.Octokit {
     constructor(token, opts) {
         super(GitHub.getOctokitOptions(GitHub.disambiguate(token, opts)));
         this.graphql = GitHub.getGraphQL(GitHub.disambiguate(token, opts));
@@ -7140,6 +7137,13 @@ exports.setFailed = setFailed;
 //-----------------------------------------------------------------------
 // Logging Commands
 //-----------------------------------------------------------------------
+/**
+ * Gets whether Actions Step Debug is on or not
+ */
+function isDebug() {
+    return process.env['RUNNER_DEBUG'] === '1';
+}
+exports.isDebug = isDebug;
 /**
  * Writes debug message to user log
  * @param message debug message
