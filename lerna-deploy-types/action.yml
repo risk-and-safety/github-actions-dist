@@ -1,16 +1,13 @@
-name: lerna-version
-description: Use Lerna version to increment, tag and create a changelog for all or individual packages
+name: lerna-group-deploy-type
+description: Groups a list of packages by deploy type
 inputs:
   packages:
-    description: The comma or newline delimited list of packages to bump (* or all)
+    description: "Serialized JSON array of packages (eg [{ name: 'app-a'}, ...])"
     required: true
-  exclude:
-    description: The comma or newline delimited list of packages to exclude
-    required: false
-  log-level:
-    description: The logging level for Lerna version command
-    required: false
-    default: 'info'
+  ignore-prefix:
+    description: Prefix to ignore when comparing the package name
+    required: true
+    default: 'pkg:'
 outputs:
   GIT:
     description: Changed packages for pushing to a remote git repo (eg GitHub Actions)
@@ -29,5 +26,3 @@ outputs:
 runs:
   using: node12
   main: index.js
-  post: post/index.js
-  post-if: success()
