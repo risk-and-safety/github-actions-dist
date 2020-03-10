@@ -2,10 +2,10 @@ name: lerna-group-deploy-type
 description: Groups a list of packages by deploy type
 inputs:
   packages:
-    description: "Serialized JSON array of packages (eg [{ name: 'app-a'}, ...])"
+    description: "Serialized JSON array of packages (eg [{ name: 'deploy:app-a'}, ...])"
     required: true
-  ignore-prefix:
-    description: Package name prefix to ignore when comparing names
+  prefix:
+    description: Package name prefix for each package name to it will ignore non-deploy labels
     required: false
     default: 'deploy:'
   ignore-suffix:

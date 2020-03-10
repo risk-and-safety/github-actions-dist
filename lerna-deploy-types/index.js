@@ -8451,24 +8451,26 @@ if (process.env.READABLE_STREAM === 'disable' && Stream) {
 
 const Project = __webpack_require__(278);
 
-async function groupByDeployType({ packages = [], ignorePrefix = '', ignoreSuffix = '' }) {
+async function groupByDeployType({ packages = [], prefix = '', ignoreSuffix = '' }) {
   if (!packages.length) {
     throw new Error('List of packages is empty');
   }
 
-  const packageNames = packages.map((pkg) => {
-    let { name } = pkg;
+  const packageNames = packages
+    .filter((pkg) => !prefix || pkg.name.startsWith(prefix))
+    .map((pkg) => {
+      let { name } = pkg;
 
-    if (ignorePrefix && name.startsWith(ignorePrefix)) {
-      name = name.substring(ignorePrefix.length);
-    }
+      if (prefix) {
+        name = name.substring(prefix.length);
+      }
 
-    if (ignoreSuffix && name.endsWith(ignoreSuffix)) {
-      name = name.substring(0, name.length - ignoreSuffix.length);
-    }
+      if (ignoreSuffix && name.endsWith(ignoreSuffix)) {
+        name = name.substring(0, name.length - ignoreSuffix.length);
+      }
 
-    return name;
-  });
+      return name;
+    });
 
   const cwd = process.cwd();
   const project = new Project(cwd);
@@ -40944,7 +40946,7 @@ const { DEPLOY_TYPES } = __webpack_require__(824);
 
 const params = {
   packages: JSON.parse(core.getInput('packages')),
-  ignorePrefix: core.getInput('ignore-prefix'),
+  prefix: core.getInput('prefix'),
   ignoreSuffix: core.getInput('ignore-suffix'),
 };
 
