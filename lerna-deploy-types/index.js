@@ -40929,6 +40929,9 @@ const { groupByDeployType } = __webpack_require__(215);
 
 const { DEPLOY_TYPES } = __webpack_require__(824);
 
+console.log('packages', core.getInput('packages'));
+console.log('packages', JSON.parse(core.getInput('packages')));
+
 const params = {
   packages: JSON.parse(core.getInput('packages')),
   namePrefix: core.getInput('name-prefix'),
