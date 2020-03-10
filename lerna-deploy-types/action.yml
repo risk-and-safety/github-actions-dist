@@ -5,9 +5,13 @@ inputs:
     description: "Serialized JSON array of packages (eg [{ name: 'app-a'}, ...])"
     required: true
   ignore-prefix:
-    description: Prefix to ignore when comparing the package name
-    required: true
-    default: 'pkg:'
+    description: Package name prefix to ignore when comparing names
+    required: false
+    default: ''
+  ignore-suffix:
+    description: Package name suffix to ignore when comparing names
+    required: false
+    default: ''
 outputs:
   GIT:
     description: Changed packages for pushing to a remote git repo (eg GitHub Actions)

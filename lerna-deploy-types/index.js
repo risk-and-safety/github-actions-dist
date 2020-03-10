@@ -8451,12 +8451,12 @@ if (process.env.READABLE_STREAM === 'disable' && Stream) {
 
 const Project = __webpack_require__(278);
 
-async function groupByDeployType({ packages = [], namePrefix = '' }) {
+async function groupByDeployType({ packages = [], ignorePrefix = '', ignoreSuffix = '' }) {
   if (!packages.length) {
     throw new Error('List of packages is empty');
   }
 
-  const packageNames = packages.map((pkg) => pkg.name.substring(namePrefix.length));
+  const packageNames = packages.map((pkg) => pkg.name.replace(ignorePrefix, '').replace(ignoreSuffix, ''));
   const cwd = process.cwd();
   const project = new Project(cwd);
   const configs = await project.getPackages();
@@ -40929,12 +40929,10 @@ const { groupByDeployType } = __webpack_require__(215);
 
 const { DEPLOY_TYPES } = __webpack_require__(824);
 
-console.log('packages', core.getInput('packages'));
-console.log('packages', JSON.parse(core.getInput('packages')));
-
 const params = {
   packages: JSON.parse(core.getInput('packages')),
-  namePrefix: core.getInput('name-prefix'),
+  ignorePrefix: core.getInput('ignore-prefix'),
+  ignoreSuffix: core.getInput('ignore-suffix'),
 };
 
 groupByDeployType(params)
