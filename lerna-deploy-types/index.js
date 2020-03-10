@@ -8456,7 +8456,20 @@ async function groupByDeployType({ packages = [], ignorePrefix = '', ignoreSuffi
     throw new Error('List of packages is empty');
   }
 
-  const packageNames = packages.map((pkg) => pkg.name.replace(ignorePrefix, '').replace(ignoreSuffix, ''));
+  const packageNames = packages.map((pkg) => {
+    let { name } = pkg;
+
+    if (ignorePrefix && name.startsWith(ignorePrefix)) {
+      name = name.substring(ignorePrefix.length);
+    }
+
+    if (ignoreSuffix && name.endsWith(ignoreSuffix)) {
+      name = name.substring(0, name.length - ignoreSuffix.length);
+    }
+
+    return name;
+  });
+
   const cwd = process.cwd();
   const project = new Project(cwd);
   const configs = await project.getPackages();
