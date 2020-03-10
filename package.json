@@ -60,7 +60,7 @@
       "prettier"
     ],
     "rules": {
-      "no-console": "off",
+      "no-console": ["error", { "allow": ["info", "warn", "error"] }],
       "prettier/prettier": [
         "error"
       ]
