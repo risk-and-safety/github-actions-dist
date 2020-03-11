@@ -1819,6 +1819,7 @@ function paginatePlugin(octokit) {
 /***/ 167:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const { warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { validateAppName, validateRepo } = __webpack_require__(521);
@@ -1835,7 +1836,7 @@ async function tryFindCommit() {
       throw err;
     }
 
-    console.warn('No local git found, using GitHub context payload');
+    warning('No local git found, using GitHub context payload');
     return github.context.sha.substring(0, 9);
   }
 }
@@ -1868,7 +1869,7 @@ async function dockerReleaseOne(params) {
       await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
-      throw new Error(`No git tag found for app [${app}] and commit [${commit}]`);
+      warning(`No git tag found for app [${app}] and commit [${commit}]`);
     }
   }
 }
