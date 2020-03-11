@@ -1874,6 +1874,8 @@ async function dockerReleaseOne(params) {
 }
 
 async function dockerRelease(params) {
+  console.info(`Deploying docker images for: ${params.app}`);
+
   return Promise.all(params.app.map(async (app) => dockerReleaseOne({ ...params, app })));
 }
 
