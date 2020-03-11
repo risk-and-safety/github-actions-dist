@@ -1876,7 +1876,12 @@ async function dockerReleaseOne(params) {
 async function dockerRelease(params) {
   console.info(`Deploying docker images for: ${params.app}`);
 
-  return Promise.all(params.app.map(async (app) => dockerReleaseOne({ ...params, app })));
+  // Force releases to be sequential so the logs are readable.
+  // eslint-disable-next-line no-restricted-syntax
+  for (const app of params.app) {
+    // eslint-disable-next-line no-await-in-loop
+    await dockerReleaseOne({ ...params, app });
+  }
 }
 
 module.exports.dockerRelease = dockerRelease;
