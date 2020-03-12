@@ -8922,7 +8922,8 @@ async function groupByDeployType({ packages = [], prefix = '', ignoreSuffix = ''
     if (
       deployTypes.includes(KUBE_CRONJOB) ||
       deployTypes.includes(KUBE_DEPLOYMENT) ||
-      fs.existsSync(`${packagesPath}/${name}/Dockerfile`)
+      // For packages that don't have a package.json but do have a Dockerfile mark as DOCKER_BUILD
+      (!pkgJson && fs.existsSync(`${packagesPath}/${name}/Dockerfile`))
     ) {
       acc[DOCKER_BUILD] = DOCKER_BUILD in acc ? [...acc[DOCKER_BUILD], name] : [name];
     }
