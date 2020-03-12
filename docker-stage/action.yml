@@ -17,10 +17,6 @@ inputs:
     description: Docker build directory (default '.')
     required: false
     default: '.'
-  dry-run:
-    description: Don't pull or push images to Docker repository
-    required: false
-    default: 'false'
   registry:
     description: Docker registry
     required: false

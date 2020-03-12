@@ -15,7 +15,7 @@ inputs:
 outputs:
   GIT:
     description: Changed packages for pushing to a remote git repo (eg GitHub Actions)
-  KUBE_CRONJOB:
+  KUBE_JOB:
     description: Changed Kubernetes cronjobs (comma separated)
   KUBE_DEPLOYMENT:
     description: Changed Kubernetes deployments (comma separated)
