@@ -8885,7 +8885,7 @@ const Project = __webpack_require__(278);
 const fs = __webpack_require__(201);
 
 const {
-  DEPLOY_TYPES: { DOCKER_BUILD, KUBE_CRONJOB, KUBE_DEPLOYMENT },
+  DEPLOY_TYPES: { DOCKER_BUILD, KUBE_JOB, KUBE_DEPLOYMENT },
 } = __webpack_require__(824);
 
 async function groupByDeployType({ packages = [], prefix = '', ignoreSuffix = '' }) {
@@ -8920,7 +8920,7 @@ async function groupByDeployType({ packages = [], prefix = '', ignoreSuffix = ''
     const { deployTypes = [] } = (pkgJson && pkgJson.get('rss')) || {};
 
     if (
-      deployTypes.includes(KUBE_CRONJOB) ||
+      deployTypes.includes(KUBE_JOB) ||
       deployTypes.includes(KUBE_DEPLOYMENT) ||
       // For packages that don't have a package.json but do have a Dockerfile mark as DOCKER_BUILD
       (!pkgJson && fs.existsSync(`${packagesPath}/${name}/Dockerfile`))
@@ -40882,7 +40882,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 module.exports.DEPLOY_TYPES = {
   DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
-  KUBE_CRONJOB: 'KUBE_CRONJOB',
+  KUBE_JOB: 'KUBE_JOB',
   KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
   LAMBDA: 'LAMBDA',
   MAVEN: 'MAVEN',
