@@ -40928,6 +40928,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 /***/ (function(module) {
 
 module.exports.DEPLOY_TYPES = {
+  NONE: 'NONE', // Placeholder so the deploy job ignores this package
   DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
   KUBE_JOB: 'KUBE_JOB',
   KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
