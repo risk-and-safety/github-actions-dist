@@ -3,7 +3,7 @@
   "version": "1.5.10-dev.7",
   "description": "GitHub Actions",
   "author": "Risk and Safety Solutions",
-  "license": "UNLICENSED",
+  "license": "none",
   "private": true,
   "rss": {
     "deployTypes": [
@@ -13,7 +13,7 @@
   "scripts": {
     "lint": "eslint .",
     "compile": "bash ./compile.sh",
-    "test": "node jest.setup.js && jest"
+    "test": "node jest.setup.js && cross-env AWS_PROFILE=mgmt jest"
   },
   "dependencies": {
     "@actions/core": "1.2.3",
@@ -22,22 +22,22 @@
     "@lerna/project": "3.18.0",
     "@lerna/version": "3.20.2",
     "@rss/common-nodejs": "0.3.60",
-    "aws-sdk": "2.613.0",
-    "axios": "0.19.0",
+    "aws-sdk": "2.638.0",
+    "axios": "0.19.2",
     "conventional-changelog-angular": "5.0.6",
     "fs-extra": "8.1.0",
     "mime-types": "2.1.26",
-    "uuid": "3.4.0",
-    "yargs": "15.1.0"
+    "uuid": "7.0.2",
+    "yargs": "15.3.0"
   },
   "devDependencies": {
-    "@zeit/ncc": "0.21.0",
+    "@zeit/ncc": "0.21.1",
     "axios": "0.19.0",
-    "cross-env": "6.0.3",
+    "cross-env": "7.0.2",
     "eslint": "6.8.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-config-prettier": "6.9.0",
-    "eslint-plugin-import": "2.19.1",
+    "eslint-plugin-import": "2.20.1",
     "eslint-plugin-prettier": "3.1.2",
     "jest": "24.9.0",
     "prettier": "1.19.1"
@@ -60,7 +60,16 @@
       "prettier"
     ],
     "rules": {
-      "no-console": ["error", { "allow": ["info", "warn", "error"] }],
+      "no-console": [
+        "error",
+        {
+          "allow": [
+            "info",
+            "warn",
+            "error"
+          ]
+        }
+      ],
       "prettier/prettier": [
         "error"
       ]

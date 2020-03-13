@@ -1,0 +1,32 @@
+name: lerna-group-deploy-types
+description: Group Lerna packages by package.json deploy type
+inputs:
+  packages:
+    description: "Serialized JSON array of packages (eg [{ name: 'deploy:app-a'}, ...])"
+    required: true
+  prefix:
+    description: Package name prefix to ignore packages that should not be deployed
+    required: false
+    default: 'deploy:'
+  ignore-suffix:
+    description: Package name suffix to ignore when comparing names
+    required: false
+    default: '-server'
+outputs:
+  GIT:
+    description: Changed packages for pushing to a remote git repo (eg GitHub Actions)
+  KUBE_JOB:
+    description: Changed Kubernetes cronjobs (comma separated)
+  KUBE_DEPLOYMENT:
+    description: Changed Kubernetes deployments (comma separated)
+  LAMBDA:
+    description: Changed AWS Lambda functions (comma separated)
+  MAVEN:
+    description: Change Maven jars (comma separated)
+  NPM:
+    description: Changed npm packages (comma separated)
+  S3:
+    description: Changed S3 web asset bundles (comma separated)
+runs:
+  using: node12
+  main: index.js
