@@ -22785,6 +22785,7 @@ Gauge.prototype._doRedraw = function () {
 /* 411 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const { warning } = __webpack_require__(470);
 const Project = __webpack_require__(278);
 const fs = __webpack_require__(201);
 
@@ -22819,7 +22820,8 @@ function findDeployTypes(packagesPath, name, pkgJson) {
 
 async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' }) {
   if (!packages.length) {
-    throw new Error('List of packages is empty');
+    warning('List of packages is empty');
+    return {};
   }
 
   const packageNames = packages
