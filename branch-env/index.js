@@ -8817,10 +8817,10 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv(envBranches = ['cognito', 'prod', 'qa']) {
+async function getEnv(envList = ['cognito', 'qa', 'prod', 'hc']) {
   const destBranch = await getDestBranch();
 
-  if (envBranches.includes(destBranch)) {
+  if (envList.includes(destBranch)) {
     return destBranch;
   }
 
@@ -9501,8 +9501,8 @@ const { getEnv } = __webpack_require__(731);
 const { inputList } = __webpack_require__(521);
 
 async function calculateEnv() {
-  const envBranches = inputList(core.getInput('branches'));
-  return getEnv(envBranches);
+  const envList = inputList(core.getInput('env-list'));
+  return getEnv(envList);
 }
 
 calculateEnv()

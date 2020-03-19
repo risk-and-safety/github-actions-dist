@@ -1,10 +1,10 @@
 name: branch-env
-description: Return environment (dev, qa, prod) for the current git branch
+description: For the current branch, export the AWS environment as the var name. Defaults to "dev" for feature branches.
 inputs:
-  branches:
-    description: List of env specific branches. All other branches will default to "dev" env.
+  env-list:
+    description: List of branches that match the AWS environments. Falls back to "dev" if none match.
     required: false
-    default: prod,qa
+    default: qa,prod,hc
   var-name:
     description: Name of the env variable to export
     required: true
