@@ -1821,9 +1821,10 @@ function paginatePlugin(octokit) {
 
 const { warning } = __webpack_require__(470);
 
-const { validateAppName, validateRepo } = __webpack_require__(521);
-const { exec, sh } = __webpack_require__(686);
 const { findGitVersion, getShortCommit, getEnv, getSrcBranch } = __webpack_require__(731);
+const { sequentialDeploy } = __webpack_require__(585);
+const { exec, sh } = __webpack_require__(686);
+const { validateAppName, validateRepo } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
   const repo = validateRepo(params.repo);
@@ -1859,14 +1860,10 @@ async function dockerReleaseOne(params) {
 }
 
 async function dockerRelease(params) {
-  console.info(`Deploying docker images for: ${params.app}`);
-
-  // Force releases to be sequential so the logs are readable.
-  // eslint-disable-next-line no-restricted-syntax
-  for (const app of params.app) {
-    // eslint-disable-next-line no-await-in-loop
-    await dockerReleaseOne({ ...params, app });
-  }
+  // Force deployments to be sequential so the logs are readable.
+  return sequentialDeploy(params.app, async (app) => {
+    return dockerReleaseOne({ ...params, app });
+  });
 }
 
 module.exports.dockerRelease = dockerRelease;
@@ -8437,6 +8434,42 @@ function getPageLinks (link) {
 
 /***/ }),
 
+/***/ 585:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info } = __webpack_require__(470);
+
+module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
+  info(`Deploying: ${apps}`);
+
+  const failed = [];
+  const results = [];
+
+  // Force deployments to be sequential so the logs are readable.
+  // eslint-disable-next-line no-restricted-syntax
+  for (const app of apps) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      results.push(await deploy(app));
+    } catch (err) {
+      // Catch errors so that we don't prevent deployments
+      failed.push({ app, err });
+    }
+  }
+
+  if (failed.length) {
+    const failedApps = failed.map(({ app }) => app).join(', ');
+    const errors = failed.map(({ err }) => err.message).join('\n');
+
+    throw new Error(`Failed to deploy: ${failedApps}\n\n${errors}`);
+  }
+
+  return results;
+};
+
+
+/***/ }),
+
 /***/ 605:
 /***/ (function(module) {
 
@@ -8522,8 +8555,8 @@ const params = {
 };
 
 dockerRelease(params).catch((err) => {
-  console.error(err);
-  process.exit(1);
+  core.error(err);
+  core.setFailed(err.message);
 });
 
 
@@ -8745,6 +8778,7 @@ module.exports = function btoa(str) {
 /***/ 686:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const { info } = __webpack_require__(470);
 const childProcess = __webpack_require__(129);
 const util = __webpack_require__(669);
 
@@ -8758,7 +8792,7 @@ async function sh(cmd) {
     .replace(/((?<!<<EOL.*)[\r\n]+(?!EOL))/gs, ' \\\n') // Add trailing backslash except for <<EOL EOL
     .replace(/^(((?!\b(then|else|elif|do)\b).)*) \\$/gm, '$1; \\'); // Append a semicolon command except for bash keywords
 
-  console.info(cmdEscaped);
+  info(cmdEscaped);
 
   await new Promise((resolve, reject) => {
     try {
@@ -8767,7 +8801,6 @@ async function sh(cmd) {
 
       process.stderr.on('data', (data) => {
         const message = data.toString().trim();
-        console.error(message);
         error = new Error(message);
       });
 
@@ -8789,16 +8822,8 @@ async function sh(cmd) {
   });
 }
 
-async function exec(cmd, { echo = false } = {}) {
-  if (echo) {
-    console.info(cmd);
-  }
-
+async function exec(cmd) {
   const { stdout } = await execPromise(cmd);
-
-  if (echo) {
-    console.info(stdout);
-  }
 
   return stdout.trim();
 }
@@ -8863,7 +8888,7 @@ module.exports = (promise, onFinally) => {
 /***/ 731:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { warning } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
@@ -8959,7 +8984,7 @@ async function setGitUser(user, dir = '.') {
 
 // If GitHub Actions did a shallow fetch (the default), set user and pull history
 async function trueUpGitHistory() {
-  console.info('True up git history since GitHub Actions does a shallow fetch');
+  info('True up git history since GitHub Actions does a shallow fetch');
 
   await setGitUser(await getGitUser());
 

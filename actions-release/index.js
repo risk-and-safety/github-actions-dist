@@ -9033,6 +9033,7 @@ rimraf.sync = rimrafSync
 /***/ 484:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const { info } = __webpack_require__(470);
 const fs = __webpack_require__(226);
 const os = __webpack_require__(87);
 const path = __webpack_require__(622);
@@ -9103,7 +9104,7 @@ git tag -a -m "v${version}" v${version} || true
 ${dryRun ? '' : 'git push origin master --follow-tags'}`,
     );
   } else {
-    console.info('no changes found');
+    info('no changes found');
   }
 }
 
@@ -11496,6 +11497,7 @@ exports.fromPromise = function (fn) {
 /***/ 686:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const { info } = __webpack_require__(470);
 const childProcess = __webpack_require__(129);
 const util = __webpack_require__(669);
 
@@ -11509,7 +11511,7 @@ async function sh(cmd) {
     .replace(/((?<!<<EOL.*)[\r\n]+(?!EOL))/gs, ' \\\n') // Add trailing backslash except for <<EOL EOL
     .replace(/^(((?!\b(then|else|elif|do)\b).)*) \\$/gm, '$1; \\'); // Append a semicolon command except for bash keywords
 
-  console.info(cmdEscaped);
+  info(cmdEscaped);
 
   await new Promise((resolve, reject) => {
     try {
@@ -11518,7 +11520,6 @@ async function sh(cmd) {
 
       process.stderr.on('data', (data) => {
         const message = data.toString().trim();
-        console.error(message);
         error = new Error(message);
       });
 
@@ -11540,16 +11541,8 @@ async function sh(cmd) {
   });
 }
 
-async function exec(cmd, { echo = false } = {}) {
-  if (echo) {
-    console.info(cmd);
-  }
-
+async function exec(cmd) {
   const { stdout } = await execPromise(cmd);
-
-  if (echo) {
-    console.info(stdout);
-  }
 
   return stdout.trim();
 }
@@ -11688,7 +11681,7 @@ module.exports = {
 /***/ 731:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { warning } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
@@ -11784,7 +11777,7 @@ async function setGitUser(user, dir = '.') {
 
 // If GitHub Actions did a shallow fetch (the default), set user and pull history
 async function trueUpGitHistory() {
-  console.info('True up git history since GitHub Actions does a shallow fetch');
+  info('True up git history since GitHub Actions does a shallow fetch');
 
   await setGitUser(await getGitUser());
 
@@ -29153,8 +29146,8 @@ const params = {
 };
 
 actionsRelease(params).catch((err) => {
-  console.error(err);
-  process.exit(1);
+  core.error(err);
+  core.setFailed(err.message);
 });
 
 

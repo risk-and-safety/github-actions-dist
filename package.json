@@ -59,16 +59,6 @@
       "prettier"
     ],
     "rules": {
-      "no-console": [
-        "error",
-        {
-          "allow": [
-            "info",
-            "warn",
-            "error"
-          ]
-        }
-      ],
       "prettier/prettier": [
         "error"
       ]
