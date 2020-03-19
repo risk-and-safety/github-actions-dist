@@ -34,7 +34,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(400);
+/******/ 		return __webpack_require__(203);
 /******/ 	};
 /******/
 /******/ 	// run startup
@@ -57,70 +57,11 @@ module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 286:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { info } = __webpack_require__(852);
-const childProcess = __webpack_require__(129);
-const util = __webpack_require__(669);
-
-const execPromise = util.promisify(childProcess.exec);
-const { spawn } = childProcess;
-
-async function sh(cmd) {
-  const cmdEscaped = cmd
-    .replace(/^\s*#.+$/gm, '') // Remove comments
-    .replace(/[\r\n]+\s*[\r\n]+/g, '\n') // Remove empty lines
-    .replace(/((?<!<<EOL.*)[\r\n]+(?!EOL))/gs, ' \\\n') // Add trailing backslash except for <<EOL EOL
-    .replace(/^(((?!\b(then|else|elif|do)\b).)*) \\$/gm, '$1; \\'); // Append a semicolon command except for bash keywords
-
-  info(cmdEscaped);
-
-  await new Promise((resolve, reject) => {
-    try {
-      const process = spawn('sh', ['-c', cmdEscaped], { stdio: ['inherit', 'inherit', 'pipe'] });
-      let error = null;
-
-      process.stderr.on('data', (data) => {
-        const message = data.toString().trim();
-        error = new Error(message);
-      });
-
-      process.on('close', (code) => {
-        if (code !== 0) {
-          if (!error) {
-            error = new Error(`Error code ${code}`);
-          }
-          error.code = code;
-          reject(error);
-          return;
-        }
-
-        resolve();
-      });
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-async function exec(cmd) {
-  const { stdout } = await execPromise(cmd);
-
-  return stdout.trim();
-}
-
-module.exports.sh = sh;
-module.exports.exec = exec;
-
-
-/***/ }),
-
-/***/ 400:
+/***/ 203:
 /***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
 
-const core = __webpack_require__(852);
-const { sh } = __webpack_require__(286);
+const core = __webpack_require__(470);
+const { sh } = __webpack_require__(686);
 
 async function gitPush() {
   await sh(
@@ -130,14 +71,14 @@ async function gitPush() {
 }
 
 gitPush().catch((err) => {
-  core.error(err);
+  console.error(err);
   core.setFailed(err.message);
 });
 
 
 /***/ }),
 
-/***/ 558:
+/***/ 431:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
@@ -222,21 +163,7 @@ function escapeProperty(s) {
 
 /***/ }),
 
-/***/ 622:
-/***/ (function(module) {
-
-module.exports = require("path");
-
-/***/ }),
-
-/***/ 669:
-/***/ (function(module) {
-
-module.exports = require("util");
-
-/***/ }),
-
-/***/ 852:
+/***/ 470:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
@@ -258,7 +185,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const command_1 = __webpack_require__(558);
+const command_1 = __webpack_require__(431);
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 /**
@@ -449,6 +376,79 @@ function getState(name) {
 }
 exports.getState = getState;
 //# sourceMappingURL=core.js.map
+
+/***/ }),
+
+/***/ 622:
+/***/ (function(module) {
+
+module.exports = require("path");
+
+/***/ }),
+
+/***/ 669:
+/***/ (function(module) {
+
+module.exports = require("util");
+
+/***/ }),
+
+/***/ 686:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info } = __webpack_require__(470);
+const childProcess = __webpack_require__(129);
+const util = __webpack_require__(669);
+
+const execPromise = util.promisify(childProcess.exec);
+const { spawn } = childProcess;
+
+async function sh(cmd) {
+  const cmdEscaped = cmd
+    .replace(/^\s*#.+$/gm, '') // Remove comments
+    .replace(/[\r\n]+\s*[\r\n]+/g, '\n') // Remove empty lines
+    .replace(/((?<!<<EOL.*)[\r\n]+(?!EOL))/gs, ' \\\n') // Add trailing backslash except for <<EOL EOL
+    .replace(/^(((?!\b(then|else|elif|do)\b).)*) \\$/gm, '$1; \\'); // Append a semicolon command except for bash keywords
+
+  info(cmdEscaped);
+
+  await new Promise((resolve, reject) => {
+    try {
+      const process = spawn('sh', ['-c', cmdEscaped], { stdio: ['inherit', 'inherit', 'pipe'] });
+      let error = null;
+
+      process.stderr.on('data', (data) => {
+        const message = data.toString().trim();
+        error = new Error(message);
+      });
+
+      process.on('close', (code) => {
+        if (code !== 0) {
+          if (!error) {
+            error = new Error(`Error code ${code}`);
+          }
+          error.code = code;
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function exec(cmd) {
+  const { stdout } = await execPromise(cmd);
+
+  return stdout.trim();
+}
+
+module.exports.sh = sh;
+module.exports.exec = exec;
+
 
 /***/ })
 
