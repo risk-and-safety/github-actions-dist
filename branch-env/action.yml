@@ -1,10 +1,13 @@
 name: branch-env
 description: Return environment (dev, qa, prod) for the current git branch
-outputs:
-  branch:
-    description: Current branch or target branch for a pull request
-  env:
-    description: Environment for current branch
+inputs:
+  branches:
+    description: List of env specific branches. All other branches will default to "dev" env.
+    required: false
+    default: prod,qa
+  var-name:
+    description: Name of the env variable to export
+    required: true
 runs:
   using: 'node12'
   main: 'index.js'

@@ -7401,6 +7401,101 @@ function addHook (state, kind, name, hook) {
 
 /***/ }),
 
+/***/ 521:
+/***/ (function(module) {
+
+module.exports.inputList = function inputList(input) {
+  const list = typeof input === 'string' ? input.split(/[,\s\r\n]/g) : input;
+
+  return list.map((item) => item.trim()).filter(Boolean);
+};
+
+module.exports.validateRepo = function validateRepo(repo) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
+    throw new Error(`Invalid repo name [${repo}]`);
+  }
+
+  return repo;
+};
+
+module.exports.validateAppName = function validateAppName(name) {
+  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
+    throw new Error(`Invalid app name [${name}]`);
+  }
+
+  return name;
+};
+
+module.exports.validateNamespace = function validateNamespace(namespace) {
+  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+    throw new Error(`Invalid namespace name [${namespace}]`);
+  }
+
+  return namespace;
+};
+
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
+
+  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+  }
+
+  return zipPath;
+};
+
+module.exports.cleanPath = function cleanPath(uncleanPath) {
+  const path = uncleanPath || '.';
+
+  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
+    throw new Error(`Invalid path [${uncleanPath}]`);
+  }
+
+  return path;
+};
+
+module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
+  let buildDir = uncleanBuildDir;
+
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
+    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
+  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
+    throw new Error('Build directory should not be empty or the root of the project');
+  }
+
+  // Append trailing slash
+  if (!buildDir.endsWith('/')) {
+    buildDir = `${buildDir}/`;
+  }
+
+  return buildDir;
+};
+
+module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
+  let context = uncleanContext === '/' ? '' : uncleanContext;
+
+  if (context !== '') {
+    if (!/^\/?[\w-]{2,50}\/?$/g.test(context)) {
+      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
+    }
+
+    // Append trailing slash
+    if (!context.endsWith('/')) {
+      context = `${context}/`;
+    }
+
+    // Remove leading slash
+    if (context.startsWith('/')) {
+      context = context.substring(1);
+    }
+  }
+
+  return context;
+};
+
+
+/***/ }),
+
 /***/ 523:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -8722,11 +8817,11 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv() {
-  const branch = await getDestBranch();
+async function getEnv(envBranches = ['cognito', 'prod', 'qa']) {
+  const destBranch = await getDestBranch();
 
-  if (branch === 'cognito' || branch === 'qa' || branch === 'prod') {
-    return branch;
+  if (envBranches.includes(destBranch)) {
+    return destBranch;
   }
 
   return 'dev';
@@ -9402,12 +9497,18 @@ module.exports = require("url");
 
 const core = __webpack_require__(470);
 
-const { getDestBranch, getEnv } = __webpack_require__(731);
+const { getEnv } = __webpack_require__(731);
+const { inputList } = __webpack_require__(521);
 
-Promise.all([getDestBranch(), getEnv()])
-  .then(([branch, env]) => {
-    core.setOutput('branch', branch);
-    core.setOutput('env', env);
+async function calculateEnv() {
+  const envBranches = inputList(core.getInput('branches'));
+  return getEnv(envBranches);
+}
+
+calculateEnv()
+  .then((env) => {
+    const varName = core.getInput('var-name');
+    core.exportVariable(varName, env);
   })
   .catch((err) => {
     console.error(err);

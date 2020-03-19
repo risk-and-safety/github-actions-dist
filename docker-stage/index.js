@@ -8900,11 +8900,11 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv() {
-  const branch = await getDestBranch();
+async function getEnv(envBranches = ['cognito', 'prod', 'qa']) {
+  const destBranch = await getDestBranch();
 
-  if (branch === 'cognito' || branch === 'qa' || branch === 'prod') {
-    return branch;
+  if (envBranches.includes(destBranch)) {
+    return destBranch;
   }
 
   return 'dev';
