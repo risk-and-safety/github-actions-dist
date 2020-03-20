@@ -9503,7 +9503,7 @@ calculateEnv()
     core.exportVariable(varName, env);
   })
   .catch((err) => {
-    console.error(err);
+    core.error(err);
     core.setFailed(err.message);
   });
 

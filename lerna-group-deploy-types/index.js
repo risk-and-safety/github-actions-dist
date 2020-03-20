@@ -37801,7 +37801,7 @@ groupDeployTypes(params)
     });
   })
   .catch((err) => {
-    console.error(err);
+    core.error(err);
     core.setFailed(err.message);
   });
 
