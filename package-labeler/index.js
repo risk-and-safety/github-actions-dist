@@ -396,7 +396,7 @@ const core = __webpack_require__(470);
 const { packageLabeler } = __webpack_require__(655);
 
 const params = {
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
+  token: core.getInput('GITHUB_TOKEN'),
   workspace: core.getInput('workspace'),
   prefix: core.getInput('prefix'),
 };
