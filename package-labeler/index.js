@@ -402,7 +402,7 @@ const params = {
 };
 
 packageLabeler(params).catch((err) => {
-  core.error(err);
+  console.error(err);
   core.setFailed(err.message);
 });
 

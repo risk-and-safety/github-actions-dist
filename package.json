@@ -1,10 +1,9 @@
 {
   "name": "github-actions",
   "version": "1.5.10-dev.7",
-  "description": "Common GitHub Actions",
+  "description": "GitHub Actions",
   "author": "Risk and Safety Solutions",
-  "homepage": "https://riskandsafety.com",
-  "license": "UNLICENSED",
+  "license": "none",
   "private": true,
   "rss": {
     "deployTypes": [
@@ -61,6 +60,14 @@
       "prettier"
     ],
     "rules": {
+      "no-console": [
+        "error",
+        {
+          "allow": [
+            "error"
+          ]
+        }
+      ],
       "prettier/prettier": [
         "error"
       ]
