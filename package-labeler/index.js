@@ -401,8 +401,6 @@ const params = {
   prefix: core.getInput('prefix'),
 };
 
-core.info('token exists: ', params.token.length);
-
 packageLabeler(params).catch((err) => {
   console.error(err);
   core.setFailed(err.message);
