@@ -9083,13 +9083,26 @@ async function actionsRelease(params) {
   if (!fs.existsSync(TEMP_GIT_DIR)) {
     await fs.ensureDir(TEMP_GIT_DIR);
 
-    await sh(`cd "${TEMP_GIT_DIR}" && git init && git remote add origin "${originUrl}"`);
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+       git init
+       git remote add origin "${originUrl}"`,
+    );
     await setGitUser(user, TEMP_GIT_DIR);
   }
 
-  await sh(`cd "${TEMP_GIT_DIR}" && git fetch && git pull origin master`);
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+     git fetch
+     git pull origin master`,
+  );
 
   await fs.copy(buildDir, TEMP_GIT_DIR);
+
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+    git add -N .`,
+  );
 
   const changes = (await exec(`cd "${TEMP_GIT_DIR}" && git diff --exit-code >/dev/null || echo true`)) === 'true';
 
