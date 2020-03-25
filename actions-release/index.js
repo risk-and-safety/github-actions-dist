@@ -9461,7 +9461,7 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
   let context = uncleanContext === '/' ? '' : uncleanContext;
 
   if (context !== '') {
-    if (!/^\/?[\w-]{2,50}\/?$/g.test(context)) {
+    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
       throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
     }
 
