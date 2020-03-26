@@ -22846,7 +22846,7 @@ async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' 
   const pkgJsons = await project.getPackages();
 
   return packageNames.reduce((acc, name) => {
-    const pkgJson = pkgJsons.find((pkg) => pkg.name.split('/').pop() === name); // ignore npm @scope/
+    const pkgJson = pkgJsons.find((pkg) => pkg.name === name || pkg.location.split('/').pop() === name); // ignore npm @scope/
     const deployTypes = findDeployTypes(packagesPath, name, pkgJson);
 
     deployTypes.forEach((type) => {
