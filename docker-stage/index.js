@@ -1449,7 +1449,7 @@ const { info } = __webpack_require__(470);
 const fs = __webpack_require__(747);
 
 const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
-const { getShortCommit, getSrcBranch } = __webpack_require__(731);
+const { getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 async function tryDockerPull(dockerImage, tag) {
@@ -1468,7 +1468,6 @@ async function tryDockerPull(dockerImage, tag) {
 }
 
 async function dockerStage(params) {
-  const commit = await getShortCommit();
   const branch = await getSrcBranch();
   const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
@@ -1490,10 +1489,7 @@ async function dockerStage(params) {
 
   await tryDockerPull(dockerImage, branch);
 
-  await sh(`docker build -t ${dockerImage}:${commit} ${path}`);
-  await sh(`docker push ${dockerImage}:${commit}`);
-
-  await sh(`docker tag ${dockerImage}:${commit} ${dockerImage}:${branch}`);
+  await sh(`docker build -t ${dockerImage}:${branch} ${path}`);
   await sh(`docker push ${dockerImage}:${branch}`);
 }
 

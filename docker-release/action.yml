@@ -16,7 +16,9 @@ inputs:
   registry:
     description: Docker registry
     required: false
-    default: 'docker.pkg.github.com'
+    default: docker.pkg.github.com
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: node12
+  main: index.js
+  post: post/index.js
+  post-if: success()

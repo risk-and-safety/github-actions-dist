@@ -34,7 +34,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(625);
+/******/ 		return __webpack_require__(284);
 /******/ 	};
 /******/
 /******/ 	// run startup
@@ -1816,57 +1816,57 @@ function paginatePlugin(octokit) {
 
 /***/ }),
 
-/***/ 167:
+/***/ 158:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info } = __webpack_require__(470);
+const { getSrcBranch } = __webpack_require__(731);
+const { deleteVersion, packagesHeaders } = __webpack_require__(819);
+const { validateRepo } = __webpack_require__(521);
 
-const { findGitVersion, getShortCommit, getEnv, getSrcBranch } = __webpack_require__(731);
-const { sequentialDeploy } = __webpack_require__(585);
-const { exec, sh } = __webpack_require__(686);
-const { validateAppName, validateRepo } = __webpack_require__(521);
-
-async function dockerReleaseOne(params) {
-  const repo = validateRepo(params.repo);
-  const app = validateAppName(params.app);
-  const { username, password, registry = 'docker.pkg.github.com' } = params;
-  const commit = await getShortCommit();
+async function prune(params) {
+  const [owner, repo] = validateRepo(params.repo).split('/');
+  const { githubClient, app } = params;
   const branch = await getSrcBranch();
-  const env = await getEnv();
-  const dockerImage = `${registry}/${repo}/${app}`;
 
-  if (!username || !password) {
-    throw new Error('Missing Docker credentials');
+  if (/^(dev|qa|prod)-[a-f\d]+$/.test(branch)) {
+    throw new Error(`Branch looks like a Docker tag ${branch}`);
   }
 
-  // Do not run in "sh()" as it would expose the password
-  await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
-
-  await sh(`docker pull ${dockerImage}:${branch}`);
-
-  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${env}-${commit}`);
-  await sh(`docker push ${dockerImage}:${env}-${commit}`);
-
-  if (env === 'qa' || env === 'prod') {
-    const version = await findGitVersion(app, commit);
-
-    if (version) {
-      await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
-      await sh(`docker push ${dockerImage}:${version}`);
-    } else {
-      info(`No git tag found for app [${app}] and commit [${commit}]`);
+  const query = `query($owner: String!, $repo: String!, $app: [String!]!) {
+  repository(owner: $owner, name: $repo) {
+    name
+    packages(first: 1, names:$app) {
+      edges {
+        node {
+          name
+          packageType
+          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
+            nodes {
+              id
+              version
+            }
+          }
+        }
+      }
     }
   }
+}`;
+
+  const {
+    repository: {
+      packages: { edges: packageEdges },
+    },
+  } = await githubClient.graphql(query, { owner, repo, app, headers: packagesHeaders });
+
+  const versions = packageEdges
+    .filter((edge) => edge.node.packageType === 'DOCKER')
+    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
+    .filter((version) => version.version === branch);
+
+  await Promise.all(versions.map((version) => deleteVersion(githubClient, version)));
 }
 
-async function dockerRelease(params) {
-  // Force deployments to be sequential so the logs are readable.
-  return sequentialDeploy(params.app, async (app) => {
-    return dockerReleaseOne({ ...params, app });
-  });
-}
-
-module.exports.dockerRelease = dockerRelease;
+module.exports.prune = prune;
 
 
 /***/ }),
@@ -3836,6 +3836,27 @@ function coerce (version) {
     '.' + (match[2] || '0') +
     '.' + (match[3] || '0'))
 }
+
+
+/***/ }),
+
+/***/ 284:
+/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
+
+const core = __webpack_require__(470);
+const github = __webpack_require__(469);
+
+const { inputList } = __webpack_require__(521);
+const { prune } = __webpack_require__(158);
+
+prune({
+  repo: core.getInput('repo'),
+  githubClient: new github.GitHub(core.getInput('password')),
+  app: inputList(core.getInput('app')),
+}).catch((err) => {
+  console.error(err);
+  core.setFailed(err.message);
+});
 
 
 /***/ }),
@@ -8434,42 +8455,6 @@ function getPageLinks (link) {
 
 /***/ }),
 
-/***/ 585:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { info } = __webpack_require__(470);
-
-module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
-  info(`Deploying: ${apps}`);
-
-  const failed = [];
-  const results = [];
-
-  // Force deployments to be sequential so the logs are readable.
-  // eslint-disable-next-line no-restricted-syntax
-  for (const app of apps) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      results.push(await deploy(app));
-    } catch (err) {
-      // Catch errors so that we don't prevent deployments
-      failed.push({ app, err });
-    }
-  }
-
-  if (failed.length) {
-    const failedApps = failed.map(({ app }) => app).join(', ');
-    const errors = failed.map(({ err }) => err.message).join('\n');
-
-    throw new Error(`Failed to deploy: ${failedApps}\n\n${errors}`);
-  }
-
-  return results;
-};
-
-
-/***/ }),
-
 /***/ 605:
 /***/ (function(module) {
 
@@ -8535,30 +8520,6 @@ module.exports.env = opts => {
 /***/ (function(module) {
 
 module.exports = require("path");
-
-/***/ }),
-
-/***/ 625:
-/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
-
-const core = __webpack_require__(470);
-
-const { dockerRelease } = __webpack_require__(167);
-const { inputList } = __webpack_require__(521);
-
-const params = {
-  repo: core.getInput('repo'),
-  username: core.getInput('username'),
-  password: core.getInput('password'),
-  app: inputList(core.getInput('app')),
-  registry: core.getInput('registry'),
-};
-
-dockerRelease(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
-
 
 /***/ }),
 
@@ -9588,6 +9549,31 @@ function isexe (path, options, cb) {
 function sync (path, options) {
   return checkStat(fs.statSync(path), path, options)
 }
+
+
+/***/ }),
+
+/***/ 819:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info } = __webpack_require__(470);
+const util = __webpack_require__(669);
+
+async function deleteVersion(githubClient, { id, name, version }) {
+  const deleteHeaders = { Accept: 'application/vnd.github.package-deletes-preview+json' };
+  const query = `mutation($id: String!) {
+    deletePackageVersion(input: { packageVersionId: $id }) {
+      success
+    }
+  }`;
+
+  const { deletePackageVersion } = await githubClient.graphql(query, { id, headers: deleteHeaders });
+
+  info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
+}
+
+module.exports.deleteVersion = deleteVersion;
+module.exports.packagesHeaders = { Accept: 'application/vnd.github.packages-preview+json' };
 
 
 /***/ }),
