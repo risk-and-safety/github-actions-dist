@@ -22499,7 +22499,7 @@ async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' 
   const pkgJsons = await project.getPackages();
 
   return packageNames.reduce((acc, name) => {
-    const pkgJson = pkgJsons.find((pkg) => pkg.name.split('/').pop() === name); // ignore npm @scope/
+    const pkgJson = pkgJsons.find((pkg) => pkg.name === name || pkg.location.split('/').pop() === name); // ignore npm @scope/
     const deployTypes = findDeployTypes(packagesPath, name, pkgJson);
 
     deployTypes.forEach((type) => {
@@ -25962,7 +25962,19 @@ module.exports = setInterval
 
 /***/ }),
 /* 463 */,
-/* 464 */,
+/* 464 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+var arrayUniq = __webpack_require__(738);
+
+module.exports = function () {
+	return arrayUniq([].concat.apply([], arguments));
+};
+
+
+/***/ }),
 /* 465 */,
 /* 466 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -32924,19 +32936,7 @@ module.exports = {
 /* 604 */,
 /* 605 */,
 /* 606 */,
-/* 607 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-var arrayUniq = __webpack_require__(738);
-
-module.exports = function () {
-	return arrayUniq([].concat.apply([], arguments));
-};
-
-
-/***/ }),
+/* 607 */,
 /* 608 */
 /***/ (function(module) {
 
@@ -33471,7 +33471,7 @@ function readdirStream (dir, options, internalOptions) {
 "use strict";
 
 const fs = __webpack_require__(747);
-const arrayUnion = __webpack_require__(607);
+const arrayUnion = __webpack_require__(464);
 const glob = __webpack_require__(402);
 const fastGlob = __webpack_require__(191);
 const dirGlob = __webpack_require__(895);

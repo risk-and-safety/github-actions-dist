@@ -29,7 +29,6 @@
     "conventional-changelog-angular": "5.0.6",
     "fs-extra": "8.1.0",
     "mime-types": "2.1.26",
-    "multimatch": "4.0.0",
     "tweetsodium": "0.0.4",
     "uuid": "7.0.2",
     "yargs": "15.3.1"
