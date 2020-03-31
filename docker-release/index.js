@@ -25068,7 +25068,7 @@ async function findImages({ githubClient, owner, repo, apps, tag }) {
         node {
           name
           packageType
-          versions(first: 1000, orderBy: { field:CREATED_AT, direction:DESC }) {
+          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
             nodes {
               id
               version
