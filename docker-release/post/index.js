@@ -21840,7 +21840,7 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv(envList = ['cognito', 'qa', 'prod', 'hc']) {
+async function getEnv(envList = ['qa', 'prod']) {
   const destBranch = await getDestBranch();
 
   if (envList.includes(destBranch)) {

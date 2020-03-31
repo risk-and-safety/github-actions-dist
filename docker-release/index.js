@@ -2058,6 +2058,7 @@ async function dockerReleaseOne(params) {
   const commit = await getShortCommit();
   const branch = await getSrcBranch();
   const env = await getEnv();
+  const tagPrefix = params.tagPrefix || env;
   const dockerImage = `${registry}/${repo}/${app}`;
 
   if (!username || !password) {
@@ -2069,14 +2070,14 @@ async function dockerReleaseOne(params) {
 
   await sh(`docker pull ${dockerImage}:${branch}`);
 
-  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${env}-${commit}`);
-  await sh(`docker push ${dockerImage}:${env}-${commit}`);
+  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${tagPrefix}-${commit}`);
+  await sh(`docker push ${dockerImage}:${tagPrefix}-${commit}`);
 
   if (env === 'qa' || env === 'prod') {
     const version = await findGitVersion(app, commit);
 
     if (version) {
-      await sh(`docker tag ${dockerImage}:${env}-${commit} ${dockerImage}:${version}`);
+      await sh(`docker tag ${dockerImage}:${tagPrefix}-${commit} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
       info(`No git tag found for app [${app}] and commit [${commit}]`);
@@ -21565,6 +21566,7 @@ const params = {
   username: core.getInput('username'),
   password: core.getInput('password'),
   app: inputList(core.getInput('app')),
+  tagPrefix: core.getInput('tag-prefix'),
   registry: core.getInput('registry'),
 };
 
@@ -21879,7 +21881,7 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv(envList = ['cognito', 'qa', 'prod', 'hc']) {
+async function getEnv(envList = ['qa', 'prod']) {
   const destBranch = await getDestBranch();
 
   if (envList.includes(destBranch)) {
