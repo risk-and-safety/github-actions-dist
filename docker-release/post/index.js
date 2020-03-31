@@ -2045,48 +2045,21 @@ module.exports.MaxBufferError = MaxBufferError;
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { getSrcBranch } = __webpack_require__(731);
-const { deleteVersion, packagesHeaders } = __webpack_require__(819);
+const { deleteVersion } = __webpack_require__(819);
 const { validateRepo } = __webpack_require__(521);
+
+const { findImages } = __webpack_require__(938);
 
 async function prune(params) {
   const [owner, repo] = validateRepo(params.repo).split('/');
-  const { githubClient, app } = params;
-  const branch = await getSrcBranch();
+  const { githubClient, apps } = params;
+  const tag = await getSrcBranch();
 
-  if (/^(dev|qa|prod)-[a-f\d]+$/.test(branch)) {
-    throw new Error(`Branch looks like a Docker tag ${branch}`);
+  if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
+    throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
   }
 
-  const query = `query($owner: String!, $repo: String!, $app: [String!]!) {
-  repository(owner: $owner, name: $repo) {
-    name
-    packages(first: 1, names:$app) {
-      edges {
-        node {
-          name
-          packageType
-          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
-            nodes {
-              id
-              version
-            }
-          }
-        }
-      }
-    }
-  }
-}`;
-
-  const {
-    repository: {
-      packages: { edges: packageEdges },
-    },
-  } = await githubClient.graphql(query, { owner, repo, app, headers: packagesHeaders });
-
-  const versions = packageEdges
-    .filter((edge) => edge.node.packageType === 'DOCKER')
-    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
-    .filter((version) => version.version === branch);
+  const versions = await findImages({ githubClient, owner, repo, apps, tag });
 
   await Promise.all(versions.map((version) => deleteVersion(githubClient, version)));
 }
@@ -4026,7 +3999,7 @@ const { prune } = __webpack_require__(158);
 prune({
   repo: core.getInput('repo'),
   githubClient: new github.GitHub(core.getInput('password')),
-  app: inputList(core.getInput('app')),
+  apps: inputList(core.getInput('app')),
 }).catch((err) => {
   console.error(err);
   core.setFailed(err.message);
@@ -24998,6 +24971,49 @@ function hasNextPage (link) {
   deprecate(`octokit.hasNextPage() – You can use octokit.paginate or async iterators instead: https://github.com/octokit/rest.js#pagination.`)
   return getPageLinks(link).next
 }
+
+
+/***/ }),
+
+/***/ 938:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { packagesHeaders } = __webpack_require__(819);
+
+async function findImages({ githubClient, owner, repo, apps, tag }) {
+  const query = `query($owner: String!, $repo: String!, $apps: [String!]!) {
+  repository(owner: $owner, name: $repo) {
+    name
+    packages(first: 1, names: $apps) {
+      edges {
+        node {
+          name
+          packageType
+          versions(first: 1000, orderBy: { field:CREATED_AT, direction:DESC }) {
+            nodes {
+              id
+              version
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+  const {
+    repository: {
+      packages: { edges: packageEdges },
+    },
+  } = await githubClient.graphql(query, { owner, repo, apps, headers: packagesHeaders });
+
+  return packageEdges
+    .filter((edge) => edge.node.packageType === 'DOCKER')
+    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
+    .filter((version) => version.version === tag);
+}
+
+module.exports.findImages = findImages;
 
 
 /***/ }),

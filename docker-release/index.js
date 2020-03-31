@@ -2045,24 +2045,36 @@ module.exports.MaxBufferError = MaxBufferError;
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { info } = __webpack_require__(470);
+const github = __webpack_require__(469);
 
 const { findGitVersion, getShortCommit, getEnv, getSrcBranch } = __webpack_require__(731);
 const { sequentialDeploy } = __webpack_require__(585);
 const { exec, sh } = __webpack_require__(686);
 const { validateAppName, validateRepo } = __webpack_require__(521);
 
+const { findImages } = __webpack_require__(938);
+
 async function dockerReleaseOne(params) {
   const repo = validateRepo(params.repo);
+  const owner = repo.split('/')[0];
   const app = validateAppName(params.app);
   const { username, password, registry = 'docker.pkg.github.com' } = params;
   const commit = await getShortCommit();
   const branch = await getSrcBranch();
   const env = await getEnv();
   const tagPrefix = params.tagPrefix || env;
+  const tag = `${tagPrefix}-${commit}`;
   const dockerImage = `${registry}/${repo}/${app}`;
 
   if (!username || !password) {
     throw new Error('Missing Docker credentials');
+  }
+
+  const githubClient = new github.GitHub(password);
+  const [existingTag] = await findImages({ githubClient, owner, repo, apps: [app], tag });
+
+  if (existingTag) {
+    return;
   }
 
   // Do not run in "sh()" as it would expose the password
@@ -2070,14 +2082,14 @@ async function dockerReleaseOne(params) {
 
   await sh(`docker pull ${dockerImage}:${branch}`);
 
-  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${tagPrefix}-${commit}`);
-  await sh(`docker push ${dockerImage}:${tagPrefix}-${commit}`);
+  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${tag}`);
+  await sh(`docker push ${dockerImage}:${tag}`);
 
   if (env === 'qa' || env === 'prod') {
     const version = await findGitVersion(app, commit);
 
     if (version) {
-      await sh(`docker tag ${dockerImage}:${tagPrefix}-${commit} ${dockerImage}:${version}`);
+      await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
       await sh(`docker push ${dockerImage}:${version}`);
     } else {
       info(`No git tag found for app [${app}] and commit [${commit}]`);
@@ -22672,6 +22684,31 @@ function sync (path, options) {
 
 /***/ }),
 
+/***/ 819:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info } = __webpack_require__(470);
+const util = __webpack_require__(669);
+
+async function deleteVersion(githubClient, { id, name, version }) {
+  const deleteHeaders = { Accept: 'application/vnd.github.package-deletes-preview+json' };
+  const query = `mutation($id: String!) {
+    deletePackageVersion(input: { packageVersionId: $id }) {
+      success
+    }
+  }`;
+
+  const { deletePackageVersion } = await githubClient.graphql(query, { id, headers: deleteHeaders });
+
+  info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
+}
+
+module.exports.deleteVersion = deleteVersion;
+module.exports.packagesHeaders = { Accept: 'application/vnd.github.packages-preview+json' };
+
+
+/***/ }),
+
 /***/ 835:
 /***/ (function(module) {
 
@@ -25014,6 +25051,49 @@ function hasNextPage (link) {
   deprecate(`octokit.hasNextPage() – You can use octokit.paginate or async iterators instead: https://github.com/octokit/rest.js#pagination.`)
   return getPageLinks(link).next
 }
+
+
+/***/ }),
+
+/***/ 938:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { packagesHeaders } = __webpack_require__(819);
+
+async function findImages({ githubClient, owner, repo, apps, tag }) {
+  const query = `query($owner: String!, $repo: String!, $apps: [String!]!) {
+  repository(owner: $owner, name: $repo) {
+    name
+    packages(first: 1, names: $apps) {
+      edges {
+        node {
+          name
+          packageType
+          versions(first: 1000, orderBy: { field:CREATED_AT, direction:DESC }) {
+            nodes {
+              id
+              version
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+  const {
+    repository: {
+      packages: { edges: packageEdges },
+    },
+  } = await githubClient.graphql(query, { owner, repo, apps, headers: packagesHeaders });
+
+  return packageEdges
+    .filter((edge) => edge.node.packageType === 'DOCKER')
+    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
+    .filter((version) => version.version === tag);
+}
+
+module.exports.findImages = findImages;
 
 
 /***/ }),
