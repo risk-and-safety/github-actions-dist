@@ -2055,8 +2055,7 @@ const { validateAppName, validateRepo } = __webpack_require__(521);
 const { findImages } = __webpack_require__(938);
 
 async function dockerReleaseOne(params) {
-  const repo = validateRepo(params.repo);
-  const owner = repo.split('/')[0];
+  const [owner, repo] = validateRepo(params.repo).split('/');
   const app = validateAppName(params.app);
   const { username, password, registry = 'docker.pkg.github.com' } = params;
   const commit = await getShortCommit();
@@ -2064,7 +2063,7 @@ async function dockerReleaseOne(params) {
   const env = await getEnv();
   const tagPrefix = params.tagPrefix || env;
   const tag = `${tagPrefix}-${commit}`;
-  const dockerImage = `${registry}/${repo}/${app}`;
+  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
 
   if (!username || !password) {
     throw new Error('Missing Docker credentials');
