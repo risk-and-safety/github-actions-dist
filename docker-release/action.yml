@@ -1,5 +1,5 @@
 name: docker-release
-description: Add docker tag for Flux to pickup for deployment (eg prod-1234567, v1.0.1)
+description: Add docker tag for Flux to pickup the new image (eg prod-1234567, v1.0.1)
 inputs:
   repo:
     description: Repository name

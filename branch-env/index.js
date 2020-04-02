@@ -7306,7 +7306,7 @@ module.exports.validateAppName = function validateAppName(name) {
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
   if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
-    throw new Error(`Invalid namespace name [${namespace}]`);
+    throw new Error(`Invalid env or namespace name [${namespace}]`);
   }
 
   return namespace;
