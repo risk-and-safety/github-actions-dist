@@ -22465,7 +22465,7 @@ function findDeployTypes(packagesPath, name, pkgJson) {
   }
 
   if (!deployTypes.length) {
-    console.warn(`Missing deploy type for ${name}`);
+    throw new Error(`Missing deploy type for ${name}`);
   }
 
   return deployTypes;
