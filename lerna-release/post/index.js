@@ -21762,8 +21762,7 @@ async function trueUpGitHistory() {
     const destBranch = await getDestBranch();
     await sh(
       `git fetch --prune --unshallow
-      git fetch origin "${srcBranch}"
-      git fetch origin "${destBranch}"`,
+      git fetch origin ${srcBranch}:${srcBranch} ${destBranch}:${destBranch}`,
     );
   } else {
     await sh('git fetch --tags');
