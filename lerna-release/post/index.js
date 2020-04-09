@@ -21758,10 +21758,12 @@ async function trueUpGitHistory() {
 
   const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
   if (isShallowFetch) {
-    const branch = await getSrcBranch();
+    const srcBranch = await getSrcBranch();
+    const destBranch = await getDestBranch();
     await sh(
       `git fetch --prune --unshallow
-      git checkout "${branch}"`,
+      git fetch origin "${srcBranch}"
+      git fetch origin "${destBranch}"`,
     );
   } else {
     await sh('git fetch --tags');
