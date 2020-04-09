@@ -1,9 +1,0 @@
-{
-  "name": "root",
-  "version": "v1.0.0",
-  "repository": "https://github.com/risk-and-safety/platform",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ]
-}
