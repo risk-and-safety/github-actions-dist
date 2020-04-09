@@ -1,0 +1,29 @@
+name: Lerna Release
+description: Increments package versions, generates release notes and creates a GitHub Release
+inputs:
+  packages:
+    description: "Serialized JSON array of packages (eg [{ name: 'deploy:app-a'}, ...])"
+    required: true
+  GITHUB_TOKEN:
+    description: GitHub security token for editing a release or comment
+    required: true
+  SLACK_BOT_TOKEN:
+    description: Slack security token for sending release notes to slack
+    required: false
+  channel:
+    description: Slack Channel for release notes
+    required: false
+    default: deployments
+  draft:
+    description: Indicates if the GitHub Release is still in draft (ie the Pull Request is still open)
+    required: false
+    default: "true"
+  prefix:
+    description: Label prefix for targeting labels that relate to a package deployment
+    required: false
+    default: "deploy:"
+runs:
+  using: node12
+  main: index.js
+  post: post/index.js
+  post-if: success()
