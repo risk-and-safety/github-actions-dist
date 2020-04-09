@@ -38474,7 +38474,7 @@ const labelChangedFn = core.getInput('diff-by') === 'tag' ? labelChangedSinceTag
 
 labelChangedFn(params)
   .then((labels) => {
-    core.setOutput('labels', labels);
+    core.setOutput('labels', labels.join(','));
   })
   .catch((err) => {
     console.error(err);

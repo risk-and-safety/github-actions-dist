@@ -7,7 +7,7 @@ inputs:
   diff-by:
     description: Calculate changes by either comparing the branches or HEAD with the most recent tag. Options are [branch,tag]
     required: false
-    default: "branch"
+    default: branch
   prefix:
     description: The prefix to use for labels
     required: false

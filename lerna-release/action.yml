@@ -13,7 +13,7 @@ inputs:
   channel:
     description: Slack Channel for release notes
     required: false
-    default: deployments
+    default: "#deployments"
   draft:
     description: Indicates if the GitHub Release is still in draft (ie the Pull Request is still open)
     required: false
