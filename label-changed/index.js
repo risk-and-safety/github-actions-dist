@@ -38472,10 +38472,14 @@ const params = {
 
 const labelChangedFn = core.getInput('diff-by') === 'tag' ? labelChangedSinceTag : labelChanged;
 
-labelChangedFn(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
+labelChangedFn(params)
+  .then((labels) => {
+    core.setOutput('labels', labels);
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
 
 
 /***/ }),
@@ -59795,6 +59799,7 @@ async function labelChanged({ gitHubClient, prefix = LABEL_PREFIX }) {
   const labels = packages.map((pkg) => `${prefix}${pkg}`);
 
   await addLabels(gitHubClient, labels);
+  return labels;
 }
 
 module.exports.addLabels = addLabels;
@@ -71604,6 +71609,7 @@ async function labelChangedSinceTag({ gitHubClient, prefix = LABEL_PREFIX }) {
   const labels = [...packages, ...nonJsPackages].map((pkg) => `${prefix}${pkg}`);
 
   await addLabels(gitHubClient, labels);
+  return labels;
 }
 
 module.exports.labelChangedSinceTag = labelChangedSinceTag;
