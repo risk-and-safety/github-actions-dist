@@ -18,6 +18,14 @@ inputs:
     description: Indicates if the GitHub Release is still in draft (ie the Pull Request is still open)
     required: false
     default: "true"
+  pre-release:
+    description: Indicates if the GitHub Release should be a prereleaes (ie non-production)
+    required: false
+    default: "false"
+  graduate:
+    description: Indicates if the GitHub Release should be a release (ie production)
+    required: false
+    default: "false"
   prefix:
     description: Label prefix for targeting labels that relate to a package deployment
     required: false
