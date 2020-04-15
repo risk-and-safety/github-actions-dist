@@ -14,16 +14,16 @@ inputs:
     description: Slack Channel for release notes
     required: false
     default: "#deployments"
+  jira-issue-url:
+    description: URL template for the jira issues
+    required: false
+    default: "https://riskandsafetysolutions.atlassian.net/browse/{ISSUE_KEY}"
   draft:
     description: Indicates if the GitHub Release is still in draft (ie the Pull Request is still open)
     required: false
     default: "true"
   pre-release:
-    description: Indicates if the GitHub Release should be a prereleaes (ie non-production)
-    required: false
-    default: "false"
-  graduate:
-    description: Indicates if the GitHub Release should be a release (ie production)
+    description: Indicates if the GitHub Release is a pre-release (ie non-prod)
     required: false
     default: "false"
   prefix:
