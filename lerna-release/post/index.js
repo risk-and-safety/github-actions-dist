@@ -305,10 +305,18 @@ module.exports._enoent = enoent;
 
 const core = __webpack_require__(470);
 
-const { gitMergeBack } = __webpack_require__(134);
+const { getDestBranch, getSrcBranch, gitMerge } = __webpack_require__(731);
 
-if (core.getInput('draft') !== 'false') {
-  gitMergeBack({}).catch((err) => {
+async function gitMergeBack() {
+  // Reverse the branches so changelog commits are pushed back to the source branch
+  const srcBranch = await getDestBranch();
+  const destBranch = await getSrcBranch();
+
+  await gitMerge({ srcBranch, destBranch });
+}
+
+if (core.getInput('draft') === 'false') {
+  gitMergeBack().catch((err) => {
     console.error(err);
     process.exit(1);
   });
@@ -3137,43 +3145,6 @@ module.exports = uniq;
 /***/ (function(module) {
 
 module.exports = require("child_process");
-
-/***/ }),
-
-/***/ 134:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const github = __webpack_require__(469);
-
-const { getDestBranch, getGitUser, getPrevBranch, setGitUser } = __webpack_require__(731);
-const { sh } = __webpack_require__(686);
-
-async function gitMergeBack({ dryRun = false }) {
-  if (github.context.actor) {
-    await setGitUser(await getGitUser());
-  }
-
-  if (!dryRun) {
-    await sh(`git pull
-      git push --follow-tags`);
-  }
-
-  const currentBranch = await getDestBranch();
-  const prevBranch = await getPrevBranch(currentBranch);
-
-  await sh(
-    `git checkout ${prevBranch}
-    git merge ${currentBranch}`,
-  );
-
-  if (!dryRun) {
-    await sh(`git pull
-    git push --follow-tags`);
-  }
-}
-
-module.exports.gitMergeBack = gitMergeBack;
-
 
 /***/ }),
 
@@ -21943,6 +21914,21 @@ async function trueUpGitHistory() {
   }
 }
 
+async function gitMerge(params = {}) {
+  if (github.context.actor) {
+    await setGitUser(await getGitUser());
+  }
+
+  const srcBranch = params.srcBranch || (await getSrcBranch());
+  const destBranch = params.destBranch || (await getDestBranch());
+
+  await sh(
+    `git checkout ${destBranch}
+    git merge ${srcBranch}
+    git push --follow-tags`,
+  );
+}
+
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
@@ -21953,6 +21939,7 @@ module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
 module.exports.setGitUser = setGitUser;
 module.exports.trueUpGitHistory = trueUpGitHistory;
+module.exports.gitMerge = gitMerge;
 
 
 /***/ }),

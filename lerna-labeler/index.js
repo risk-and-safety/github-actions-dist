@@ -1835,7 +1835,13 @@ module.exports = str => {
 
 
 /***/ }),
-/* 41 */,
+/* 41 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+module.exports = __webpack_require__(413);
+
+
+/***/ }),
 /* 42 */
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -3763,13 +3769,21 @@ const windowsRelease = release => {
 
 	const ver = (version || [])[0];
 
-	// Server 2008, 2012 and 2016 versions are ambiguous with desktop versions and must be detected at runtime.
+	// Server 2008, 2012, 2016, and 2019 versions are ambiguous with desktop versions and must be detected at runtime.
 	// If `release` is omitted or we're on a Windows system, and the version number is an ambiguous version
 	// then use `wmic` to get the OS caption: https://msdn.microsoft.com/en-us/library/aa394531(v=vs.85).aspx
-	// If the resulting caption contains the year 2008, 2012 or 2016, it is a server version, so return a server OS name.
+	// If `wmic` is obsoloete (later versions of Windows 10), use PowerShell instead.
+	// If the resulting caption contains the year 2008, 2012, 2016 or 2019, it is a server version, so return a server OS name.
 	if ((!release || release === os.release()) && ['6.1', '6.2', '6.3', '10.0'].includes(ver)) {
-		const stdout = execa.sync('wmic', ['os', 'get', 'Caption']).stdout || '';
-		const year = (stdout.match(/2008|2012|2016/) || [])[0];
+		let stdout;
+		try {
+			stdout = execa.sync('powershell', ['(Get-CimInstance -ClassName Win32_OperatingSystem).caption']).stdout || '';
+		} catch (_) {
+			stdout = execa.sync('wmic', ['os', 'get', 'Caption']).stdout || '';
+		}
+
+		const year = (stdout.match(/2008|2012|2016|2019/) || [])[0];
+
 		if (year) {
 			return `Server ${year}`;
 		}
@@ -3798,7 +3812,7 @@ module.exports = windowsRelease;
 
 
 
-var isPlainObject = __webpack_require__(653);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -5315,7 +5329,7 @@ function coerce (version) {
 
 var split = __webpack_require__(138);
 var extend = __webpack_require__(157);
-var isPlainObject = __webpack_require__(562);
+var isPlainObject = __webpack_require__(960);
 var isObject = __webpack_require__(441);
 
 module.exports = function(obj, prop, val) {
@@ -7987,7 +8001,7 @@ module.exports = Mark;
 
 const fs = __webpack_require__(598)
 const path = __webpack_require__(622)
-const copySync = __webpack_require__(820).copySync
+const copySync = __webpack_require__(640).copySync
 const removeSync = __webpack_require__(652).removeSync
 const mkdirpSync = __webpack_require__(884).mkdirpSync
 const stat = __webpack_require__(425)
@@ -8082,14 +8096,16 @@ async function changedNonJsPackages(project) {
   return nonJsPackages.filter(Boolean);
 }
 
-async function labelerSinceTag({ gitHubClient, prefix = LABEL_PREFIX }) {
+async function labelerSinceTag({ gitHubClient, additionalLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
 
   const packages = await changedPackages(project);
   const nonJsPackages = await changedNonJsPackages(project);
-  const labels = [...packages, ...nonJsPackages].map((pkg) => `${prefix}${pkg}`);
+  const labels = [...packages, ...nonJsPackages].map((pkg) => `${prefix}${pkg}`).concat(additionalLabels);
 
-  await addLabels(gitHubClient, labels);
+  if (!dryRun) {
+    await addLabels(gitHubClient, labels);
+  }
   return labels;
 }
 
@@ -12899,50 +12915,7 @@ module.exports = Braces;
 
 
 /***/ }),
-/* 148 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isObject = __webpack_require__(782);
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-};
-
-
-/***/ }),
+/* 148 */,
 /* 149 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -14536,7 +14509,7 @@ function writeFileSync (filename, data, options) {
 "use strict";
 
 const escapeStringRegexp = __webpack_require__(45);
-const ansiStyles = __webpack_require__(604);
+const ansiStyles = __webpack_require__(820);
 const stdoutColor = __webpack_require__(722).stdout;
 
 const template = __webpack_require__(841);
@@ -17342,7 +17315,7 @@ module.exports = Object.assign(
   // Export promiseified graceful-fs:
   __webpack_require__(258),
   // Export extra methods:
-  __webpack_require__(820),
+  __webpack_require__(640),
   __webpack_require__(160),
   __webpack_require__(615),
   __webpack_require__(472),
@@ -17537,7 +17510,85 @@ module.exports = isAccessorDescriptor;
 module.exports = require("https");
 
 /***/ }),
-/* 212 */,
+/* 212 */
+/***/ (function(module) {
+
+"use strict";
+
+
+const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
+	options = Object.assign({
+		concurrency: Infinity
+	}, options);
+
+	if (typeof mapper !== 'function') {
+		throw new TypeError('Mapper function is required');
+	}
+
+	const {concurrency} = options;
+
+	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
+		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
+	}
+
+	const ret = [];
+	const iterator = iterable[Symbol.iterator]();
+	let isRejected = false;
+	let isIterableDone = false;
+	let resolvingCount = 0;
+	let currentIndex = 0;
+
+	const next = () => {
+		if (isRejected) {
+			return;
+		}
+
+		const nextItem = iterator.next();
+		const i = currentIndex;
+		currentIndex++;
+
+		if (nextItem.done) {
+			isIterableDone = true;
+
+			if (resolvingCount === 0) {
+				resolve(ret);
+			}
+
+			return;
+		}
+
+		resolvingCount++;
+
+		Promise.resolve(nextItem.value)
+			.then(element => mapper(element, i))
+			.then(
+				value => {
+					ret[i] = value;
+					resolvingCount--;
+					next();
+				},
+				error => {
+					isRejected = true;
+					reject(error);
+				}
+			);
+	};
+
+	for (let i = 0; i < concurrency; i++) {
+		next();
+
+		if (isIterableDone) {
+			break;
+		}
+	}
+});
+
+module.exports = pMap;
+// TODO: Remove this for the next major release
+module.exports.default = pMap;
+
+
+/***/ }),
 /* 213 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -18095,7 +18146,7 @@ var EElistenerCount = function (emitter, type) {
 /*</replacement>*/
 
 /*<replacement>*/
-var Stream = __webpack_require__(626);
+var Stream = __webpack_require__(41);
 /*</replacement>*/
 
 /*<replacement>*/
@@ -19750,7 +19801,7 @@ var internalUtil = {
 /*</replacement>*/
 
 /*<replacement>*/
-var Stream = __webpack_require__(626);
+var Stream = __webpack_require__(41);
 /*</replacement>*/
 
 /*<replacement>*/
@@ -21641,7 +21692,68 @@ module.exports = () => {
 
 
 /***/ }),
-/* 257 */,
+/* 257 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var deprecation = __webpack_require__(692);
+var once = _interopDefault(__webpack_require__(969));
+
+const logOnce = once(deprecation => console.warn(deprecation));
+/**
+ * Error with extra properties to help with debugging
+ */
+
+class RequestError extends Error {
+  constructor(message, statusCode, options) {
+    super(message); // Maintains proper stack trace (only available on V8)
+
+    /* istanbul ignore next */
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+
+    this.name = "HttpError";
+    this.status = statusCode;
+    Object.defineProperty(this, "code", {
+      get() {
+        logOnce(new deprecation.Deprecation("[@octokit/request-error] `error.code` is deprecated, use `error.status`."));
+        return statusCode;
+      }
+
+    });
+    this.headers = options.headers || {}; // redact request credentials without mutating original request options
+
+    const requestCopy = Object.assign({}, options.request);
+
+    if (options.request.headers.authorization) {
+      requestCopy.headers = Object.assign({}, options.request.headers, {
+        authorization: options.request.headers.authorization.replace(/ .*$/, " [REDACTED]")
+      });
+    }
+
+    requestCopy.url = requestCopy.url // client_id & client_secret can be passed as URL query parameters to increase rate limit
+    // see https://developer.github.com/v3/#increasing-the-unauthenticated-rate-limit-for-oauth-applications
+    .replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]") // OAuth tokens can be passed as URL query parameters, although it is not recommended
+    // see https://developer.github.com/v3/#oauth2-token-sent-in-a-header
+    .replace(/\baccess_token=\w+/g, "access_token=[REDACTED]");
+    this.request = requestCopy;
+  }
+
+}
+
+exports.RequestError = RequestError;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
 /* 258 */
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -21912,6 +22024,7 @@ exports.decode = function base64VLQ_decode(aStr, aIndex, aOutParam) {
 // ignored, since we can never get coverage for them.
 var assert = __webpack_require__(357)
 var signals = __webpack_require__(654)
+var isWin = /^win/i.test(process.platform)
 
 var EE = __webpack_require__(614)
 /* istanbul ignore if */
@@ -22001,6 +22114,11 @@ signals.forEach(function (sig) {
       /* istanbul ignore next */
       emit('afterexit', null, sig)
       /* istanbul ignore next */
+      if (isWin && sig === 'SIGHUP') {
+        // "SIGHUP" throws an `ENOSYS` error on Windows,
+        // so use a supported signal instead
+        sig = 'SIGINT'
+      }
       process.kill(process.pid, sig)
     }
   }
@@ -22697,7 +22815,7 @@ const globby = __webpack_require__(625);
 const globParent = __webpack_require__(920);
 const loadJsonFile = __webpack_require__(869);
 const log = __webpack_require__(533);
-const pMap = __webpack_require__(521);
+const pMap = __webpack_require__(212);
 const path = __webpack_require__(622);
 const writeJsonFile = __webpack_require__(294);
 
@@ -23292,7 +23410,7 @@ function isEnum(obj, key) {
 
 
 
-var isPlainObject = __webpack_require__(401);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -23370,29 +23488,7 @@ module.exports = mkdirs
 
 
 /***/ }),
-/* 290 */
-/***/ (function(module) {
-
-"use strict";
-/*!
- * for-in <https://github.com/jonschlinkert/for-in>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-module.exports = function forIn(obj, fn, thisArg) {
-  for (var key in obj) {
-    if (fn.call(thisArg, obj[key], key, obj) === false) {
-      break;
-    }
-  }
-};
-
-
-/***/ }),
+/* 290 */,
 /* 291 */,
 /* 292 */,
 /* 293 */
@@ -24258,43 +24354,30 @@ module.exports = extend;
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 "use strict";
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
 
+var os = __webpack_require__(87);
 
+function homedir() {
+	var env = process.env;
+	var home = env.HOME;
+	var user = env.LOGNAME || env.USER || env.LNAME || env.USERNAME;
 
-var isObject = __webpack_require__(782);
+	if (process.platform === 'win32') {
+		return env.USERPROFILE || env.HOMEDRIVE + env.HOMEPATH || home || null;
+	}
 
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
+	if (process.platform === 'darwin') {
+		return home || (user ? '/Users/' + user : null);
+	}
+
+	if (process.platform === 'linux') {
+		return home || (process.getuid() === 0 ? '/root' : (user ? '/home/' + user : null));
+	}
+
+	return home || null;
 }
 
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-};
+module.exports = typeof os.homedir === 'function' ? os.homedir : homedir;
 
 
 /***/ }),
@@ -28492,6 +28575,8 @@ const fs = __webpack_require__(201);
 const path = __webpack_require__(622);
 
 const { LABEL_PREFIX } = __webpack_require__(824);
+const { getDestBranch, getSrcBranch } = __webpack_require__(731);
+const { exec } = __webpack_require__(603);
 
 async function addLabels(gitHubClient, labels) {
   const pullRequest = github.context.payload.pull_request;
@@ -28521,14 +28606,10 @@ async function addLabels(gitHubClient, labels) {
   }
 }
 
-async function findChangedFiles(gitHubClient, prNumber) {
-  const options = gitHubClient.pulls.listFiles.endpoint.merge({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    pull_number: prNumber,
-  });
+async function findChangedFiles(srcBranch, destBranch) {
+  const changes = await exec(`git diff --name-only ${destBranch} ${srcBranch}`);
 
-  return gitHubClient.paginate(options, ({ data }) => data.map((file) => file.filename));
+  return changes.split('\n').filter(Boolean);
 }
 
 async function findPackageName(pkgDir) {
@@ -28542,7 +28623,7 @@ async function findPackageName(pkgDir) {
   return pkgDir.split('/').pop();
 }
 
-async function labeler({ gitHubClient, prefix = LABEL_PREFIX }) {
+async function labeler({ gitHubClient, additionalLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -28553,14 +28634,16 @@ async function labeler({ gitHubClient, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
   const workspacePath = project.packageParentDirs[0];
   const workspaceDir = `${workspacePath.split('/').pop()}/`;
+  const srcBranch = await getSrcBranch();
+  const destBranch = await getDestBranch();
 
   let changedFiles;
 
   try {
-    changedFiles = await findChangedFiles(gitHubClient, prNumber);
+    changedFiles = await findChangedFiles(srcBranch, destBranch);
   } catch (err) {
     // Retry once
-    changedFiles = await findChangedFiles(gitHubClient, prNumber);
+    changedFiles = await findChangedFiles(srcBranch, destBranch);
   }
 
   info(`Changed files for pr #${prNumber}`);
@@ -28572,9 +28655,11 @@ async function labeler({ gitHubClient, prefix = LABEL_PREFIX }) {
 
   const uniqChangePkgDirs = [...new Set(changedPkgDirs)];
   const packages = await Promise.all(uniqChangePkgDirs.map(findPackageName));
-  const labels = packages.map((pkg) => `${prefix}${pkg}`);
+  const labels = packages.map((pkg) => `${prefix}${pkg}`).concat(additionalLabels);
 
-  await addLabels(gitHubClient, labels);
+  if (!dryRun) {
+    await addLabels(gitHubClient, labels);
+  }
   return labels;
 }
 
@@ -28874,7 +28959,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var isPlainObject = _interopDefault(__webpack_require__(696));
+var isPlainObject = _interopDefault(__webpack_require__(626));
 var universalUserAgent = __webpack_require__(796);
 
 function lowercaseKeys(object) {
@@ -29225,7 +29310,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "5.5.3";
+const VERSION = "6.0.0";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
@@ -29436,41 +29521,42 @@ module.exports = function (fromModel) {
 
 "use strict";
 /*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ * define-property <https://github.com/jonschlinkert/define-property>
  *
- * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Copyright (c) 2015-2018, Jon Schlinkert.
  * Released under the MIT License.
  */
 
 
 
-var isObject = __webpack_require__(782);
+var isobject = __webpack_require__(782);
+var isDescriptor = __webpack_require__(715);
+var define = (typeof Reflect !== 'undefined' && Reflect.defineProperty)
+  ? Reflect.defineProperty
+  : Object.defineProperty;
 
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
+module.exports = function defineProperty(obj, key, val) {
+  if (!isobject(obj) && typeof obj !== 'function' && !Array.isArray(obj)) {
+    throw new TypeError('expected an object, function, or array');
   }
 
-  // Most likely a plain Object
-  return true;
+  if (typeof key !== 'string') {
+    throw new TypeError('expected "key" to be a string');
+  }
+
+  if (isDescriptor(val)) {
+    define(obj, key, val);
+    return obj;
+  }
+
+  define(obj, key, {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: val
+  });
+
+  return obj;
 };
 
 
@@ -30132,50 +30218,7 @@ function through (write, end, opts) {
 
 
 /***/ }),
-/* 401 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isObject = __webpack_require__(782);
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-};
-
-
-/***/ }),
+/* 401 */,
 /* 402 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -32641,7 +32684,7 @@ module.exports = function isExtendable(val) {
 const log = __webpack_require__(533);
 const describeRef = __webpack_require__(718);
 
-const hasTags = __webpack_require__(529);
+const hasTags = __webpack_require__(798);
 const collectPackages = __webpack_require__(207);
 const getPackagesForOption = __webpack_require__(665);
 const makeDiffPredicate = __webpack_require__(546);
@@ -32898,7 +32941,7 @@ module.exports = function isDataDescriptor(obj, prop) {
 
 
 const globby = __webpack_require__(625);
-const pMap = __webpack_require__(521);
+const pMap = __webpack_require__(212);
 const path = __webpack_require__(622);
 const ValidationError = __webpack_require__(793);
 
@@ -36698,7 +36741,7 @@ exports.anyChar = function() {
 
 
 
-var isPlainObject = __webpack_require__(393);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -37537,11 +37580,15 @@ module.exports = x => {
 const core = __webpack_require__(470);
 const gitHub = __webpack_require__(469);
 
+const { inputList } = __webpack_require__(521);
+
 const { labeler } = __webpack_require__(379);
 const { labelerSinceTag } = __webpack_require__(97);
 
 const params = {
   gitHubClient: new gitHub.GitHub(core.getInput('GITHUB_TOKEN')),
+  additionalLabels: inputList(core.getInput('additional-labels')),
+  dryRun: core.getInput('dry-run') === 'true',
   prefix: core.getInput('prefix'),
 };
 
@@ -37571,7 +37618,7 @@ labelerFn(params)
 
 
 
-var isPlainObject = __webpack_require__(312);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -39566,79 +39613,102 @@ module.exports = {
 /* 521 */
 /***/ (function(module) {
 
-"use strict";
+module.exports.inputList = function inputList(input) {
+  let list = input || [];
 
+  if (typeof input === 'string') {
+    try {
+      list = JSON.parse(input);
+    } catch (err) {
+      list = input.split(/[,\r\n]/g);
+    }
+  }
 
-const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
-	options = Object.assign({
-		concurrency: Infinity
-	}, options);
+  return list.map((item) => item.trim()).filter(Boolean);
+};
 
-	if (typeof mapper !== 'function') {
-		throw new TypeError('Mapper function is required');
-	}
+module.exports.validateRepo = function validateRepo(repo) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
+    throw new Error(`Invalid repo name [${repo}]`);
+  }
 
-	const {concurrency} = options;
+  return repo;
+};
 
-	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
-		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
-	}
+module.exports.validateAppName = function validateAppName(name) {
+  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
+    throw new Error(`Invalid app name [${name}]`);
+  }
 
-	const ret = [];
-	const iterator = iterable[Symbol.iterator]();
-	let isRejected = false;
-	let isIterableDone = false;
-	let resolvingCount = 0;
-	let currentIndex = 0;
+  return name;
+};
 
-	const next = () => {
-		if (isRejected) {
-			return;
-		}
+module.exports.validateNamespace = function validateNamespace(namespace) {
+  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+    throw new Error(`Invalid env or namespace name [${namespace}]`);
+  }
 
-		const nextItem = iterator.next();
-		const i = currentIndex;
-		currentIndex++;
+  return namespace;
+};
 
-		if (nextItem.done) {
-			isIterableDone = true;
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
 
-			if (resolvingCount === 0) {
-				resolve(ret);
-			}
+  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+  }
 
-			return;
-		}
+  return zipPath;
+};
 
-		resolvingCount++;
+module.exports.cleanPath = function cleanPath(uncleanPath) {
+  const path = uncleanPath || '.';
 
-		Promise.resolve(nextItem.value)
-			.then(element => mapper(element, i))
-			.then(
-				value => {
-					ret[i] = value;
-					resolvingCount--;
-					next();
-				},
-				error => {
-					isRejected = true;
-					reject(error);
-				}
-			);
-	};
+  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
+    throw new Error(`Invalid path [${uncleanPath}]`);
+  }
 
-	for (let i = 0; i < concurrency; i++) {
-		next();
+  return path;
+};
 
-		if (isIterableDone) {
-			break;
-		}
-	}
-});
+module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
+  let buildDir = uncleanBuildDir;
 
-module.exports = pMap;
-// TODO: Remove this for the next major release
-module.exports.default = pMap;
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
+    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
+  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
+    throw new Error('Build directory should not be empty or the root of the project');
+  }
+
+  // Append trailing slash
+  if (!buildDir.endsWith('/')) {
+    buildDir = `${buildDir}/`;
+  }
+
+  return buildDir;
+};
+
+module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
+  let context = uncleanContext === '/' ? '' : uncleanContext;
+
+  if (context !== '') {
+    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
+      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
+    }
+
+    // Append trailing slash
+    if (!context.endsWith('/')) {
+      context = `${context}/`;
+    }
+
+    // Remove leading slash
+    if (context.startsWith('/')) {
+      context = context.substring(1);
+    }
+  }
+
+  return context;
+};
 
 
 /***/ }),
@@ -39803,35 +39873,7 @@ module.exports = x => {
 
 
 /***/ }),
-/* 529 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-
-const childProcess = __webpack_require__(801);
-const log = __webpack_require__(533);
-
-module.exports = hasTags;
-
-function hasTags(opts) {
-  log.silly("hasTags");
-  let result = false;
-
-  try {
-    result = !!childProcess.execSync("git", ["tag"], opts);
-  } catch (err) {
-    log.warn("ENOTAGS", "No git tags were reachable from this branch!");
-    log.verbose("hasTags error", err);
-  }
-
-  log.verbose("hasTags", result);
-
-  return result;
-}
-
-
-/***/ }),
+/* 529 */,
 /* 530 */
 /***/ (function(module) {
 
@@ -40314,6 +40356,7 @@ var HttpCodes;
     HttpCodes[HttpCodes["RequestTimeout"] = 408] = "RequestTimeout";
     HttpCodes[HttpCodes["Conflict"] = 409] = "Conflict";
     HttpCodes[HttpCodes["Gone"] = 410] = "Gone";
+    HttpCodes[HttpCodes["TooManyRequests"] = 429] = "TooManyRequests";
     HttpCodes[HttpCodes["InternalServerError"] = 500] = "InternalServerError";
     HttpCodes[HttpCodes["NotImplemented"] = 501] = "NotImplemented";
     HttpCodes[HttpCodes["BadGateway"] = 502] = "BadGateway";
@@ -40929,7 +40972,61 @@ function diffSinceIn(committish, location, opts) {
 
 /***/ }),
 /* 547 */,
-/* 548 */,
+/* 548 */
+/***/ (function(module) {
+
+"use strict";
+
+
+/*!
+ * isobject <https://github.com/jonschlinkert/isobject>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObject(val) {
+  return val != null && typeof val === 'object' && Array.isArray(val) === false;
+}
+
+/*!
+ * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObjectObject(o) {
+  return isObject(o) === true
+    && Object.prototype.toString.call(o) === '[object Object]';
+}
+
+function isPlainObject(o) {
+  var ctor,prot;
+
+  if (isObjectObject(o) === false) return false;
+
+  // If has modified constructor
+  ctor = o.constructor;
+  if (typeof ctor !== 'function') return false;
+
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (isObjectObject(prot) === false) return false;
+
+  // If constructor does not have an Object-specific method
+  if (prot.hasOwnProperty('isPrototypeOf') === false) {
+    return false;
+  }
+
+  // Most likely a plain Object
+  return true;
+}
+
+module.exports = isPlainObject;
+
+
+/***/ }),
 /* 549 */,
 /* 550 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -54751,50 +54848,7 @@ exports.restEndpointMethods = restEndpointMethods;
 /***/ }),
 /* 560 */,
 /* 561 */,
-/* 562 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isObject = __webpack_require__(782);
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-};
-
-
-/***/ }),
+/* 562 */,
 /* 563 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -55705,7 +55759,7 @@ var isWindows = process.platform === 'win32'
 var path = __webpack_require__(622)
 var exec = __webpack_require__(129).exec
 var osTmpdir = __webpack_require__(844)
-var osHomedir = __webpack_require__(594)
+var osHomedir = __webpack_require__(312)
 
 // looking up envs is a bit costly.
 // Also, sometimes we want to have a fallback
@@ -56224,37 +56278,7 @@ module.exports = {
 
 
 /***/ }),
-/* 594 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-var os = __webpack_require__(87);
-
-function homedir() {
-	var env = process.env;
-	var home = env.HOME;
-	var user = env.LOGNAME || env.USER || env.LNAME || env.USERNAME;
-
-	if (process.platform === 'win32') {
-		return env.USERPROFILE || env.HOMEDRIVE + env.HOMEPATH || home || null;
-	}
-
-	if (process.platform === 'darwin') {
-		return home || (user ? '/Users/' + user : null);
-	}
-
-	if (process.platform === 'linux') {
-		return home || (process.getuid() === 0 ? '/root' : (user ? '/home/' + user : null));
-	}
-
-	return home || null;
-}
-
-module.exports = typeof os.homedir === 'function' ? os.homedir : homedir;
-
-
-/***/ }),
+/* 594 */,
 /* 595 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -58756,179 +58780,7 @@ module.exports.exec = exec;
 
 
 /***/ }),
-/* 604 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/* module decorator */ module = __webpack_require__.nmd(module);
-
-const colorConvert = __webpack_require__(592);
-
-const wrapAnsi16 = (fn, offset) => function () {
-	const code = fn.apply(colorConvert, arguments);
-	return `\u001B[${code + offset}m`;
-};
-
-const wrapAnsi256 = (fn, offset) => function () {
-	const code = fn.apply(colorConvert, arguments);
-	return `\u001B[${38 + offset};5;${code}m`;
-};
-
-const wrapAnsi16m = (fn, offset) => function () {
-	const rgb = fn.apply(colorConvert, arguments);
-	return `\u001B[${38 + offset};2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
-};
-
-function assembleStyles() {
-	const codes = new Map();
-	const styles = {
-		modifier: {
-			reset: [0, 0],
-			// 21 isn't widely supported and 22 does the same thing
-			bold: [1, 22],
-			dim: [2, 22],
-			italic: [3, 23],
-			underline: [4, 24],
-			inverse: [7, 27],
-			hidden: [8, 28],
-			strikethrough: [9, 29]
-		},
-		color: {
-			black: [30, 39],
-			red: [31, 39],
-			green: [32, 39],
-			yellow: [33, 39],
-			blue: [34, 39],
-			magenta: [35, 39],
-			cyan: [36, 39],
-			white: [37, 39],
-			gray: [90, 39],
-
-			// Bright color
-			redBright: [91, 39],
-			greenBright: [92, 39],
-			yellowBright: [93, 39],
-			blueBright: [94, 39],
-			magentaBright: [95, 39],
-			cyanBright: [96, 39],
-			whiteBright: [97, 39]
-		},
-		bgColor: {
-			bgBlack: [40, 49],
-			bgRed: [41, 49],
-			bgGreen: [42, 49],
-			bgYellow: [43, 49],
-			bgBlue: [44, 49],
-			bgMagenta: [45, 49],
-			bgCyan: [46, 49],
-			bgWhite: [47, 49],
-
-			// Bright color
-			bgBlackBright: [100, 49],
-			bgRedBright: [101, 49],
-			bgGreenBright: [102, 49],
-			bgYellowBright: [103, 49],
-			bgBlueBright: [104, 49],
-			bgMagentaBright: [105, 49],
-			bgCyanBright: [106, 49],
-			bgWhiteBright: [107, 49]
-		}
-	};
-
-	// Fix humans
-	styles.color.grey = styles.color.gray;
-
-	for (const groupName of Object.keys(styles)) {
-		const group = styles[groupName];
-
-		for (const styleName of Object.keys(group)) {
-			const style = group[styleName];
-
-			styles[styleName] = {
-				open: `\u001B[${style[0]}m`,
-				close: `\u001B[${style[1]}m`
-			};
-
-			group[styleName] = styles[styleName];
-
-			codes.set(style[0], style[1]);
-		}
-
-		Object.defineProperty(styles, groupName, {
-			value: group,
-			enumerable: false
-		});
-
-		Object.defineProperty(styles, 'codes', {
-			value: codes,
-			enumerable: false
-		});
-	}
-
-	const ansi2ansi = n => n;
-	const rgb2rgb = (r, g, b) => [r, g, b];
-
-	styles.color.close = '\u001B[39m';
-	styles.bgColor.close = '\u001B[49m';
-
-	styles.color.ansi = {
-		ansi: wrapAnsi16(ansi2ansi, 0)
-	};
-	styles.color.ansi256 = {
-		ansi256: wrapAnsi256(ansi2ansi, 0)
-	};
-	styles.color.ansi16m = {
-		rgb: wrapAnsi16m(rgb2rgb, 0)
-	};
-
-	styles.bgColor.ansi = {
-		ansi: wrapAnsi16(ansi2ansi, 10)
-	};
-	styles.bgColor.ansi256 = {
-		ansi256: wrapAnsi256(ansi2ansi, 10)
-	};
-	styles.bgColor.ansi16m = {
-		rgb: wrapAnsi16m(rgb2rgb, 10)
-	};
-
-	for (let key of Object.keys(colorConvert)) {
-		if (typeof colorConvert[key] !== 'object') {
-			continue;
-		}
-
-		const suite = colorConvert[key];
-
-		if (key === 'ansi16') {
-			key = 'ansi';
-		}
-
-		if ('ansi16' in suite) {
-			styles.color.ansi[key] = wrapAnsi16(suite.ansi16, 0);
-			styles.bgColor.ansi[key] = wrapAnsi16(suite.ansi16, 10);
-		}
-
-		if ('ansi256' in suite) {
-			styles.color.ansi256[key] = wrapAnsi256(suite.ansi256, 0);
-			styles.bgColor.ansi256[key] = wrapAnsi256(suite.ansi256, 10);
-		}
-
-		if ('rgb' in suite) {
-			styles.color.ansi16m[key] = wrapAnsi16m(suite.rgb, 0);
-			styles.bgColor.ansi16m[key] = wrapAnsi16m(suite.rgb, 10);
-		}
-	}
-
-	return styles;
-}
-
-// Make the export immutable
-Object.defineProperty(module, 'exports', {
-	enumerable: true,
-	get: assembleStyles
-});
-
-
-/***/ }),
+/* 604 */,
 /* 605 */
 /***/ (function(module) {
 
@@ -59613,9 +59465,57 @@ module.exports.gitignore = gitignore;
 
 /***/ }),
 /* 626 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-module.exports = __webpack_require__(413);
+"use strict";
+
+
+/*!
+ * isobject <https://github.com/jonschlinkert/isobject>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObject(val) {
+  return val != null && typeof val === 'object' && Array.isArray(val) === false;
+}
+
+/*!
+ * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObjectObject(o) {
+  return isObject(o) === true
+    && Object.prototype.toString.call(o) === '[object Object]';
+}
+
+function isPlainObject(o) {
+  var ctor,prot;
+
+  if (isObjectObject(o) === false) return false;
+
+  // If has modified constructor
+  ctor = o.constructor;
+  if (typeof ctor !== 'function') return false;
+
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (isObjectObject(prot) === false) return false;
+
+  // If constructor does not have an Object-specific method
+  if (prot.hasOwnProperty('isPrototypeOf') === false) {
+    return false;
+  }
+
+  // Most likely a plain Object
+  return true;
+}
+
+module.exports = isPlainObject;
 
 
 /***/ }),
@@ -59748,122 +59648,12 @@ module.exports = new Type('tag:yaml.org,2002:merge', {
 /* 640 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var isBuffer = __webpack_require__(812);
-var toString = Object.prototype.toString;
+"use strict";
 
-/**
- * Get the native `typeof` a value.
- *
- * @param  {*} `val`
- * @return {*} Native javascript type
- */
 
-module.exports = function kindOf(val) {
-  // primitivies
-  if (typeof val === 'undefined') {
-    return 'undefined';
-  }
-  if (val === null) {
-    return 'null';
-  }
-  if (val === true || val === false || val instanceof Boolean) {
-    return 'boolean';
-  }
-  if (typeof val === 'string' || val instanceof String) {
-    return 'string';
-  }
-  if (typeof val === 'number' || val instanceof Number) {
-    return 'number';
-  }
-
-  // functions
-  if (typeof val === 'function' || val instanceof Function) {
-    return 'function';
-  }
-
-  // array
-  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
-    return 'array';
-  }
-
-  // check for instances of RegExp and Date before calling `toString`
-  if (val instanceof RegExp) {
-    return 'regexp';
-  }
-  if (val instanceof Date) {
-    return 'date';
-  }
-
-  // other objects
-  var type = toString.call(val);
-
-  if (type === '[object RegExp]') {
-    return 'regexp';
-  }
-  if (type === '[object Date]') {
-    return 'date';
-  }
-  if (type === '[object Arguments]') {
-    return 'arguments';
-  }
-  if (type === '[object Error]') {
-    return 'error';
-  }
-
-  // buffer
-  if (isBuffer(val)) {
-    return 'buffer';
-  }
-
-  // es6: Map, WeakMap, Set, WeakSet
-  if (type === '[object Set]') {
-    return 'set';
-  }
-  if (type === '[object WeakSet]') {
-    return 'weakset';
-  }
-  if (type === '[object Map]') {
-    return 'map';
-  }
-  if (type === '[object WeakMap]') {
-    return 'weakmap';
-  }
-  if (type === '[object Symbol]') {
-    return 'symbol';
-  }
-
-  // typed arrays
-  if (type === '[object Int8Array]') {
-    return 'int8array';
-  }
-  if (type === '[object Uint8Array]') {
-    return 'uint8array';
-  }
-  if (type === '[object Uint8ClampedArray]') {
-    return 'uint8clampedarray';
-  }
-  if (type === '[object Int16Array]') {
-    return 'int16array';
-  }
-  if (type === '[object Uint16Array]') {
-    return 'uint16array';
-  }
-  if (type === '[object Int32Array]') {
-    return 'int32array';
-  }
-  if (type === '[object Uint32Array]') {
-    return 'uint32array';
-  }
-  if (type === '[object Float32Array]') {
-    return 'float32array';
-  }
-  if (type === '[object Float64Array]') {
-    return 'float64array';
-  }
-
-  // must be a plain object
-  return 'object';
-};
+module.exports = {
+  copySync: __webpack_require__(110)
+}
 
 
 /***/ }),
@@ -60383,11 +60173,11 @@ module.exports = {
 
 /***/ }),
 /* 653 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
 "use strict";
 /*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ * for-in <https://github.com/jonschlinkert/for-in>
  *
  * Copyright (c) 2014-2017, Jon Schlinkert.
  * Released under the MIT License.
@@ -60395,33 +60185,12 @@ module.exports = {
 
 
 
-var isObject = __webpack_require__(782);
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
+module.exports = function forIn(obj, fn, thisArg) {
+  for (var key in obj) {
+    if (fn.call(thisArg, obj[key], key, obj) === false) {
+      break;
+    }
   }
-
-  // Most likely a plain Object
-  return true;
 };
 
 
@@ -60533,7 +60302,7 @@ module.exports = function (blocking) {
 
 
 var isExtendable = __webpack_require__(477);
-var forIn = __webpack_require__(290);
+var forIn = __webpack_require__(653);
 
 function mixinDeep(target, objects) {
   var len = arguments.length, i = 0;
@@ -63633,57 +63402,124 @@ module.exports = outputJson
 
 /***/ }),
 /* 696 */
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
-"use strict";
+var isBuffer = __webpack_require__(812);
+var toString = Object.prototype.toString;
 
-
-/*!
- * isobject <https://github.com/jonschlinkert/isobject>
+/**
+ * Get the native `typeof` a value.
  *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
+ * @param  {*} `val`
+ * @return {*} Native javascript type
  */
 
-function isObject(val) {
-  return val != null && typeof val === 'object' && Array.isArray(val) === false;
-}
-
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
+module.exports = function kindOf(val) {
+  // primitivies
+  if (typeof val === 'undefined') {
+    return 'undefined';
+  }
+  if (val === null) {
+    return 'null';
+  }
+  if (val === true || val === false || val instanceof Boolean) {
+    return 'boolean';
+  }
+  if (typeof val === 'string' || val instanceof String) {
+    return 'string';
+  }
+  if (typeof val === 'number' || val instanceof Number) {
+    return 'number';
   }
 
-  // Most likely a plain Object
-  return true;
-}
+  // functions
+  if (typeof val === 'function' || val instanceof Function) {
+    return 'function';
+  }
 
-module.exports = isPlainObject;
+  // array
+  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
+    return 'array';
+  }
+
+  // check for instances of RegExp and Date before calling `toString`
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val instanceof Date) {
+    return 'date';
+  }
+
+  // other objects
+  var type = toString.call(val);
+
+  if (type === '[object RegExp]') {
+    return 'regexp';
+  }
+  if (type === '[object Date]') {
+    return 'date';
+  }
+  if (type === '[object Arguments]') {
+    return 'arguments';
+  }
+  if (type === '[object Error]') {
+    return 'error';
+  }
+
+  // buffer
+  if (isBuffer(val)) {
+    return 'buffer';
+  }
+
+  // es6: Map, WeakMap, Set, WeakSet
+  if (type === '[object Set]') {
+    return 'set';
+  }
+  if (type === '[object WeakSet]') {
+    return 'weakset';
+  }
+  if (type === '[object Map]') {
+    return 'map';
+  }
+  if (type === '[object WeakMap]') {
+    return 'weakmap';
+  }
+  if (type === '[object Symbol]') {
+    return 'symbol';
+  }
+
+  // typed arrays
+  if (type === '[object Int8Array]') {
+    return 'int8array';
+  }
+  if (type === '[object Uint8Array]') {
+    return 'uint8array';
+  }
+  if (type === '[object Uint8ClampedArray]') {
+    return 'uint8clampedarray';
+  }
+  if (type === '[object Int16Array]') {
+    return 'int16array';
+  }
+  if (type === '[object Uint16Array]') {
+    return 'uint16array';
+  }
+  if (type === '[object Int32Array]') {
+    return 'int32array';
+  }
+  if (type === '[object Uint32Array]') {
+    return 'uint32array';
+  }
+  if (type === '[object Float32Array]') {
+    return 'float32array';
+  }
+  if (type === '[object Float64Array]') {
+    return 'float64array';
+  }
+
+  // must be a plain object
+  return 'object';
+};
 
 
 /***/ }),
@@ -65227,6 +65063,850 @@ module.exports = fillRange;
 
 /***/ }),
 /* 731 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info, warning } = __webpack_require__(470);
+const github = __webpack_require__(469);
+
+const { exec, sh } = __webpack_require__(603);
+
+async function getShortCommit() {
+  try {
+    return await exec('git rev-parse --short=8 HEAD');
+  } catch (err) {
+    if (!err.message.includes('not a git repository')) {
+      throw err;
+    }
+
+    warning('No local git found, using GitHub context payload');
+    return github.context.sha.substring(0, 8);
+  }
+}
+
+async function getDestBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
+async function getSrcBranch() {
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  const branch = (pull_request && pull_request.head && pull_request.head.ref) || github.context.ref;
+  /* eslint-enable camelcase */
+
+  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+}
+
+async function getEnv(envList = ['qa', 'prod']) {
+  const destBranch = await getDestBranch();
+
+  if (envList.includes(destBranch)) {
+    return destBranch;
+  }
+
+  return 'dev';
+}
+
+function getPrevBranch(env) {
+  if (env === 'prod') {
+    return 'qa';
+  }
+
+  return 'master';
+}
+
+async function findGitTags(commitish = 'HEAD') {
+  const tags = await exec(`git tag -l --points-at ${commitish}`);
+
+  return tags.split('\n').filter(Boolean);
+}
+
+async function findGitVersion(app, commitish) {
+  const tag = await exec(`git tag --points-at ${commitish}`);
+
+  const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[\\w.]+)?)`, 'g');
+  const matches = regExp.exec(tag);
+
+  if (!matches || matches.length < 3) {
+    return null;
+  }
+
+  return matches[2];
+}
+
+async function getGitUser() {
+  const user = {
+    username: github.context.actor,
+    email: github.context.payload.pusher ? github.context.payload.pusher.email : null,
+  };
+
+  if (!user.username) {
+    user.username = await exec(`git show -s --format=%an HEAD`);
+  }
+
+  if (!user.email) {
+    user.email = await exec(`git show -s --format=%ae HEAD`);
+  }
+
+  return user;
+}
+
+async function setGitUser(user, dir = '.') {
+  const currentUsername = await exec(`git -C "${dir}" config user.name || true`);
+  if (!currentUsername) {
+    await sh(`git -C "${dir}" config user.name "${user.username}"`);
+  }
+
+  const currentEmail = await exec(`git -C "${dir}" config user.email || true`);
+  if (!currentEmail) {
+    await sh(`git -C "${dir}" config user.email "${user.email}"`);
+  }
+}
+
+// If GitHub Actions did a shallow fetch (the default), set user and pull history
+async function trueUpGitHistory() {
+  info('True up git history since GitHub Actions does a shallow fetch');
+
+  await setGitUser(await getGitUser());
+
+  const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
+  if (isShallowFetch) {
+    const srcBranch = await getSrcBranch();
+    const destBranch = await getDestBranch();
+    await sh(
+      `git fetch --prune --unshallow
+      git checkout ${destBranch}
+      git checkout ${srcBranch}`,
+    );
+  } else {
+    await sh('git fetch --tags');
+  }
+}
+
+async function gitMerge(params = {}) {
+  if (github.context.actor) {
+    await setGitUser(await getGitUser());
+  }
+
+  const srcBranch = params.srcBranch || (await getSrcBranch());
+  const destBranch = params.destBranch || (await getDestBranch());
+
+  await sh(
+    `git checkout ${destBranch}
+    git merge ${srcBranch}
+    git push --follow-tags`,
+  );
+}
+
+module.exports.getShortCommit = getShortCommit;
+module.exports.getSrcBranch = getSrcBranch;
+module.exports.getDestBranch = getDestBranch;
+module.exports.getEnv = getEnv;
+module.exports.getPrevBranch = getPrevBranch;
+module.exports.findGitTags = findGitTags;
+module.exports.findGitVersion = findGitVersion;
+module.exports.getGitUser = getGitUser;
+module.exports.setGitUser = setGitUser;
+module.exports.trueUpGitHistory = trueUpGitHistory;
+module.exports.gitMerge = gitMerge;
+
+
+/***/ }),
+/* 732 */,
+/* 733 */,
+/* 734 */,
+/* 735 */,
+/* 736 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+
+const semver = __webpack_require__(757);
+const prereleaseIdFromVersion = __webpack_require__(981);
+
+/**
+ * Represents a node in a PackageGraph.
+ * @constructor
+ * @param {!<Package>} pkg - A Package object to build the node from.
+ */
+class PackageGraphNode {
+  constructor(pkg) {
+    Object.defineProperties(this, {
+      // immutable properties
+      name: {
+        enumerable: true,
+        value: pkg.name,
+      },
+      location: {
+        value: pkg.location,
+      },
+      prereleaseId: {
+        // an existing prerelease ID only matters at the beginning
+        value: prereleaseIdFromVersion(pkg.version),
+      },
+      // properties that might change over time
+      version: {
+        get() {
+          return pkg.version;
+        },
+      },
+      pkg: {
+        get() {
+          return pkg;
+        },
+      },
+    });
+
+    this.externalDependencies = new Map();
+    this.localDependencies = new Map();
+    this.localDependents = new Map();
+  }
+
+  /**
+   * Determine if the Node satisfies a resolved semver range.
+   * @see https://github.com/npm/npm-package-arg#result-object
+   *
+   * @param {!Result} resolved npm-package-arg Result object
+   * @returns {Boolean}
+   */
+  satisfies({ gitCommittish, gitRange, fetchSpec }) {
+    return semver.satisfies(this.version, gitCommittish || gitRange || fetchSpec);
+  }
+
+  /**
+   * Returns a string representation of this node (its name)
+   *
+   * @returns {String}
+   */
+  toString() {
+    return this.name;
+  }
+}
+
+module.exports.PackageGraphNode = PackageGraphNode;
+
+
+/***/ }),
+/* 737 */,
+/* 738 */
+/***/ (function(module) {
+
+"use strict";
+
+
+// there's 3 implementations written in increasing order of efficiency
+
+// 1 - no Set type is defined
+function uniqNoSet(arr) {
+	var ret = [];
+
+	for (var i = 0; i < arr.length; i++) {
+		if (ret.indexOf(arr[i]) === -1) {
+			ret.push(arr[i]);
+		}
+	}
+
+	return ret;
+}
+
+// 2 - a simple Set type is defined
+function uniqSet(arr) {
+	var seen = new Set();
+	return arr.filter(function (el) {
+		if (!seen.has(el)) {
+			seen.add(el);
+			return true;
+		}
+
+		return false;
+	});
+}
+
+// 3 - a standard Set type is defined and it has a forEach method
+function uniqSetWithForEach(arr) {
+	var ret = [];
+
+	(new Set(arr)).forEach(function (el) {
+		ret.push(el);
+	});
+
+	return ret;
+}
+
+// V8 currently has a broken implementation
+// https://github.com/joyent/node/issues/8449
+function doesForEachActuallyWork() {
+	var ret = false;
+
+	(new Set([true])).forEach(function (el) {
+		ret = el;
+	});
+
+	return ret === true;
+}
+
+if ('Set' in global) {
+	if (typeof Set.prototype.forEach === 'function' && doesForEachActuallyWork()) {
+		module.exports = uniqSetWithForEach;
+	} else {
+		module.exports = uniqSet;
+	}
+} else {
+	module.exports = uniqNoSet;
+}
+
+
+/***/ }),
+/* 739 */,
+/* 740 */
+/***/ (function(module) {
+
+"use strict";
+
+
+
+function isNothing(subject) {
+  return (typeof subject === 'undefined') || (subject === null);
+}
+
+
+function isObject(subject) {
+  return (typeof subject === 'object') && (subject !== null);
+}
+
+
+function toArray(sequence) {
+  if (Array.isArray(sequence)) return sequence;
+  else if (isNothing(sequence)) return [];
+
+  return [ sequence ];
+}
+
+
+function extend(target, source) {
+  var index, length, key, sourceKeys;
+
+  if (source) {
+    sourceKeys = Object.keys(source);
+
+    for (index = 0, length = sourceKeys.length; index < length; index += 1) {
+      key = sourceKeys[index];
+      target[key] = source[key];
+    }
+  }
+
+  return target;
+}
+
+
+function repeat(string, count) {
+  var result = '', cycle;
+
+  for (cycle = 0; cycle < count; cycle += 1) {
+    result += string;
+  }
+
+  return result;
+}
+
+
+function isNegativeZero(number) {
+  return (number === 0) && (Number.NEGATIVE_INFINITY === 1 / number);
+}
+
+
+module.exports.isNothing      = isNothing;
+module.exports.isObject       = isObject;
+module.exports.toArray        = toArray;
+module.exports.repeat         = repeat;
+module.exports.isNegativeZero = isNegativeZero;
+module.exports.extend         = extend;
+
+
+/***/ }),
+/* 741 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { requestLog } = __webpack_require__(916);
+const {
+  restEndpointMethods
+} = __webpack_require__(559);
+
+const Core = __webpack_require__(37);
+
+const CORE_PLUGINS = [
+  __webpack_require__(890),
+  __webpack_require__(953), // deprecated: remove in v17
+  requestLog,
+  __webpack_require__(786),
+  restEndpointMethods,
+  __webpack_require__(341),
+
+  __webpack_require__(850) // deprecated: remove in v17
+];
+
+const OctokitRest = Core.plugin(CORE_PLUGINS);
+
+function DeprecatedOctokit(options) {
+  const warn =
+    options && options.log && options.log.warn
+      ? options.log.warn
+      : console.warn;
+  warn(
+    '[@octokit/rest] `const Octokit = require("@octokit/rest")` is deprecated. Use `const { Octokit } = require("@octokit/rest")` instead'
+  );
+  return new OctokitRest(options);
+}
+
+const Octokit = Object.assign(DeprecatedOctokit, {
+  Octokit: OctokitRest
+});
+
+Object.keys(OctokitRest).forEach(key => {
+  /* istanbul ignore else */
+  if (OctokitRest.hasOwnProperty(key)) {
+    Octokit[key] = OctokitRest[key];
+  }
+});
+
+module.exports = Octokit;
+
+
+/***/ }),
+/* 742 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var fs = __webpack_require__(747)
+var core
+if (process.platform === 'win32' || global.TESTING_WINDOWS) {
+  core = __webpack_require__(818)
+} else {
+  core = __webpack_require__(197)
+}
+
+module.exports = isexe
+isexe.sync = sync
+
+function isexe (path, options, cb) {
+  if (typeof options === 'function') {
+    cb = options
+    options = {}
+  }
+
+  if (!cb) {
+    if (typeof Promise !== 'function') {
+      throw new TypeError('callback not provided')
+    }
+
+    return new Promise(function (resolve, reject) {
+      isexe(path, options || {}, function (er, is) {
+        if (er) {
+          reject(er)
+        } else {
+          resolve(is)
+        }
+      })
+    })
+  }
+
+  core(path, options || {}, function (er, is) {
+    // ignore EACCES because that just means we aren't allowed to run it
+    if (er) {
+      if (er.code === 'EACCES' || options && options.ignoreErrors) {
+        er = null
+        is = false
+      }
+    }
+    cb(er, is)
+  })
+}
+
+function sync (path, options) {
+  // my kingdom for a filtered catch
+  try {
+    return core.sync(path, options || {})
+  } catch (er) {
+    if (options && options.ignoreErrors || er.code === 'EACCES') {
+      return false
+    } else {
+      throw er
+    }
+  }
+}
+
+
+/***/ }),
+/* 743 */,
+/* 744 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var isBuffer = __webpack_require__(812);
+var toString = Object.prototype.toString;
+
+/**
+ * Get the native `typeof` a value.
+ *
+ * @param  {*} `val`
+ * @return {*} Native javascript type
+ */
+
+module.exports = function kindOf(val) {
+  // primitivies
+  if (typeof val === 'undefined') {
+    return 'undefined';
+  }
+  if (val === null) {
+    return 'null';
+  }
+  if (val === true || val === false || val instanceof Boolean) {
+    return 'boolean';
+  }
+  if (typeof val === 'string' || val instanceof String) {
+    return 'string';
+  }
+  if (typeof val === 'number' || val instanceof Number) {
+    return 'number';
+  }
+
+  // functions
+  if (typeof val === 'function' || val instanceof Function) {
+    return 'function';
+  }
+
+  // array
+  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
+    return 'array';
+  }
+
+  // check for instances of RegExp and Date before calling `toString`
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val instanceof Date) {
+    return 'date';
+  }
+
+  // other objects
+  var type = toString.call(val);
+
+  if (type === '[object RegExp]') {
+    return 'regexp';
+  }
+  if (type === '[object Date]') {
+    return 'date';
+  }
+  if (type === '[object Arguments]') {
+    return 'arguments';
+  }
+  if (type === '[object Error]') {
+    return 'error';
+  }
+
+  // buffer
+  if (isBuffer(val)) {
+    return 'buffer';
+  }
+
+  // es6: Map, WeakMap, Set, WeakSet
+  if (type === '[object Set]') {
+    return 'set';
+  }
+  if (type === '[object WeakSet]') {
+    return 'weakset';
+  }
+  if (type === '[object Map]') {
+    return 'map';
+  }
+  if (type === '[object WeakMap]') {
+    return 'weakmap';
+  }
+  if (type === '[object Symbol]') {
+    return 'symbol';
+  }
+
+  // typed arrays
+  if (type === '[object Int8Array]') {
+    return 'int8array';
+  }
+  if (type === '[object Uint8Array]') {
+    return 'uint8array';
+  }
+  if (type === '[object Uint8ClampedArray]') {
+    return 'uint8clampedarray';
+  }
+  if (type === '[object Int16Array]') {
+    return 'int16array';
+  }
+  if (type === '[object Uint16Array]') {
+    return 'uint16array';
+  }
+  if (type === '[object Int32Array]') {
+    return 'int32array';
+  }
+  if (type === '[object Uint32Array]') {
+    return 'uint32array';
+  }
+  if (type === '[object Float32Array]') {
+    return 'float32array';
+  }
+  if (type === '[object Float64Array]') {
+    return 'float64array';
+  }
+
+  // must be a plain object
+  return 'object';
+};
+
+
+/***/ }),
+/* 745 */
+/***/ (function(module) {
+
+module.exports = ["assert","buffer","child_process","cluster","console","constants","crypto","dgram","dns","domain","events","fs","http","https","module","net","os","path","process","punycode","querystring","readline","repl","stream","string_decoder","timers","tls","tty","url","util","v8","vm","zlib"];
+
+/***/ }),
+/* 746 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+/*!
+ * to-object-path <https://github.com/jonschlinkert/to-object-path>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+var typeOf = __webpack_require__(972);
+
+module.exports = function toPath(args) {
+  if (typeOf(args) !== 'arguments') {
+    args = arguments;
+  }
+  return filter(args).join('.');
+};
+
+function filter(arr) {
+  var len = arr.length;
+  var idx = -1;
+  var res = [];
+
+  while (++idx < len) {
+    var ele = arr[idx];
+    if (typeOf(ele) === 'arguments' || Array.isArray(ele)) {
+      res.push.apply(res, filter(ele));
+    } else if (typeof ele === 'string') {
+      res.push(ele);
+    }
+  }
+  return res;
+}
+
+
+/***/ }),
+/* 747 */
+/***/ (function(module) {
+
+module.exports = require("fs");
+
+/***/ }),
+/* 748 */,
+/* 749 */,
+/* 750 */,
+/* 751 */,
+/* 752 */,
+/* 753 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var endpoint = __webpack_require__(385);
+var universalUserAgent = __webpack_require__(796);
+var isPlainObject = _interopDefault(__webpack_require__(548));
+var nodeFetch = _interopDefault(__webpack_require__(454));
+var requestError = __webpack_require__(257);
+
+const VERSION = "5.4.0";
+
+function getBufferResponse(response) {
+  return response.arrayBuffer();
+}
+
+function fetchWrapper(requestOptions) {
+  if (isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body)) {
+    requestOptions.body = JSON.stringify(requestOptions.body);
+  }
+
+  let headers = {};
+  let status;
+  let url;
+  const fetch = requestOptions.request && requestOptions.request.fetch || nodeFetch;
+  return fetch(requestOptions.url, Object.assign({
+    method: requestOptions.method,
+    body: requestOptions.body,
+    headers: requestOptions.headers,
+    redirect: requestOptions.redirect
+  }, requestOptions.request)).then(response => {
+    url = response.url;
+    status = response.status;
+
+    for (const keyAndValue of response.headers) {
+      headers[keyAndValue[0]] = keyAndValue[1];
+    }
+
+    if (status === 204 || status === 205) {
+      return;
+    } // GitHub API returns 200 for HEAD requests
+
+
+    if (requestOptions.method === "HEAD") {
+      if (status < 400) {
+        return;
+      }
+
+      throw new requestError.RequestError(response.statusText, status, {
+        headers,
+        request: requestOptions
+      });
+    }
+
+    if (status === 304) {
+      throw new requestError.RequestError("Not modified", status, {
+        headers,
+        request: requestOptions
+      });
+    }
+
+    if (status >= 400) {
+      return response.text().then(message => {
+        const error = new requestError.RequestError(message, status, {
+          headers,
+          request: requestOptions
+        });
+
+        try {
+          let responseBody = JSON.parse(error.message);
+          Object.assign(error, responseBody);
+          let errors = responseBody.errors; // Assumption `errors` would always be in Array format
+
+          error.message = error.message + ": " + errors.map(JSON.stringify).join(", ");
+        } catch (e) {// ignore, see octokit/rest.js#684
+        }
+
+        throw error;
+      });
+    }
+
+    const contentType = response.headers.get("content-type");
+
+    if (/application\/json/.test(contentType)) {
+      return response.json();
+    }
+
+    if (!contentType || /^text\/|charset=utf-8$/.test(contentType)) {
+      return response.text();
+    }
+
+    return getBufferResponse(response);
+  }).then(data => {
+    return {
+      status,
+      url,
+      headers,
+      data
+    };
+  }).catch(error => {
+    if (error instanceof requestError.RequestError) {
+      throw error;
+    }
+
+    throw new requestError.RequestError(error.message, 500, {
+      headers,
+      request: requestOptions
+    });
+  });
+}
+
+function withDefaults(oldEndpoint, newDefaults) {
+  const endpoint = oldEndpoint.defaults(newDefaults);
+
+  const newApi = function (route, parameters) {
+    const endpointOptions = endpoint.merge(route, parameters);
+
+    if (!endpointOptions.request || !endpointOptions.request.hook) {
+      return fetchWrapper(endpoint.parse(endpointOptions));
+    }
+
+    const request = (route, parameters) => {
+      return fetchWrapper(endpoint.parse(endpoint.merge(route, parameters)));
+    };
+
+    Object.assign(request, {
+      endpoint,
+      defaults: withDefaults.bind(null, endpoint)
+    });
+    return endpointOptions.request.hook(request, endpointOptions);
+  };
+
+  return Object.assign(newApi, {
+    endpoint,
+    defaults: withDefaults.bind(null, endpoint)
+  });
+}
+
+const request = withDefaults(endpoint.endpoint, {
+  headers: {
+    "user-agent": `octokit-request.js/${VERSION} ${universalUserAgent.getUserAgent()}`
+  }
+});
+
+exports.request = request;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+/* 754 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+const callerCallsite = __webpack_require__(922);
+
+module.exports = () => callerCallsite().getFileName();
+
+
+/***/ }),
+/* 755 */,
+/* 756 */
+/***/ (function(module) {
+
+"use strict";
+
+module.exports = input => {
+	const isExtendedLengthPath = /^\\\\\?\\/.test(input);
+	const hasNonAscii = /[^\u0000-\u0080]+/.test(input); // eslint-disable-line no-control-regex
+
+	if (isExtendedLengthPath || hasNonAscii) {
+		return input;
+	}
+
+	return input.replace(/\\/g, '/');
+};
+
+
+/***/ }),
+/* 757 */
 /***/ (function(module, exports) {
 
 exports = module.exports = SemVer
@@ -66828,697 +67508,6 @@ function coerce (version, options) {
 
 
 /***/ }),
-/* 732 */,
-/* 733 */,
-/* 734 */,
-/* 735 */,
-/* 736 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-
-const semver = __webpack_require__(731);
-const prereleaseIdFromVersion = __webpack_require__(981);
-
-/**
- * Represents a node in a PackageGraph.
- * @constructor
- * @param {!<Package>} pkg - A Package object to build the node from.
- */
-class PackageGraphNode {
-  constructor(pkg) {
-    Object.defineProperties(this, {
-      // immutable properties
-      name: {
-        enumerable: true,
-        value: pkg.name,
-      },
-      location: {
-        value: pkg.location,
-      },
-      prereleaseId: {
-        // an existing prerelease ID only matters at the beginning
-        value: prereleaseIdFromVersion(pkg.version),
-      },
-      // properties that might change over time
-      version: {
-        get() {
-          return pkg.version;
-        },
-      },
-      pkg: {
-        get() {
-          return pkg;
-        },
-      },
-    });
-
-    this.externalDependencies = new Map();
-    this.localDependencies = new Map();
-    this.localDependents = new Map();
-  }
-
-  /**
-   * Determine if the Node satisfies a resolved semver range.
-   * @see https://github.com/npm/npm-package-arg#result-object
-   *
-   * @param {!Result} resolved npm-package-arg Result object
-   * @returns {Boolean}
-   */
-  satisfies({ gitCommittish, gitRange, fetchSpec }) {
-    return semver.satisfies(this.version, gitCommittish || gitRange || fetchSpec);
-  }
-
-  /**
-   * Returns a string representation of this node (its name)
-   *
-   * @returns {String}
-   */
-  toString() {
-    return this.name;
-  }
-}
-
-module.exports.PackageGraphNode = PackageGraphNode;
-
-
-/***/ }),
-/* 737 */,
-/* 738 */
-/***/ (function(module) {
-
-"use strict";
-
-
-// there's 3 implementations written in increasing order of efficiency
-
-// 1 - no Set type is defined
-function uniqNoSet(arr) {
-	var ret = [];
-
-	for (var i = 0; i < arr.length; i++) {
-		if (ret.indexOf(arr[i]) === -1) {
-			ret.push(arr[i]);
-		}
-	}
-
-	return ret;
-}
-
-// 2 - a simple Set type is defined
-function uniqSet(arr) {
-	var seen = new Set();
-	return arr.filter(function (el) {
-		if (!seen.has(el)) {
-			seen.add(el);
-			return true;
-		}
-
-		return false;
-	});
-}
-
-// 3 - a standard Set type is defined and it has a forEach method
-function uniqSetWithForEach(arr) {
-	var ret = [];
-
-	(new Set(arr)).forEach(function (el) {
-		ret.push(el);
-	});
-
-	return ret;
-}
-
-// V8 currently has a broken implementation
-// https://github.com/joyent/node/issues/8449
-function doesForEachActuallyWork() {
-	var ret = false;
-
-	(new Set([true])).forEach(function (el) {
-		ret = el;
-	});
-
-	return ret === true;
-}
-
-if ('Set' in global) {
-	if (typeof Set.prototype.forEach === 'function' && doesForEachActuallyWork()) {
-		module.exports = uniqSetWithForEach;
-	} else {
-		module.exports = uniqSet;
-	}
-} else {
-	module.exports = uniqNoSet;
-}
-
-
-/***/ }),
-/* 739 */,
-/* 740 */
-/***/ (function(module) {
-
-"use strict";
-
-
-
-function isNothing(subject) {
-  return (typeof subject === 'undefined') || (subject === null);
-}
-
-
-function isObject(subject) {
-  return (typeof subject === 'object') && (subject !== null);
-}
-
-
-function toArray(sequence) {
-  if (Array.isArray(sequence)) return sequence;
-  else if (isNothing(sequence)) return [];
-
-  return [ sequence ];
-}
-
-
-function extend(target, source) {
-  var index, length, key, sourceKeys;
-
-  if (source) {
-    sourceKeys = Object.keys(source);
-
-    for (index = 0, length = sourceKeys.length; index < length; index += 1) {
-      key = sourceKeys[index];
-      target[key] = source[key];
-    }
-  }
-
-  return target;
-}
-
-
-function repeat(string, count) {
-  var result = '', cycle;
-
-  for (cycle = 0; cycle < count; cycle += 1) {
-    result += string;
-  }
-
-  return result;
-}
-
-
-function isNegativeZero(number) {
-  return (number === 0) && (Number.NEGATIVE_INFINITY === 1 / number);
-}
-
-
-module.exports.isNothing      = isNothing;
-module.exports.isObject       = isObject;
-module.exports.toArray        = toArray;
-module.exports.repeat         = repeat;
-module.exports.isNegativeZero = isNegativeZero;
-module.exports.extend         = extend;
-
-
-/***/ }),
-/* 741 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { requestLog } = __webpack_require__(916);
-const {
-  restEndpointMethods
-} = __webpack_require__(559);
-
-const Core = __webpack_require__(37);
-
-const CORE_PLUGINS = [
-  __webpack_require__(890),
-  __webpack_require__(953), // deprecated: remove in v17
-  requestLog,
-  __webpack_require__(786),
-  restEndpointMethods,
-  __webpack_require__(341),
-
-  __webpack_require__(850) // deprecated: remove in v17
-];
-
-const OctokitRest = Core.plugin(CORE_PLUGINS);
-
-function DeprecatedOctokit(options) {
-  const warn =
-    options && options.log && options.log.warn
-      ? options.log.warn
-      : console.warn;
-  warn(
-    '[@octokit/rest] `const Octokit = require("@octokit/rest")` is deprecated. Use `const { Octokit } = require("@octokit/rest")` instead'
-  );
-  return new OctokitRest(options);
-}
-
-const Octokit = Object.assign(DeprecatedOctokit, {
-  Octokit: OctokitRest
-});
-
-Object.keys(OctokitRest).forEach(key => {
-  /* istanbul ignore else */
-  if (OctokitRest.hasOwnProperty(key)) {
-    Octokit[key] = OctokitRest[key];
-  }
-});
-
-module.exports = Octokit;
-
-
-/***/ }),
-/* 742 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-var fs = __webpack_require__(747)
-var core
-if (process.platform === 'win32' || global.TESTING_WINDOWS) {
-  core = __webpack_require__(818)
-} else {
-  core = __webpack_require__(197)
-}
-
-module.exports = isexe
-isexe.sync = sync
-
-function isexe (path, options, cb) {
-  if (typeof options === 'function') {
-    cb = options
-    options = {}
-  }
-
-  if (!cb) {
-    if (typeof Promise !== 'function') {
-      throw new TypeError('callback not provided')
-    }
-
-    return new Promise(function (resolve, reject) {
-      isexe(path, options || {}, function (er, is) {
-        if (er) {
-          reject(er)
-        } else {
-          resolve(is)
-        }
-      })
-    })
-  }
-
-  core(path, options || {}, function (er, is) {
-    // ignore EACCES because that just means we aren't allowed to run it
-    if (er) {
-      if (er.code === 'EACCES' || options && options.ignoreErrors) {
-        er = null
-        is = false
-      }
-    }
-    cb(er, is)
-  })
-}
-
-function sync (path, options) {
-  // my kingdom for a filtered catch
-  try {
-    return core.sync(path, options || {})
-  } catch (er) {
-    if (options && options.ignoreErrors || er.code === 'EACCES') {
-      return false
-    } else {
-      throw er
-    }
-  }
-}
-
-
-/***/ }),
-/* 743 */,
-/* 744 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-var isBuffer = __webpack_require__(812);
-var toString = Object.prototype.toString;
-
-/**
- * Get the native `typeof` a value.
- *
- * @param  {*} `val`
- * @return {*} Native javascript type
- */
-
-module.exports = function kindOf(val) {
-  // primitivies
-  if (typeof val === 'undefined') {
-    return 'undefined';
-  }
-  if (val === null) {
-    return 'null';
-  }
-  if (val === true || val === false || val instanceof Boolean) {
-    return 'boolean';
-  }
-  if (typeof val === 'string' || val instanceof String) {
-    return 'string';
-  }
-  if (typeof val === 'number' || val instanceof Number) {
-    return 'number';
-  }
-
-  // functions
-  if (typeof val === 'function' || val instanceof Function) {
-    return 'function';
-  }
-
-  // array
-  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
-    return 'array';
-  }
-
-  // check for instances of RegExp and Date before calling `toString`
-  if (val instanceof RegExp) {
-    return 'regexp';
-  }
-  if (val instanceof Date) {
-    return 'date';
-  }
-
-  // other objects
-  var type = toString.call(val);
-
-  if (type === '[object RegExp]') {
-    return 'regexp';
-  }
-  if (type === '[object Date]') {
-    return 'date';
-  }
-  if (type === '[object Arguments]') {
-    return 'arguments';
-  }
-  if (type === '[object Error]') {
-    return 'error';
-  }
-
-  // buffer
-  if (isBuffer(val)) {
-    return 'buffer';
-  }
-
-  // es6: Map, WeakMap, Set, WeakSet
-  if (type === '[object Set]') {
-    return 'set';
-  }
-  if (type === '[object WeakSet]') {
-    return 'weakset';
-  }
-  if (type === '[object Map]') {
-    return 'map';
-  }
-  if (type === '[object WeakMap]') {
-    return 'weakmap';
-  }
-  if (type === '[object Symbol]') {
-    return 'symbol';
-  }
-
-  // typed arrays
-  if (type === '[object Int8Array]') {
-    return 'int8array';
-  }
-  if (type === '[object Uint8Array]') {
-    return 'uint8array';
-  }
-  if (type === '[object Uint8ClampedArray]') {
-    return 'uint8clampedarray';
-  }
-  if (type === '[object Int16Array]') {
-    return 'int16array';
-  }
-  if (type === '[object Uint16Array]') {
-    return 'uint16array';
-  }
-  if (type === '[object Int32Array]') {
-    return 'int32array';
-  }
-  if (type === '[object Uint32Array]') {
-    return 'uint32array';
-  }
-  if (type === '[object Float32Array]') {
-    return 'float32array';
-  }
-  if (type === '[object Float64Array]') {
-    return 'float64array';
-  }
-
-  // must be a plain object
-  return 'object';
-};
-
-
-/***/ }),
-/* 745 */
-/***/ (function(module) {
-
-module.exports = ["assert","buffer","child_process","cluster","console","constants","crypto","dgram","dns","domain","events","fs","http","https","module","net","os","path","process","punycode","querystring","readline","repl","stream","string_decoder","timers","tls","tty","url","util","v8","vm","zlib"];
-
-/***/ }),
-/* 746 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/*!
- * to-object-path <https://github.com/jonschlinkert/to-object-path>
- *
- * Copyright (c) 2015, Jon Schlinkert.
- * Licensed under the MIT License.
- */
-
-
-
-var typeOf = __webpack_require__(972);
-
-module.exports = function toPath(args) {
-  if (typeOf(args) !== 'arguments') {
-    args = arguments;
-  }
-  return filter(args).join('.');
-};
-
-function filter(arr) {
-  var len = arr.length;
-  var idx = -1;
-  var res = [];
-
-  while (++idx < len) {
-    var ele = arr[idx];
-    if (typeOf(ele) === 'arguments' || Array.isArray(ele)) {
-      res.push.apply(res, filter(ele));
-    } else if (typeof ele === 'string') {
-      res.push(ele);
-    }
-  }
-  return res;
-}
-
-
-/***/ }),
-/* 747 */
-/***/ (function(module) {
-
-module.exports = require("fs");
-
-/***/ }),
-/* 748 */,
-/* 749 */,
-/* 750 */,
-/* 751 */,
-/* 752 */,
-/* 753 */
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var endpoint = __webpack_require__(385);
-var universalUserAgent = __webpack_require__(796);
-var isPlainObject = _interopDefault(__webpack_require__(696));
-var nodeFetch = _interopDefault(__webpack_require__(454));
-var requestError = __webpack_require__(463);
-
-const VERSION = "5.3.2";
-
-function getBufferResponse(response) {
-  return response.arrayBuffer();
-}
-
-function fetchWrapper(requestOptions) {
-  if (isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body)) {
-    requestOptions.body = JSON.stringify(requestOptions.body);
-  }
-
-  let headers = {};
-  let status;
-  let url;
-  const fetch = requestOptions.request && requestOptions.request.fetch || nodeFetch;
-  return fetch(requestOptions.url, Object.assign({
-    method: requestOptions.method,
-    body: requestOptions.body,
-    headers: requestOptions.headers,
-    redirect: requestOptions.redirect
-  }, requestOptions.request)).then(response => {
-    url = response.url;
-    status = response.status;
-
-    for (const keyAndValue of response.headers) {
-      headers[keyAndValue[0]] = keyAndValue[1];
-    }
-
-    if (status === 204 || status === 205) {
-      return;
-    } // GitHub API returns 200 for HEAD requests
-
-
-    if (requestOptions.method === "HEAD") {
-      if (status < 400) {
-        return;
-      }
-
-      throw new requestError.RequestError(response.statusText, status, {
-        headers,
-        request: requestOptions
-      });
-    }
-
-    if (status === 304) {
-      throw new requestError.RequestError("Not modified", status, {
-        headers,
-        request: requestOptions
-      });
-    }
-
-    if (status >= 400) {
-      return response.text().then(message => {
-        const error = new requestError.RequestError(message, status, {
-          headers,
-          request: requestOptions
-        });
-
-        try {
-          let responseBody = JSON.parse(error.message);
-          Object.assign(error, responseBody);
-          let errors = responseBody.errors; // Assumption `errors` would always be in Array format
-
-          error.message = error.message + ": " + errors.map(JSON.stringify).join(", ");
-        } catch (e) {// ignore, see octokit/rest.js#684
-        }
-
-        throw error;
-      });
-    }
-
-    const contentType = response.headers.get("content-type");
-
-    if (/application\/json/.test(contentType)) {
-      return response.json();
-    }
-
-    if (!contentType || /^text\/|charset=utf-8$/.test(contentType)) {
-      return response.text();
-    }
-
-    return getBufferResponse(response);
-  }).then(data => {
-    return {
-      status,
-      url,
-      headers,
-      data
-    };
-  }).catch(error => {
-    if (error instanceof requestError.RequestError) {
-      throw error;
-    }
-
-    throw new requestError.RequestError(error.message, 500, {
-      headers,
-      request: requestOptions
-    });
-  });
-}
-
-function withDefaults(oldEndpoint, newDefaults) {
-  const endpoint = oldEndpoint.defaults(newDefaults);
-
-  const newApi = function (route, parameters) {
-    const endpointOptions = endpoint.merge(route, parameters);
-
-    if (!endpointOptions.request || !endpointOptions.request.hook) {
-      return fetchWrapper(endpoint.parse(endpointOptions));
-    }
-
-    const request = (route, parameters) => {
-      return fetchWrapper(endpoint.parse(endpoint.merge(route, parameters)));
-    };
-
-    Object.assign(request, {
-      endpoint,
-      defaults: withDefaults.bind(null, endpoint)
-    });
-    return endpointOptions.request.hook(request, endpointOptions);
-  };
-
-  return Object.assign(newApi, {
-    endpoint,
-    defaults: withDefaults.bind(null, endpoint)
-  });
-}
-
-const request = withDefaults(endpoint.endpoint, {
-  headers: {
-    "user-agent": `octokit-request.js/${VERSION} ${universalUserAgent.getUserAgent()}`
-  }
-});
-
-exports.request = request;
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-/* 754 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-const callerCallsite = __webpack_require__(922);
-
-module.exports = () => callerCallsite().getFileName();
-
-
-/***/ }),
-/* 755 */,
-/* 756 */
-/***/ (function(module) {
-
-"use strict";
-
-module.exports = input => {
-	const isExtendedLengthPath = /^\\\\\?\\/.test(input);
-	const hasNonAscii = /[^\u0000-\u0080]+/.test(input); // eslint-disable-line no-control-regex
-
-	if (isExtendedLengthPath || hasNonAscii) {
-		return input;
-	}
-
-	return input.replace(/\\/g, '/');
-};
-
-
-/***/ }),
-/* 757 */,
 /* 758 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -70190,44 +70179,28 @@ function plural(ms, n, name) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 "use strict";
-/*!
- * define-property <https://github.com/jonschlinkert/define-property>
- *
- * Copyright (c) 2015-2018, Jon Schlinkert.
- * Released under the MIT License.
- */
 
 
+const childProcess = __webpack_require__(801);
+const log = __webpack_require__(533);
 
-var isobject = __webpack_require__(782);
-var isDescriptor = __webpack_require__(715);
-var define = (typeof Reflect !== 'undefined' && Reflect.defineProperty)
-  ? Reflect.defineProperty
-  : Object.defineProperty;
+module.exports = hasTags;
 
-module.exports = function defineProperty(obj, key, val) {
-  if (!isobject(obj) && typeof obj !== 'function' && !Array.isArray(obj)) {
-    throw new TypeError('expected an object, function, or array');
+function hasTags(opts) {
+  log.silly("hasTags");
+  let result = false;
+
+  try {
+    result = !!childProcess.execSync("git", ["tag"], opts);
+  } catch (err) {
+    log.warn("ENOTAGS", "No git tags were reachable from this branch!");
+    log.verbose("hasTags error", err);
   }
 
-  if (typeof key !== 'string') {
-    throw new TypeError('expected "key" to be a string');
-  }
+  log.verbose("hasTags", result);
 
-  if (isDescriptor(val)) {
-    define(obj, key, val);
-    return obj;
-  }
-
-  define(obj, key, {
-    configurable: true,
-    enumerable: false,
-    writable: true,
-    value: val
-  });
-
-  return obj;
-};
+  return result;
+}
 
 
 /***/ }),
@@ -71534,11 +71507,172 @@ module.exports.addConstructor = deprecated('addConstructor');
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 "use strict";
+/* module decorator */ module = __webpack_require__.nmd(module);
 
+const colorConvert = __webpack_require__(592);
 
-module.exports = {
-  copySync: __webpack_require__(110)
+const wrapAnsi16 = (fn, offset) => function () {
+	const code = fn.apply(colorConvert, arguments);
+	return `\u001B[${code + offset}m`;
+};
+
+const wrapAnsi256 = (fn, offset) => function () {
+	const code = fn.apply(colorConvert, arguments);
+	return `\u001B[${38 + offset};5;${code}m`;
+};
+
+const wrapAnsi16m = (fn, offset) => function () {
+	const rgb = fn.apply(colorConvert, arguments);
+	return `\u001B[${38 + offset};2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
+};
+
+function assembleStyles() {
+	const codes = new Map();
+	const styles = {
+		modifier: {
+			reset: [0, 0],
+			// 21 isn't widely supported and 22 does the same thing
+			bold: [1, 22],
+			dim: [2, 22],
+			italic: [3, 23],
+			underline: [4, 24],
+			inverse: [7, 27],
+			hidden: [8, 28],
+			strikethrough: [9, 29]
+		},
+		color: {
+			black: [30, 39],
+			red: [31, 39],
+			green: [32, 39],
+			yellow: [33, 39],
+			blue: [34, 39],
+			magenta: [35, 39],
+			cyan: [36, 39],
+			white: [37, 39],
+			gray: [90, 39],
+
+			// Bright color
+			redBright: [91, 39],
+			greenBright: [92, 39],
+			yellowBright: [93, 39],
+			blueBright: [94, 39],
+			magentaBright: [95, 39],
+			cyanBright: [96, 39],
+			whiteBright: [97, 39]
+		},
+		bgColor: {
+			bgBlack: [40, 49],
+			bgRed: [41, 49],
+			bgGreen: [42, 49],
+			bgYellow: [43, 49],
+			bgBlue: [44, 49],
+			bgMagenta: [45, 49],
+			bgCyan: [46, 49],
+			bgWhite: [47, 49],
+
+			// Bright color
+			bgBlackBright: [100, 49],
+			bgRedBright: [101, 49],
+			bgGreenBright: [102, 49],
+			bgYellowBright: [103, 49],
+			bgBlueBright: [104, 49],
+			bgMagentaBright: [105, 49],
+			bgCyanBright: [106, 49],
+			bgWhiteBright: [107, 49]
+		}
+	};
+
+	// Fix humans
+	styles.color.grey = styles.color.gray;
+
+	for (const groupName of Object.keys(styles)) {
+		const group = styles[groupName];
+
+		for (const styleName of Object.keys(group)) {
+			const style = group[styleName];
+
+			styles[styleName] = {
+				open: `\u001B[${style[0]}m`,
+				close: `\u001B[${style[1]}m`
+			};
+
+			group[styleName] = styles[styleName];
+
+			codes.set(style[0], style[1]);
+		}
+
+		Object.defineProperty(styles, groupName, {
+			value: group,
+			enumerable: false
+		});
+
+		Object.defineProperty(styles, 'codes', {
+			value: codes,
+			enumerable: false
+		});
+	}
+
+	const ansi2ansi = n => n;
+	const rgb2rgb = (r, g, b) => [r, g, b];
+
+	styles.color.close = '\u001B[39m';
+	styles.bgColor.close = '\u001B[49m';
+
+	styles.color.ansi = {
+		ansi: wrapAnsi16(ansi2ansi, 0)
+	};
+	styles.color.ansi256 = {
+		ansi256: wrapAnsi256(ansi2ansi, 0)
+	};
+	styles.color.ansi16m = {
+		rgb: wrapAnsi16m(rgb2rgb, 0)
+	};
+
+	styles.bgColor.ansi = {
+		ansi: wrapAnsi16(ansi2ansi, 10)
+	};
+	styles.bgColor.ansi256 = {
+		ansi256: wrapAnsi256(ansi2ansi, 10)
+	};
+	styles.bgColor.ansi16m = {
+		rgb: wrapAnsi16m(rgb2rgb, 10)
+	};
+
+	for (let key of Object.keys(colorConvert)) {
+		if (typeof colorConvert[key] !== 'object') {
+			continue;
+		}
+
+		const suite = colorConvert[key];
+
+		if (key === 'ansi16') {
+			key = 'ansi';
+		}
+
+		if ('ansi16' in suite) {
+			styles.color.ansi[key] = wrapAnsi16(suite.ansi16, 0);
+			styles.bgColor.ansi[key] = wrapAnsi16(suite.ansi16, 10);
+		}
+
+		if ('ansi256' in suite) {
+			styles.color.ansi256[key] = wrapAnsi256(suite.ansi256, 0);
+			styles.bgColor.ansi256[key] = wrapAnsi256(suite.ansi256, 10);
+		}
+
+		if ('rgb' in suite) {
+			styles.color.ansi16m[key] = wrapAnsi16m(suite.rgb, 0);
+			styles.bgColor.ansi16m[key] = wrapAnsi16m(suite.rgb, 10);
+		}
+	}
+
+	return styles;
 }
+
+// Make the export immutable
+Object.defineProperty(module, 'exports', {
+	enumerable: true,
+	get: assembleStyles
+});
 
 
 /***/ }),
@@ -72288,7 +72422,7 @@ var path = __webpack_require__(622);
  */
 
 var Snapdragon = __webpack_require__(381);
-utils.define = __webpack_require__(798);
+utils.define = __webpack_require__(393);
 utils.diff = __webpack_require__(266);
 utils.extend = __webpack_require__(119);
 utils.pick = __webpack_require__(349);
@@ -74346,50 +74480,7 @@ module.exports.sync = (filePath, options) => parse(fs.readFileSync(filePath, 'ut
 /* 870 */,
 /* 871 */,
 /* 872 */,
-/* 873 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isObject = __webpack_require__(782);
-
-function isObjectObject(o) {
-  return isObject(o) === true
-    && Object.prototype.toString.call(o) === '[object Object]';
-}
-
-module.exports = function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObjectObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (typeof ctor !== 'function') return false;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObjectObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-};
-
-
-/***/ }),
+/* 873 */,
 /* 874 */,
 /* 875 */,
 /* 876 */,
@@ -77468,7 +77559,7 @@ module.exports = new Type('tag:yaml.org,2002:binary', {
 
 
 
-var typeOf = __webpack_require__(640);
+var typeOf = __webpack_require__(696);
 
 module.exports = function isNumber(num) {
   var type = typeOf(num);
@@ -77497,7 +77588,7 @@ module.exports = function isNumber(num) {
 
 
 
-var isPlainObject = __webpack_require__(148);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -79661,7 +79752,7 @@ module.exports.cli = __webpack_require__(261);
 
 
 
-var isPlainObject = __webpack_require__(873);
+var isPlainObject = __webpack_require__(960);
 
 module.exports = function isExtendable(val) {
   return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
@@ -79681,7 +79772,50 @@ module.exports = {
 
 
 /***/ }),
-/* 960 */,
+/* 960 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+/*!
+ * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var isObject = __webpack_require__(782);
+
+function isObjectObject(o) {
+  return isObject(o) === true
+    && Object.prototype.toString.call(o) === '[object Object]';
+}
+
+module.exports = function isPlainObject(o) {
+  var ctor,prot;
+
+  if (isObjectObject(o) === false) return false;
+
+  // If has modified constructor
+  ctor = o.constructor;
+  if (typeof ctor !== 'function') return false;
+
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (isObjectObject(prot) === false) return false;
+
+  // If constructor does not have an Object-specific method
+  if (prot.hasOwnProperty('isPrototypeOf') === false) {
+    return false;
+  }
+
+  // Most likely a plain Object
+  return true;
+};
+
+
+/***/ }),
 /* 961 */,
 /* 962 */,
 /* 963 */,

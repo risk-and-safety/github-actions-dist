@@ -1,0 +1,14 @@
+{
+  "name": "@rss/app-d",
+  "version": "1.0.0",
+  "description": "Fake monorepo app for integration tests",
+  "repository": "https://github.com/risk-and-safety/platform",
+  "author": "Risk and Safety Solutions",
+  "license": "UNLICENSED",
+  "private": true,
+  "rss": {
+    "deployTypes": [
+      "NPM"
+    ]
+  }
+}
