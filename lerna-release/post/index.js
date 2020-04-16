@@ -305,22 +305,25 @@ module.exports._enoent = enoent;
 
 const core = __webpack_require__(470);
 
-const { getDestBranch, getSrcBranch, gitMerge } = __webpack_require__(731);
+const { getDestBranch, gitMerge } = __webpack_require__(731);
 
 async function gitMergeBack() {
-  // Reverse the branches so changelog commits are pushed back to the source branch
-  const srcBranch = await getDestBranch();
-  const destBranch = await getSrcBranch();
+  const destBranch = await getDestBranch();
 
-  await gitMerge({ srcBranch, destBranch });
+  if (core.getInput('draft') !== 'false' || (destBranch !== 'qa' && destBranch !== 'prod')) {
+    return;
+  }
+
+  const prevBranches = destBranch === 'prod' ? ['qa', 'master'] : ['master'];
+
+  // Reverse the branches so changelog commits are pushed back to the source branches
+  await gitMerge({ srcBranch: destBranch, destBranches: prevBranches });
 }
 
-if (core.getInput('draft') === 'false') {
-  gitMergeBack().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
-}
+gitMergeBack().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 
 
 /***/ }),
@@ -21919,14 +21922,22 @@ async function gitMerge(params = {}) {
     await setGitUser(await getGitUser());
   }
 
-  const srcBranch = params.srcBranch || (await getSrcBranch());
-  const destBranch = params.destBranch || (await getDestBranch());
+  let srcBranch = params.srcBranch || (await getSrcBranch());
+  const destBranches = params.destBranches
+    ? params.destBranches.filter((branch) => branch !== srcBranch)
+    : [await getDestBranch()];
 
-  await sh(
-    `git checkout ${destBranch}
-    git merge ${srcBranch}
-    git push --follow-tags`,
-  );
+  // eslint-disable-next-line no-restricted-syntax
+  for (const destBranch of destBranches) {
+    // eslint-disable-next-line no-await-in-loop
+    await sh(
+      `git checkout ${destBranch}
+      git merge ${srcBranch}
+      git push --follow-tags`,
+    );
+
+    srcBranch = destBranch;
+  }
 }
 
 module.exports.getShortCommit = getShortCommit;

@@ -65192,14 +65192,22 @@ async function gitMerge(params = {}) {
     await setGitUser(await getGitUser());
   }
 
-  const srcBranch = params.srcBranch || (await getSrcBranch());
-  const destBranch = params.destBranch || (await getDestBranch());
+  let srcBranch = params.srcBranch || (await getSrcBranch());
+  const destBranches = params.destBranches
+    ? params.destBranches.filter((branch) => branch !== srcBranch)
+    : [await getDestBranch()];
 
-  await sh(
-    `git checkout ${destBranch}
-    git merge ${srcBranch}
-    git push --follow-tags`,
-  );
+  // eslint-disable-next-line no-restricted-syntax
+  for (const destBranch of destBranches) {
+    // eslint-disable-next-line no-await-in-loop
+    await sh(
+      `git checkout ${destBranch}
+      git merge ${srcBranch}
+      git push --follow-tags`,
+    );
+
+    srcBranch = destBranch;
+  }
 }
 
 module.exports.getShortCommit = getShortCommit;
