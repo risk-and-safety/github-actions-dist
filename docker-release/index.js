@@ -3542,7 +3542,7 @@ module.exports.MaxBufferError = MaxBufferError;
 /***/ 167:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
@@ -3596,6 +3596,8 @@ async function dockerReleaseOne(params) {
 }
 
 async function dockerRelease(params) {
+  warning(`Releasing: [${params.app}]`);
+
   // Force deployments to be sequential so the logs are readable.
   return sequentialDeploy(params.app, async (app) => {
     return dockerReleaseOne({ ...params, app });

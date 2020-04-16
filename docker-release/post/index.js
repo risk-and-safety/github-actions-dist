@@ -3555,6 +3555,9 @@ async function prune(params) {
 
   if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
     throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
+  } else if (tag === 'master' || tag === 'qa') {
+    // Leave master and qa so that the deploy can be replayed
+    return;
   }
 
   const versions = await findImages({ githubClient, owner, repo, apps, tag });
