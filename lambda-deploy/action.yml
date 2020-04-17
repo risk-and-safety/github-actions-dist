@@ -5,12 +5,9 @@ inputs:
     description: Function name or comma separated list of functions
     required: true
   staging-bucket-prefix:
-    description: S3 artifact bucket prefix excluding env suffix [dev,qa,prod]
+    description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)
     required: false
     default: 'rss-config-'
-  env:
-    description: Target deployment env [dev,qa,prod]. Defaults to the destination branch.
-    required: false
 runs:
   using: 'node12'
   main: 'index.js'

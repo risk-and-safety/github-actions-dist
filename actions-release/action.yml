@@ -11,6 +11,10 @@ inputs:
   ssh-deploy-key:
     description: SSH key for writing to the git repository
     required: false
+  pre-release:
+    description: Indicates if the code should be pushed to a feature branch
+    required: false
+    default: 'false'
   dry-run:
     description: Don't push to git repository
     required: false
