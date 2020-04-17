@@ -2,17 +2,17 @@ name: actions-release
 description: Push compiled GitHub Action assets (eg action.yml) to different git repository
 inputs:
   repo:
-    description: Git repository for the compiled assets
+    description: Remote git repo for the compiled assets
     required: true
   build-dir:
-    description: The directory containing the compiled assets
+    description: Directory containing the compiled assets
     required: false
     default: 'build/'
   ssh-deploy-key:
     description: SSH key for writing to the git repository
     required: false
   pre-release:
-    description: Indicates the compile code should be pushed to a matching feature branch
+    description: Compiled assets should be pushed to a matching feature branch in the remote git repo
     required: false
     default: 'false'
   dry-run:
