@@ -12,7 +12,7 @@ inputs:
     description: SSH key for writing to the git repository
     required: false
   pre-release:
-    description: Indicates if the code should be pushed to a feature branch
+    description: Indicates the compile code should be pushed to a matching feature branch
     required: false
     default: 'false'
   dry-run:
