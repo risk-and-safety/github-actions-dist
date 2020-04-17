@@ -11,8 +11,11 @@ inputs:
     description: Password/token for the repo
     required: true
   app:
-    description: App name
+    description: App name or comma separated list of apps to stage
     required: true
+  src-tag-prefix:
+    description: If provided uses the latest image with this prefix instead of doing a docker build
+    required: false
   path:
     description: Docker build directory (default '.')
     required: false
