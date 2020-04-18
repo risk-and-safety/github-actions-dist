@@ -9046,10 +9046,13 @@ async function actionsRelease(params) {
     await setGitUser(user, TEMP_GIT_DIR);
   }
 
+  const branch = preRelease ? await getSrcBranch() : DEFAULT_BRANCH;
+
   await sh(
     `cd "${TEMP_GIT_DIR}"
      git fetch
-     git pull origin ${DEFAULT_BRANCH}`,
+     git checkout -B ${branch}
+     git pull origin ${branch} || true`,
   );
 
   await fs.copy(buildDir, TEMP_GIT_DIR);
@@ -9063,12 +9066,9 @@ async function actionsRelease(params) {
 
   if (changes) {
     const { version } = await fs.readJson(path.join(TEMP_GIT_DIR, 'package.json'));
-    const branch = preRelease ? await getSrcBranch() : DEFAULT_BRANCH;
 
     await sh(
       `cd "${TEMP_GIT_DIR}"
-${preRelease ? `git checkout -B ${branch}` : ''}
-git pull || true
 git add .
 git commit -m "chore(release): push compiled code"
 git tag -a -m "v${version}" v${version} || true
