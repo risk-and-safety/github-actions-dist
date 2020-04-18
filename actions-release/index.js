@@ -9068,6 +9068,7 @@ async function actionsRelease(params) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
 ${preRelease ? `git checkout -B ${branch}` : ''}
+git pull || true
 git add .
 git commit -m "chore(release): push compiled code"
 git tag -a -m "v${version}" v${version} || true
