@@ -1,4 +1,4 @@
-name: actions-release
+name: Actions Release
 description: Push compiled GitHub Action assets (eg action.yml) to different git repository
 inputs:
   repo:

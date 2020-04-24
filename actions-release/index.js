@@ -9002,6 +9002,31 @@ const HOME = os.homedir();
 const TEMP_GIT_DIR = `${os.tmpdir()}/actions-release-${uuid()}/`;
 const DEFAULT_BRANCH = 'master';
 
+async function copyFilesAndCommit(buildDir) {
+  await fs.copy(buildDir, TEMP_GIT_DIR);
+
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+    git add -N .`,
+  );
+
+  const changes = (await exec(`cd "${TEMP_GIT_DIR}" && git diff --exit-code >/dev/null || echo true`)) === 'true';
+
+  if (!changes) {
+    info('no changes found');
+    return;
+  }
+
+  const { version } = await fs.readJson(path.join(TEMP_GIT_DIR, 'package.json'));
+
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+git add .
+git commit -m "chore(release): push compiled code"
+git tag -a -m "v${version}" v${version} || true`,
+  );
+}
+
 async function actionsRelease(params) {
   const repo = validateRepo(params.repo);
   const buildDir = cleanBuildDir(params.buildDir);
@@ -9046,36 +9071,31 @@ async function actionsRelease(params) {
     await setGitUser(user, TEMP_GIT_DIR);
   }
 
+  const branch = await getSrcBranch();
+
   await sh(
     `cd "${TEMP_GIT_DIR}"
      git fetch
-     git pull origin ${DEFAULT_BRANCH}`,
+     git checkout ${DEFAULT_BRANCH}
+     git checkout ${branch} || git checkout -b ${branch}
+     git pull origin ${branch} || true`,
   );
 
-  await fs.copy(buildDir, TEMP_GIT_DIR);
-
-  await sh(
-    `cd "${TEMP_GIT_DIR}"
-    git add -N .`,
-  );
-
-  const changes = (await exec(`cd "${TEMP_GIT_DIR}" && git diff --exit-code >/dev/null || echo true`)) === 'true';
-
-  if (changes) {
-    const { version } = await fs.readJson(path.join(TEMP_GIT_DIR, 'package.json'));
-    const branch = preRelease ? await getSrcBranch() : DEFAULT_BRANCH;
-
+  if (preRelease) {
+    await copyFilesAndCommit(buildDir);
+  } else if (branch !== DEFAULT_BRANCH) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
-${preRelease ? `git checkout -B ${branch}` : ''}
-git add .
-git commit -m "chore(release): push compiled code"
-git tag -a -m "v${version}" v${version} || true
-${!dryRun ? `git push origin ${branch} --follow-tags` : ''}
-${!dryRun && !preRelease && branch !== DEFAULT_BRANCH ? `git push origin --delete ${branch} || true` : ''}`,
+      git checkout ${DEFAULT_BRANCH}
+      git merge ${branch}`,
     );
-  } else {
-    info('no changes found');
+  }
+
+  if (!dryRun) {
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+      git push origin ${preRelease ? branch : DEFAULT_BRANCH} --follow-tags`,
+    );
   }
 }
 
