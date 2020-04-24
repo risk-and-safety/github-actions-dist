@@ -6136,7 +6136,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "6.0.0";
+const VERSION = "6.0.1";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
@@ -9046,13 +9046,10 @@ async function actionsRelease(params) {
     await setGitUser(user, TEMP_GIT_DIR);
   }
 
-  const branch = preRelease ? await getSrcBranch() : DEFAULT_BRANCH;
-
   await sh(
     `cd "${TEMP_GIT_DIR}"
      git fetch
-     git checkout -B ${branch}
-     git pull origin ${branch} || true`,
+     git pull origin ${DEFAULT_BRANCH}`,
   );
 
   await fs.copy(buildDir, TEMP_GIT_DIR);
@@ -9066,9 +9063,11 @@ async function actionsRelease(params) {
 
   if (changes) {
     const { version } = await fs.readJson(path.join(TEMP_GIT_DIR, 'package.json'));
+    const branch = preRelease ? await getSrcBranch() : DEFAULT_BRANCH;
 
     await sh(
       `cd "${TEMP_GIT_DIR}"
+${preRelease ? `git checkout -B ${branch}` : ''}
 git add .
 git commit -m "chore(release): push compiled code"
 git tag -a -m "v${version}" v${version} || true
@@ -25110,7 +25109,7 @@ var isPlainObject = _interopDefault(__webpack_require__(548));
 var nodeFetch = _interopDefault(__webpack_require__(454));
 var requestError = __webpack_require__(257);
 
-const VERSION = "5.4.0";
+const VERSION = "5.4.2";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
