@@ -7360,9 +7360,17 @@ function factory(plugins) {
 /***/ (function(module) {
 
 module.exports.inputList = function inputList(input) {
-  const list = typeof input === 'string' ? input.split(/[,\s\r\n]/g) : input;
+  let list = input || [];
 
-  return list.map((item) => item.trim()).filter(Boolean);
+  if (typeof input === 'string') {
+    try {
+      list = JSON.parse(input);
+    } catch (err) {
+      list = input.split(/[,\r\n]/g).map((item) => item.trim());
+    }
+  }
+
+  return list.filter(Boolean);
 };
 
 module.exports.validateRepo = function validateRepo(repo) {
@@ -21866,6 +21874,20 @@ const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
+const { validateRepo } = __webpack_require__(521);
+
+function getRepo(repoUrl) {
+  if (repoUrl && repoUrl.trim()) {
+    const urlParts = validateRepo(repoUrl).split('/');
+
+    return {
+      repo: urlParts.pop().replace('.git', ''),
+      owner: urlParts.pop(),
+    };
+  }
+
+  return github.context.repo;
+}
 
 async function getShortCommit() {
   try {
@@ -21898,8 +21920,8 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv(envList = ['qa', 'prod']) {
-  const destBranch = await getDestBranch();
+async function getEnv({ branch, envList = ['qa', 'prod'] } = {}) {
+  const destBranch = branch || (await getDestBranch());
 
   if (envList.includes(destBranch)) {
     return destBranch;
@@ -21917,7 +21939,7 @@ async function findGitTags(commitish = 'HEAD') {
 async function findGitVersion(app, commitish) {
   const tag = await exec(`git tag --points-at ${commitish}`);
 
-  const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[a-z0-9.]+)?)`, 'g');
+  const regExp = new RegExp(`(${app}@|v)([0-9.]{5,12}(-[\\w.]+)?)`, 'g');
   const matches = regExp.exec(tag);
 
   if (!matches || matches.length < 3) {
@@ -21964,12 +21986,22 @@ async function trueUpGitHistory() {
 
   const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
   if (isShallowFetch) {
-    await sh('git fetch --prune --unshallow');
+    const destBranch = await getDestBranch();
+    const srcBranch = await getSrcBranch();
+    const merged = github.context.payload && github.context.payload.pull_request.merged;
+
+    await sh(
+      `git fetch --prune --unshallow --tags
+      git fetch origin ${destBranch} --tags
+      git checkout ${destBranch}
+      ${!merged ? `git checkout ${srcBranch}` : ''}`,
+    );
   } else {
     await sh('git fetch --tags');
   }
 }
 
+module.exports.getRepo = getRepo;
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
@@ -22706,7 +22738,7 @@ const { inputList } = __webpack_require__(521);
 
 async function calculateEnv() {
   const envList = inputList(core.getInput('env-list'));
-  return getEnv(envList);
+  return getEnv({ envList });
 }
 
 calculateEnv()

@@ -6967,7 +6967,48 @@ module.exports = str => {
 
 
 /***/ }),
-/* 140 */,
+/* 140 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+/*!
+ * object.pick <https://github.com/jonschlinkert/object.pick>
+ *
+ * Copyright (c) 2014-2015 Jon Schlinkert, contributors.
+ * Licensed under the MIT License
+ */
+
+
+
+var isObject = __webpack_require__(782);
+
+module.exports = function pick(obj, keys) {
+  if (!isObject(obj) && typeof obj !== 'function') {
+    return {};
+  }
+
+  var res = {};
+  if (typeof keys === 'string') {
+    if (keys in obj) {
+      res[keys] = obj[keys];
+    }
+    return res;
+  }
+
+  var len = keys.length;
+  var idx = -1;
+
+  while (++idx < len) {
+    var key = keys[idx];
+    if (key in obj) {
+      res[key] = obj[key];
+    }
+  }
+  return res;
+};
+
+
+/***/ }),
 /* 141 */,
 /* 142 */,
 /* 143 */
@@ -8851,7 +8892,85 @@ module.exports = isAccessorDescriptor;
 /***/ }),
 /* 210 */,
 /* 211 */,
-/* 212 */,
+/* 212 */
+/***/ (function(module) {
+
+"use strict";
+
+
+const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
+	options = Object.assign({
+		concurrency: Infinity
+	}, options);
+
+	if (typeof mapper !== 'function') {
+		throw new TypeError('Mapper function is required');
+	}
+
+	const {concurrency} = options;
+
+	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
+		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
+	}
+
+	const ret = [];
+	const iterator = iterable[Symbol.iterator]();
+	let isRejected = false;
+	let isIterableDone = false;
+	let resolvingCount = 0;
+	let currentIndex = 0;
+
+	const next = () => {
+		if (isRejected) {
+			return;
+		}
+
+		const nextItem = iterator.next();
+		const i = currentIndex;
+		currentIndex++;
+
+		if (nextItem.done) {
+			isIterableDone = true;
+
+			if (resolvingCount === 0) {
+				resolve(ret);
+			}
+
+			return;
+		}
+
+		resolvingCount++;
+
+		Promise.resolve(nextItem.value)
+			.then(element => mapper(element, i))
+			.then(
+				value => {
+					ret[i] = value;
+					resolvingCount--;
+					next();
+				},
+				error => {
+					isRejected = true;
+					reject(error);
+				}
+			);
+	};
+
+	for (let i = 0; i < concurrency; i++) {
+		next();
+
+		if (isIterableDone) {
+			break;
+		}
+	}
+});
+
+module.exports = pMap;
+// TODO: Remove this for the next major release
+module.exports.default = pMap;
+
+
+/***/ }),
 /* 213 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -13072,7 +13191,7 @@ const globby = __webpack_require__(625);
 const globParent = __webpack_require__(763);
 const loadJsonFile = __webpack_require__(37);
 const log = __webpack_require__(533);
-const pMap = __webpack_require__(521);
+const pMap = __webpack_require__(212);
 const path = __webpack_require__(622);
 const writeJsonFile = __webpack_require__(294);
 
@@ -16848,44 +16967,21 @@ module.exports = process
 
 /***/ }),
 /* 349 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-"use strict";
-/*!
- * object.pick <https://github.com/jonschlinkert/object.pick>
- *
- * Copyright (c) 2014-2015 Jon Schlinkert, contributors.
- * Licensed under the MIT License
- */
-
-
-
-var isObject = __webpack_require__(782);
-
-module.exports = function pick(obj, keys) {
-  if (!isObject(obj) && typeof obj !== 'function') {
-    return {};
-  }
-
-  var res = {};
-  if (typeof keys === 'string') {
-    if (keys in obj) {
-      res[keys] = obj[keys];
-    }
-    return res;
-  }
-
-  var len = keys.length;
-  var idx = -1;
-
-  while (++idx < len) {
-    var key = keys[idx];
-    if (key in obj) {
-      res[key] = obj[key];
-    }
-  }
-  return res;
+module.exports.DEPLOY_TYPES = {
+  NONE: 'NONE', // Placeholder so the deploy job ignores this package
+  DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
+  KUBE_JOB: 'KUBE_JOB',
+  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
+  LAMBDA: 'LAMBDA',
+  MAVEN: 'MAVEN',
+  NPM: 'NPM',
+  S3: 'S3',
+  GIT: 'GIT',
 };
+
+module.exports.LABEL_PREFIX = 'deploy:';
 
 
 /***/ }),
@@ -22791,11 +22887,12 @@ Gauge.prototype._doRedraw = function () {
 /* 411 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { warning } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
 const Project = __webpack_require__(278);
 const fs = __webpack_require__(201);
+const util = __webpack_require__(669);
 
-const { DEPLOY_TYPES } = __webpack_require__(824);
+const { DEPLOY_TYPES } = __webpack_require__(349);
 
 const { DOCKER_BUILD, KUBE_JOB, KUBE_DEPLOYMENT } = DEPLOY_TYPES;
 
@@ -22824,22 +22921,12 @@ function findDeployTypes(packagesPath, name, pkgJson) {
   return deployTypes;
 }
 
-async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' }) {
+async function groupDeployTypes({ packages = [], prefix = '' }) {
   const packageNames = packages
-    .filter((pkg) => !prefix || pkg.name.startsWith(prefix))
-    .map((pkg) => {
-      let { name } = pkg;
-
-      if (prefix) {
-        name = name.substring(prefix.length);
-      }
-
-      if (ignoreSuffix && name.endsWith(ignoreSuffix)) {
-        name = name.substring(0, name.length - ignoreSuffix.length);
-      }
-
-      return name;
-    });
+    .map((pkg) => (typeof pkg === 'string' ? pkg : pkg.name))
+    .filter((name) => name && (!prefix || name.startsWith(prefix)))
+    .map((name) => (prefix ? name.substring(prefix.length) : name))
+    .sort((a, b) => a.localeCompare(b));
 
   if (!packageNames.length) {
     warning('List of packages is empty');
@@ -22851,7 +22938,7 @@ async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' 
   const packagesPath = `${project.rootPath}/packages`;
   const pkgJsons = await project.getPackages();
 
-  return packageNames.reduce((acc, name) => {
+  const deployTypesMap = packageNames.reduce((acc, name) => {
     const pkgJson = pkgJsons.find((pkg) => pkg.name === name || pkg.location.split('/').pop() === name); // ignore npm @scope/
     const deployTypes = findDeployTypes(packagesPath, name, pkgJson);
 
@@ -22861,6 +22948,10 @@ async function groupDeployTypes({ packages = [], prefix = '', ignoreSuffix = '' 
 
     return acc;
   }, {});
+
+  info(`Deploy types: ${util.inspect(deployTypesMap)}`);
+
+  return deployTypesMap;
 }
 
 module.exports.groupDeployTypes = groupDeployTypes;
@@ -24154,7 +24245,7 @@ module.exports = function isDataDescriptor(obj, prop) {
 
 
 const globby = __webpack_require__(625);
-const pMap = __webpack_require__(521);
+const pMap = __webpack_require__(212);
 const path = __webpack_require__(622);
 const ValidationError = __webpack_require__(793);
 
@@ -28943,79 +29034,102 @@ module.exports = {
 /* 521 */
 /***/ (function(module) {
 
-"use strict";
+module.exports.inputList = function inputList(input) {
+  let list = input || [];
 
+  if (typeof input === 'string') {
+    try {
+      list = JSON.parse(input);
+    } catch (err) {
+      list = input.split(/[,\r\n]/g).map((item) => item.trim());
+    }
+  }
 
-const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
-	options = Object.assign({
-		concurrency: Infinity
-	}, options);
+  return list.filter(Boolean);
+};
 
-	if (typeof mapper !== 'function') {
-		throw new TypeError('Mapper function is required');
-	}
+module.exports.validateRepo = function validateRepo(repo) {
+  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
+    throw new Error(`Invalid repo name [${repo}]`);
+  }
 
-	const {concurrency} = options;
+  return repo;
+};
 
-	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
-		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
-	}
+module.exports.validateAppName = function validateAppName(name) {
+  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
+    throw new Error(`Invalid app name [${name}]`);
+  }
 
-	const ret = [];
-	const iterator = iterable[Symbol.iterator]();
-	let isRejected = false;
-	let isIterableDone = false;
-	let resolvingCount = 0;
-	let currentIndex = 0;
+  return name;
+};
 
-	const next = () => {
-		if (isRejected) {
-			return;
-		}
+module.exports.validateNamespace = function validateNamespace(namespace) {
+  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+    throw new Error(`Invalid env or namespace name [${namespace}]`);
+  }
 
-		const nextItem = iterator.next();
-		const i = currentIndex;
-		currentIndex++;
+  return namespace;
+};
 
-		if (nextItem.done) {
-			isIterableDone = true;
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
 
-			if (resolvingCount === 0) {
-				resolve(ret);
-			}
+  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+  }
 
-			return;
-		}
+  return zipPath;
+};
 
-		resolvingCount++;
+module.exports.cleanPath = function cleanPath(uncleanPath) {
+  const path = uncleanPath || '.';
 
-		Promise.resolve(nextItem.value)
-			.then(element => mapper(element, i))
-			.then(
-				value => {
-					ret[i] = value;
-					resolvingCount--;
-					next();
-				},
-				error => {
-					isRejected = true;
-					reject(error);
-				}
-			);
-	};
+  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
+    throw new Error(`Invalid path [${uncleanPath}]`);
+  }
 
-	for (let i = 0; i < concurrency; i++) {
-		next();
+  return path;
+};
 
-		if (isIterableDone) {
-			break;
-		}
-	}
-});
+module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
+  let buildDir = uncleanBuildDir;
 
-module.exports = pMap;
-// TODO: Remove this for the next major release
-module.exports.default = pMap;
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
+    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
+  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
+    throw new Error('Build directory should not be empty or the root of the project');
+  }
+
+  // Append trailing slash
+  if (!buildDir.endsWith('/')) {
+    buildDir = `${buildDir}/`;
+  }
+
+  return buildDir;
+};
+
+module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
+  let context = uncleanContext === '/' ? '' : uncleanContext;
+
+  if (context !== '') {
+    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
+      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
+    }
+
+    // Append trailing slash
+    if (!context.endsWith('/')) {
+      context = `${context}/`;
+    }
+
+    // Remove leading slash
+    if (context.startsWith('/')) {
+      context = context.substring(1);
+    }
+  }
+
+  return context;
+};
 
 
 /***/ }),
@@ -37789,14 +37903,14 @@ module.exports = require("fs");
 
 const core = __webpack_require__(470);
 
+const { DEPLOY_TYPES } = __webpack_require__(349);
+const { inputList } = __webpack_require__(521);
+
 const { groupDeployTypes } = __webpack_require__(411);
 
-const { DEPLOY_TYPES } = __webpack_require__(824);
-
 const params = {
-  packages: JSON.parse(core.getInput('packages')),
+  packages: inputList(core.getInput('packages')),
   prefix: core.getInput('prefix'),
-  ignoreSuffix: core.getInput('ignore-suffix'),
 };
 
 groupDeployTypes(params)
@@ -39944,7 +40058,7 @@ var Snapdragon = __webpack_require__(381);
 utils.define = __webpack_require__(216);
 utils.diff = __webpack_require__(266);
 utils.extend = __webpack_require__(28);
-utils.pick = __webpack_require__(349);
+utils.pick = __webpack_require__(140);
 utils.typeOf = __webpack_require__(772);
 utils.unique = __webpack_require__(305);
 
@@ -40928,23 +41042,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 /***/ }),
 /* 823 */,
-/* 824 */
-/***/ (function(module) {
-
-module.exports.DEPLOY_TYPES = {
-  NONE: 'NONE', // Placeholder so the deploy job ignores this package
-  DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
-  KUBE_JOB: 'KUBE_JOB',
-  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
-  LAMBDA: 'LAMBDA',
-  MAVEN: 'MAVEN',
-  NPM: 'NPM',
-  S3: 'S3',
-  GIT: 'GIT',
-};
-
-
-/***/ }),
+/* 824 */,
 /* 825 */,
 /* 826 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -41481,7 +41579,7 @@ var Snapdragon = __webpack_require__(381);
 utils.define = __webpack_require__(393);
 utils.diff = __webpack_require__(266);
 utils.extend = __webpack_require__(119);
-utils.pick = __webpack_require__(349);
+utils.pick = __webpack_require__(140);
 utils.typeOf = __webpack_require__(772);
 utils.unique = __webpack_require__(305);
 

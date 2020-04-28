@@ -309,7 +309,7 @@ const github = __webpack_require__(469);
 const { packageLabeler } = __webpack_require__(655);
 
 const params = {
-  githubClient: new github.GitHub(core.getInput('GITHUB_TOKEN')),
+  gitHubClient: new github.GitHub(core.getInput('GITHUB_TOKEN')),
   workspace: core.getInput('workspace'),
   prefix: core.getInput('prefix'),
 };
@@ -24028,20 +24028,20 @@ const github = __webpack_require__(469);
 const fs = __webpack_require__(226);
 const path = __webpack_require__(622);
 
-async function getChangedFiles(githubClient, prNumber) {
-  const options = githubClient.pulls.listFiles.endpoint.merge({
+async function getChangedFiles(gitHubClient, prNumber) {
+  const options = gitHubClient.pulls.listFiles.endpoint.merge({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     pull_number: prNumber,
   });
 
-  return githubClient.paginate(options, ({ data }) => data.map((file) => file.filename));
+  return gitHubClient.paginate(options, ({ data }) => data.map((file) => file.filename));
 }
 
-async function addLabels(githubClient, prNumber, labels) {
+async function addLabels(gitHubClient, prNumber, labels) {
   info(`labels to add: ${labels}`);
 
-  return githubClient.issues.addLabels({
+  return gitHubClient.issues.addLabels({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     issue_number: prNumber,
@@ -24064,7 +24064,7 @@ async function tryGetPackageName(pkgJsonPath) {
   }
 }
 
-async function packageLabeler({ githubClient, workspace = 'packages/', prefix = DEPLOY_PREFIX }) {
+async function packageLabeler({ gitHubClient, workspace = 'packages/', prefix = DEPLOY_PREFIX }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -24077,10 +24077,10 @@ async function packageLabeler({ githubClient, workspace = 'packages/', prefix = 
   let changedFiles;
 
   try {
-    changedFiles = await getChangedFiles(githubClient, prNumber);
+    changedFiles = await getChangedFiles(gitHubClient, prNumber);
   } catch (err) {
     // Retry once
-    changedFiles = await getChangedFiles(githubClient, prNumber);
+    changedFiles = await getChangedFiles(gitHubClient, prNumber);
   }
 
   info(`Changed files for pr #${prNumber}`);
@@ -24100,10 +24100,10 @@ async function packageLabeler({ githubClient, workspace = 'packages/', prefix = 
 
   if (labels.length > 0) {
     try {
-      await addLabels(githubClient, prNumber, labels);
+      await addLabels(gitHubClient, prNumber, labels);
     } catch (err) {
       // Retry once
-      await addLabels(githubClient, prNumber, labels);
+      await addLabels(gitHubClient, prNumber, labels);
     }
   } else {
     info('no labels to add');

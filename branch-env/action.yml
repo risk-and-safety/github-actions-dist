@@ -4,7 +4,7 @@ inputs:
   env-list:
     description: List of branches that match the AWS environments. Falls back to "dev" if none match.
     required: false
-    default: qa,prod,hc
+    default: qa,prod
   var-name:
     description: Name of the env variable to export
     required: true
