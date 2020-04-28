@@ -2077,8 +2077,8 @@ async function dockerReleaseOne(params) {
     throw new Error('Missing Docker credentials');
   }
 
-  const githubClient = new github.GitHub(password);
-  const [existingTag] = await findImages({ githubClient, owner, repo, apps: [app], tag });
+  const gitHubClient = new github.GitHub(password);
+  const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
 
   if (existingTag) {
     return;
