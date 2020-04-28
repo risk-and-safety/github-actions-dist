@@ -2057,11 +2057,10 @@ const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
 const { findGitVersion, getShortCommit, getEnv, getSrcBranch } = __webpack_require__(731);
+const { findImages } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { exec, sh } = __webpack_require__(686);
 const { validateAppName, validateNamespace, validateRepo } = __webpack_require__(521);
-
-const { findImages } = __webpack_require__(938);
 
 async function dockerReleaseOne(params) {
   const [owner, repo] = validateRepo(params.repo).split('/');
@@ -25714,49 +25713,6 @@ function hasNextPage (link) {
   deprecate(`octokit.hasNextPage() – You can use octokit.paginate or async iterators instead: https://github.com/octokit/rest.js#pagination.`)
   return getPageLinks(link).next
 }
-
-
-/***/ }),
-
-/***/ 938:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { packagesHeaders } = __webpack_require__(819);
-
-async function findImages({ githubClient, owner, repo, apps, tag }) {
-  const query = `query($owner: String!, $repo: String!, $apps: [String!]!) {
-  repository(owner: $owner, name: $repo) {
-    name
-    packages(first: 1, names: $apps) {
-      edges {
-        node {
-          name
-          packageType
-          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
-            nodes {
-              id
-              version
-            }
-          }
-        }
-      }
-    }
-  }
-}`;
-
-  const {
-    repository: {
-      packages: { edges: packageEdges },
-    },
-  } = await githubClient.graphql(query, { owner, repo, apps, headers: packagesHeaders });
-
-  return packageEdges
-    .filter((edge) => edge.node.packageType === 'DOCKER')
-    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
-    .filter((version) => version.version === tag);
-}
-
-module.exports.findImages = findImages;
 
 
 /***/ }),
