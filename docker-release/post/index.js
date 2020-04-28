@@ -2053,23 +2053,21 @@ module.exports.MaxBufferError = MaxBufferError;
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { getSrcBranch } = __webpack_require__(731);
-const { deleteVersion } = __webpack_require__(819);
+const { deleteVersion, findImages } = __webpack_require__(819);
 const { validateRepo } = __webpack_require__(521);
-
-const { findImages } = __webpack_require__(938);
 
 async function prune(params) {
   const [owner, repo] = validateRepo(params.repo).split('/');
-  const { githubClient, apps } = params;
+  const { gitHubClient, apps } = params;
   const tag = await getSrcBranch();
 
   if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
     throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
   }
 
-  const versions = await findImages({ githubClient, owner, repo, apps, tag });
+  const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
 
-  await Promise.all(versions.map((version) => deleteVersion(githubClient, version)));
+  await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
 }
 
 module.exports.prune = prune;
@@ -4075,7 +4073,7 @@ const { prune } = __webpack_require__(158);
 
 prune({
   repo: core.getInput('repo'),
-  githubClient: new github.GitHub(core.getInput('password')),
+  gitHubClient: new github.GitHub(core.getInput('password')),
   apps: inputList(core.getInput('app')),
 }).catch((err) => {
   console.error(err);
