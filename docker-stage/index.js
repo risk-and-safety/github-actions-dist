@@ -23307,7 +23307,7 @@ async function dockerLogin({ username, password, registry = 'docker.pkg.github.c
     // Do not run in "sh()" as it would expose the password
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
   } catch (err) {
-    warning(`Retry docker ${registry} login for "${username}"`);
+    warning(`Retry ${registry} login for "${username}"`);
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
   }
 }
