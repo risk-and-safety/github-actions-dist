@@ -2062,14 +2062,13 @@ async function prune(params) {
 
   if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
     throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
-  } else if (['master', 'qa', 'prod'].includes(tag)) {
-    // Leave master and qa so that the deploy can be replayed
-    return;
+
+    // Leave master and qa so the deploy can be replayed
+  } else if (!['master', 'qa'].includes(tag)) {
+    const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
+
+    await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
   }
-
-  const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
-
-  await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
 }
 
 module.exports.prune = prune;

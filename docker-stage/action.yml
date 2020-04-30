@@ -14,7 +14,7 @@ inputs:
     description: If provided uses the latest image with this prefix instead of doing a docker build
     required: false
   path:
-    description: Docker build directory from instead of tagging an existing image.
+    description: Docker build directory to build from instead of tagging an existing image.
     required: false
     default: '.'
   repo:
