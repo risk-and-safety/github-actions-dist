@@ -1,5 +1,5 @@
-name: docker-stage
-description: Build and push Docker image for staging and caching
+name: Docker Stage
+description: Build and push Docker image for staging
 inputs:
   username:
     description: Username for the repo
@@ -14,7 +14,7 @@ inputs:
     description: If provided uses the latest image with this prefix instead of doing a docker build
     required: false
   path:
-    description: Docker build directory (default '.')
+    description: Docker build directory from instead of tagging an existing image.
     required: false
     default: '.'
   repo:
@@ -25,5 +25,5 @@ inputs:
     required: false
     default: docker.pkg.github.com
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: node12
+  main: index.js

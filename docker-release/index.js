@@ -2102,14 +2102,14 @@ async function dockerReleaseOne(params) {
       await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
       await dockerPush(dockerImage, version);
     } else {
-      info(`No git tag found for app [${app}] and commit [${commit}]`);
+      info(`No git tag found for app "${app}" and commit "${commit}"`);
     }
   }
 }
 
 async function dockerRelease(params) {
   if (params.path && params.app.length !== 1) {
-    throw new Error(`Can only build one app, not ${params.app.length}, if using path: ${params.path}`);
+    throw new Error(`The build path: "${params.path}" is only supported for a single app`);
   }
 
   // Force deployments to be sequential so the logs are readable.
