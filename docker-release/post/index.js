@@ -2052,11 +2052,13 @@ module.exports.MaxBufferError = MaxBufferError;
 /***/ 158:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { getRepo, getSrcBranch } = __webpack_require__(731);
+const github = __webpack_require__(469);
+
+const { getSrcBranch } = __webpack_require__(731);
 const { deleteVersion, findImages } = __webpack_require__(819);
 
 async function prune(params) {
-  const { owner, repo } = getRepo(params.repo);
+  const { owner, repo } = github.context.repo;
   const { gitHubClient, apps } = params;
   const tag = await getSrcBranch();
 
@@ -7421,12 +7423,12 @@ module.exports.inputList = function inputList(input) {
   return list.filter(Boolean);
 };
 
-module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
-    throw new Error(`Invalid repo name [${repo}]`);
+module.exports.validateRepo = function validateRepo(repoUrl) {
+  if (!repoUrl || !/^(https:\/\/|git@)[\w-.]+[/:][\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repoUrl)) {
+    throw new Error(`Invalid repo URL "${repoUrl}"`);
   }
 
-  return repo;
+  return repoUrl;
 };
 
 module.exports.validateAppName = function validateAppName(name) {
@@ -21952,20 +21954,6 @@ const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
-const { validateRepo } = __webpack_require__(521);
-
-function getRepo(repoUrl) {
-  if (repoUrl && repoUrl.trim()) {
-    const urlParts = validateRepo(repoUrl).split('/');
-
-    return {
-      repo: urlParts.pop().replace('.git', ''),
-      owner: urlParts.pop(),
-    };
-  }
-
-  return github.context.repo;
-}
 
 async function getShortCommit() {
   try {
@@ -22079,7 +22067,6 @@ async function trueUpGitHistory() {
   }
 }
 
-module.exports.getRepo = getRepo;
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
@@ -22802,7 +22789,7 @@ function sync (path, options) {
 /***/ 819:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
 const util = __webpack_require__(669);
 
 const { exec, sh } = __webpack_require__(686);
@@ -22831,7 +22818,7 @@ async function dockerLogin({ username, password, registry = 'docker.pkg.github.c
     // Do not run in "sh()" as it would expose the password
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
   } catch (err) {
-    // Retry once
+    warning(`Retry docker ${registry} login for "${username}"`);
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
   }
 }
@@ -22840,7 +22827,7 @@ async function dockerPush(dockerImage, tag) {
   try {
     await sh(`docker push ${dockerImage}:${tag}`);
   } catch (err) {
-    // Retry once
+    warning(`Retry docker push ${dockerImage}:${tag}`);
     await sh(`docker push ${dockerImage}:${tag}`);
   }
 }

@@ -29048,12 +29048,12 @@ module.exports.inputList = function inputList(input) {
   return list.filter(Boolean);
 };
 
-module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
-    throw new Error(`Invalid repo name [${repo}]`);
+module.exports.validateRepo = function validateRepo(repoUrl) {
+  if (!repoUrl || !/^(https:\/\/|git@)[\w-.]+[/:][\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repoUrl)) {
+    throw new Error(`Invalid repo URL "${repoUrl}"`);
   }
 
-  return repo;
+  return repoUrl;
 };
 
 module.exports.validateAppName = function validateAppName(name) {
