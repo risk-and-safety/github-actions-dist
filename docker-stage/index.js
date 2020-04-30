@@ -1728,6 +1728,10 @@ async function dockerStageOne(params) {
 }
 
 async function dockerStage(params) {
+  if (params.path && params.app.length !== 1) {
+    throw new Error(`The build path param: "${params.path}" is only supported for a single app`);
+  }
+
   await Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
 }
 
