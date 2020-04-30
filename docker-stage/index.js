@@ -1665,54 +1665,74 @@ module.exports = require("child_process");
 /***/ 135:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info } = __webpack_require__(470);
+const { info, warning } = __webpack_require__(470);
+const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 const kebabCase = __webpack_require__(256);
 
-const { cleanPath, validateAppName, validateRepo } = __webpack_require__(521);
-const { getSrcBranch } = __webpack_require__(731);
-const { exec, sh } = __webpack_require__(686);
+const { getRepo, getSrcBranch } = __webpack_require__(731);
+const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
+const { sh } = __webpack_require__(686);
+const { cleanPath, validateAppName } = __webpack_require__(521);
 
-async function tryDockerPull(dockerImage, tag) {
+async function tryDockerPull(dockerImage, destTag) {
   try {
     // Try to pull image first for Docker layer caching
-    await sh(`docker pull ${dockerImage}:${tag}`);
+    await sh(`docker pull ${dockerImage}:${destTag}`);
   } catch (err) {
     if (err.message.includes('not found: name unknown: docker package')) {
       info('Existing docker repo not found ...');
     } else if (err.message.includes('not found: manifest unknown:')) {
       info('Existing docker image not found ...');
     } else {
-      throw err;
+      warning(`Failed to pull image ${dockerImage}:${destTag}: ${err.message}`);
     }
   }
 }
 
-async function dockerStage(params) {
+async function dockerStageOne(params) {
+  const { srcTagPrefix } = params.srcTagPrefix;
   const tag = kebabCase(await getSrcBranch());
-  const repo = validateRepo(params.repo);
   const app = validateAppName(params.app);
   const path = cleanPath(params.path);
-  const { username, password, registry = 'docker.pkg.github.com' } = params;
+  const { owner, repo } = getRepo(params.repo);
+  const { password, registry = 'docker.pkg.github.com' } = params;
 
   if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
     throw new Error('Missing yarn.lock or package-lock.json file');
   }
 
-  const dockerImage = `${registry}/${repo}/${app}`;
+  await dockerLogin(params);
 
-  if (!username || !password) {
-    throw new Error('Missing Docker credentials');
+  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+
+  if (srcTagPrefix) {
+    const srcTagPattern = `${srcTagPrefix}-[0-9a-f]{7,8}`;
+    const gitHubClient = new github.GitHub(password);
+    const [srcTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
+
+    if (!srcTag) {
+      throw new Error(`No Docker image matching ${app}:${srcTagPattern} found`);
+    }
+
+    await sh(`docker pull ${dockerImage}:${srcTag}`);
+    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
+  } else {
+    await tryDockerPull(dockerImage, tag);
+
+    const now = new Date().toISOString();
+    await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
   }
 
-  // Do not run in "sh()" as it would expose the password
-  await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
+  await dockerPush(dockerImage, tag);
+}
 
-  await tryDockerPull(dockerImage, tag);
+async function dockerStage(params) {
+  if (params.path && params.app.length !== 1) {
+    throw new Error(`The build path: "${params.path}" is only supported for a single app`);
+  }
 
-  const now = new Date().toISOString();
-  await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
-  await sh(`docker push ${dockerImage}:${tag}`);
+  await Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
 }
 
 module.exports.dockerStage = dockerStage;
@@ -5493,13 +5513,15 @@ function escapeProperty(s) {
 const core = __webpack_require__(470);
 
 const { dockerStage } = __webpack_require__(135);
+const { inputList } = __webpack_require__(521);
 
 const params = {
-  repo: core.getInput('repo'),
-  username: core.getInput('username'),
-  password: core.getInput('password'),
-  app: core.getInput('app'),
+  username: core.getInput('username', { required: true }),
+  password: core.getInput('password', { required: true }),
+  app: inputList(core.getInput('app'), { required: true }),
+  srcTagPrefix: core.getInput('src-tag-prefix'),
   path: core.getInput('path'),
+  repo: core.getInput('repo'),
   registry: core.getInput('registry'),
 };
 
@@ -8143,8 +8165,18 @@ function getProxyUrl(serverUrl) {
     return proxyUrl ? proxyUrl.href : '';
 }
 exports.getProxyUrl = getProxyUrl;
-const HttpRedirectCodes = [HttpCodes.MovedPermanently, HttpCodes.ResourceMoved, HttpCodes.SeeOther, HttpCodes.TemporaryRedirect, HttpCodes.PermanentRedirect];
-const HttpResponseRetryCodes = [HttpCodes.BadGateway, HttpCodes.ServiceUnavailable, HttpCodes.GatewayTimeout];
+const HttpRedirectCodes = [
+    HttpCodes.MovedPermanently,
+    HttpCodes.ResourceMoved,
+    HttpCodes.SeeOther,
+    HttpCodes.TemporaryRedirect,
+    HttpCodes.PermanentRedirect
+];
+const HttpResponseRetryCodes = [
+    HttpCodes.BadGateway,
+    HttpCodes.ServiceUnavailable,
+    HttpCodes.GatewayTimeout
+];
 const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
@@ -8269,18 +8301,22 @@ class HttpClient {
      */
     async request(verb, requestUrl, data, headers) {
         if (this._disposed) {
-            throw new Error("Client has already been disposed.");
+            throw new Error('Client has already been disposed.');
         }
         let parsedUrl = url.parse(requestUrl);
         let info = this._prepareRequest(verb, parsedUrl, headers);
         // Only perform retries on reads since writes may not be idempotent.
-        let maxTries = (this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1) ? this._maxRetries + 1 : 1;
+        let maxTries = this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1
+            ? this._maxRetries + 1
+            : 1;
         let numTries = 0;
         let response;
         while (numTries < maxTries) {
             response = await this.requestRaw(info, data);
             // Check if it's an authentication challenge
-            if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
+            if (response &&
+                response.message &&
+                response.message.statusCode === HttpCodes.Unauthorized) {
                 let authenticationHandler;
                 for (let i = 0; i < this.handlers.length; i++) {
                     if (this.handlers[i].canHandleAuthentication(response)) {
@@ -8298,21 +8334,32 @@ class HttpClient {
                 }
             }
             let redirectsRemaining = this._maxRedirects;
-            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1
-                && this._allowRedirects
-                && redirectsRemaining > 0) {
-                const redirectUrl = response.message.headers["location"];
+            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1 &&
+                this._allowRedirects &&
+                redirectsRemaining > 0) {
+                const redirectUrl = response.message.headers['location'];
                 if (!redirectUrl) {
                     // if there's no location to redirect to, we won't
                     break;
                 }
                 let parsedRedirectUrl = url.parse(redirectUrl);
-                if (parsedUrl.protocol == 'https:' && parsedUrl.protocol != parsedRedirectUrl.protocol && !this._allowRedirectDowngrade) {
-                    throw new Error("Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.");
+                if (parsedUrl.protocol == 'https:' &&
+                    parsedUrl.protocol != parsedRedirectUrl.protocol &&
+                    !this._allowRedirectDowngrade) {
+                    throw new Error('Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.');
                 }
                 // we need to finish reading the response before reassigning response
                 // which will leak the open socket.
                 await response.readBody();
+                // strip authorization header if redirected to a different hostname
+                if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
+                    for (let header in headers) {
+                        // header names are case insensitive
+                        if (header.toLowerCase() === 'authorization') {
+                            delete headers[header];
+                        }
+                    }
+                }
                 // let's make the request with the new redirectUrl
                 info = this._prepareRequest(verb, parsedRedirectUrl, headers);
                 response = await this.requestRaw(info, data);
@@ -8363,8 +8410,8 @@ class HttpClient {
      */
     requestRawWithCallback(info, data, onResult) {
         let socket;
-        if (typeof (data) === 'string') {
-            info.options.headers["Content-Length"] = Buffer.byteLength(data, 'utf8');
+        if (typeof data === 'string') {
+            info.options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
         }
         let callbackCalled = false;
         let handleResult = (err, res) => {
@@ -8377,7 +8424,7 @@ class HttpClient {
             let res = new HttpClientResponse(msg);
             handleResult(null, res);
         });
-        req.on('socket', (sock) => {
+        req.on('socket', sock => {
             socket = sock;
         });
         // If we ever get disconnected, we want the socket to timeout eventually
@@ -8392,10 +8439,10 @@ class HttpClient {
             // res should have headers
             handleResult(err, null);
         });
-        if (data && typeof (data) === 'string') {
+        if (data && typeof data === 'string') {
             req.write(data, 'utf8');
         }
-        if (data && typeof (data) !== 'string') {
+        if (data && typeof data !== 'string') {
             data.on('close', function () {
                 req.end();
             });
@@ -8422,31 +8469,34 @@ class HttpClient {
         const defaultPort = usingSsl ? 443 : 80;
         info.options = {};
         info.options.host = info.parsedUrl.hostname;
-        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
-        info.options.path = (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
+        info.options.port = info.parsedUrl.port
+            ? parseInt(info.parsedUrl.port)
+            : defaultPort;
+        info.options.path =
+            (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
         info.options.method = method;
         info.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-            info.options.headers["user-agent"] = this.userAgent;
+            info.options.headers['user-agent'] = this.userAgent;
         }
         info.options.agent = this._getAgent(info.parsedUrl);
         // gives handlers an opportunity to participate
         if (this.handlers) {
-            this.handlers.forEach((handler) => {
+            this.handlers.forEach(handler => {
                 handler.prepareRequest(info.options);
             });
         }
         return info;
     }
     _mergeHeaders(headers) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         if (this.requestOptions && this.requestOptions.headers) {
             return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers));
         }
         return lowercaseKeys(headers || {});
     }
     _getExistingOrDefaultHeader(additionalHeaders, header, _default) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         let clientHeader;
         if (this.requestOptions && this.requestOptions.headers) {
             clientHeader = lowercaseKeys(this.requestOptions.headers)[header];
@@ -8484,7 +8534,7 @@ class HttpClient {
                     proxyAuth: proxyUrl.auth,
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
-                },
+                }
             };
             let tunnelAgent;
             const overHttps = proxyUrl.protocol === 'https:';
@@ -8511,7 +8561,9 @@ class HttpClient {
             // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
             // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
             // we have to cast it to any and change it directly
-            agent.options = Object.assign(agent.options || {}, { rejectUnauthorized: false });
+            agent.options = Object.assign(agent.options || {}, {
+                rejectUnauthorized: false
+            });
         }
         return agent;
     }
@@ -8572,7 +8624,7 @@ class HttpClient {
                     msg = contents;
                 }
                 else {
-                    msg = "Failed request: (" + statusCode + ")";
+                    msg = 'Failed request: (' + statusCode + ')';
                 }
                 let err = new Error(msg);
                 // attach statusCode and body obj (if available) to the error object
@@ -23238,6 +23290,96 @@ function sync (path, options) {
 
 /***/ }),
 
+/***/ 819:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { info } = __webpack_require__(470);
+const util = __webpack_require__(669);
+
+const { exec, sh } = __webpack_require__(686);
+
+const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
+
+async function deleteVersion(gitHubClient, { id, name, version }) {
+  const deleteHeaders = { Accept: 'application/vnd.github.package-deletes-preview+json' };
+  const query = `mutation($id: String!) {
+    deletePackageVersion(input: { packageVersionId: $id }) {
+      success
+    }
+  }`;
+
+  const { deletePackageVersion } = await gitHubClient.graphql(query, { id, headers: deleteHeaders });
+
+  info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
+}
+
+async function dockerLogin({ username, password, registry = 'docker.pkg.github.com' }) {
+  if (!username || !password) {
+    throw new Error('Missing Docker credentials');
+  }
+
+  try {
+    // Do not run in "sh()" as it would expose the password
+    await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
+  } catch (err) {
+    // Retry once
+    await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
+  }
+}
+
+async function dockerPush(dockerImage, tag) {
+  try {
+    await sh(`docker push ${dockerImage}:${tag}`);
+  } catch (err) {
+    // Retry once
+    await sh(`docker push ${dockerImage}:${tag}`);
+  }
+}
+
+async function findImages({ gitHubClient, owner, repo, apps, tag }) {
+  const query = `query($owner: String!, $repo: String!, $appCount: Int!, $apps: [String!]!) {
+  repository(owner: $owner, name: $repo) {
+    name
+    packages(first: $appCount, names: $apps) {
+      edges {
+        node {
+          name
+          packageType
+          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
+            nodes {
+              id
+              version
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+  const {
+    repository: {
+      packages: { edges: packageEdges },
+    },
+  } = await gitHubClient.graphql(query, { owner, repo, apps, appCount: apps.length, headers: HTTP_HEADERS_PACKAGES });
+
+  const compareTag = new RegExp(`^${tag}$`);
+
+  return packageEdges
+    .filter((edge) => edge.node.packageType === 'DOCKER')
+    .flatMap((edge) => edge.node.versions.nodes.map((version) => ({ ...version, name: edge.node.name })))
+    .filter((version) => compareTag.test(version.version));
+}
+
+module.exports.deleteVersion = deleteVersion;
+module.exports.dockerLogin = dockerLogin;
+module.exports.dockerPush = dockerPush;
+module.exports.findImages = findImages;
+module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
+
+
+/***/ }),
+
 /***/ 835:
 /***/ (function(module) {
 
@@ -25625,12 +25767,10 @@ function getProxyUrl(reqUrl) {
     }
     let proxyVar;
     if (usingSsl) {
-        proxyVar = process.env["https_proxy"] ||
-            process.env["HTTPS_PROXY"];
+        proxyVar = process.env['https_proxy'] || process.env['HTTPS_PROXY'];
     }
     else {
-        proxyVar = process.env["http_proxy"] ||
-            process.env["HTTP_PROXY"];
+        proxyVar = process.env['http_proxy'] || process.env['HTTP_PROXY'];
     }
     if (proxyVar) {
         proxyUrl = url.parse(proxyVar);
@@ -25642,7 +25782,7 @@ function checkBypass(reqUrl) {
     if (!reqUrl.hostname) {
         return false;
     }
-    let noProxy = process.env["no_proxy"] || process.env["NO_PROXY"] || '';
+    let noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
     if (!noProxy) {
         return false;
     }
@@ -25663,7 +25803,10 @@ function checkBypass(reqUrl) {
         upperReqHosts.push(`${upperReqHosts[0]}:${reqPort}`);
     }
     // Compare request host against noproxy
-    for (let upperNoProxyItem of noProxy.split(',').map(x => x.trim().toUpperCase()).filter(x => x)) {
+    for (let upperNoProxyItem of noProxy
+        .split(',')
+        .map(x => x.trim().toUpperCase())
+        .filter(x => x)) {
         if (upperReqHosts.some(x => x === upperNoProxyItem)) {
             return true;
         }

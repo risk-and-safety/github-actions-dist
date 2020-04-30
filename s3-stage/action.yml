@@ -1,22 +1,22 @@
-name: s3-stage
-description: Upload zip to S3 config bucket for staging
+name: S3 Stage
+description: Upload, download or promote zip to S3 artifact bucket for staging
 inputs:
   action:
-    description: Either "upload" or "download" the zip to S3 staging
+    description: Commands are "upload" or "promote" copy the zip to the next env.
     required: false
     default: upload
   app:
-    description: App or Lambda function name
+    description: App name or Lambda name. Can be a comma deliminted list for the "promote" command.
     required: true
   context:
-    description: Webapp context path (eg app-path/) to add to the zip
+    description: Webapp context path (eg app-path/) to add to the zip, for "upload" command
     required: false
     default: ''
   build-dir:
-    description: Path to the source code directory
+    description: Path to the source code directory for "upload" command
     required: true
   staging-bucket-prefix:
-    description: The S3 config bucket prefix excluding env suffix (eg dev, qa, prod)
+    description: S3 atrifact bucket prefix excluding env suffix [dev,qa,prod]
     required: false
     default: 'rss-config-'
 runs:
