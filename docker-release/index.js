@@ -2056,26 +2056,23 @@ const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getShortCommit, getEnv, getSrcBranch } = __webpack_require__(731);
-const { findImages } = __webpack_require__(819);
+const { findGitVersion, getEnv, getRepo, getShortCommit, getSrcBranch } = __webpack_require__(731);
+const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
-const { exec, sh } = __webpack_require__(686);
-const { validateAppName, validateNamespace, validateRepo } = __webpack_require__(521);
+const { sh } = __webpack_require__(686);
+const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
-  const [owner, repo] = validateRepo(params.repo).split('/');
   const app = validateAppName(params.app);
-  const { username, password, registry = 'docker.pkg.github.com' } = params;
   const commit = await getShortCommit();
-  const branch = kebabCase(await getSrcBranch());
   const env = await getEnv();
   const tagPrefix = validateNamespace(params.tagPrefix || env);
   const tag = `${tagPrefix}-${commit}`;
-  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+  const path = params.path && cleanPath(params.path);
+  const { owner, repo } = getRepo(params.repo);
+  const { password, registry = 'docker.pkg.github.com' } = params;
 
-  if (!username || !password) {
-    throw new Error('Missing Docker credentials');
-  }
+  await dockerLogin(params);
 
   const gitHubClient = new github.GitHub(password);
   const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
@@ -2084,20 +2081,26 @@ async function dockerReleaseOne(params) {
     return;
   }
 
-  // Do not run in "sh()" as it would expose the password
-  await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
+  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
 
-  await sh(`docker pull ${dockerImage}:${branch}`);
+  if (path) {
+    const now = new Date().toISOString();
+    await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
+  } else {
+    const srcTag = kebabCase(await getSrcBranch());
 
-  await sh(`docker tag ${dockerImage}:${branch} ${dockerImage}:${tag}`);
-  await sh(`docker push ${dockerImage}:${tag}`);
+    await sh(`docker pull ${dockerImage}:${srcTag}`);
+    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
+  }
 
-  if (env === 'qa' || env === 'prod') {
+  await dockerPush(dockerImage, tag);
+
+  if (env === 'prod') {
     const version = await findGitVersion(app, commit);
 
     if (version) {
       await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
-      await sh(`docker push ${dockerImage}:${version}`);
+      await dockerPush(dockerImage, version);
     } else {
       info(`No git tag found for app [${app}] and commit [${commit}]`);
     }
@@ -2105,6 +2108,10 @@ async function dockerReleaseOne(params) {
 }
 
 async function dockerRelease(params) {
+  if (params.path && params.app.length !== 1) {
+    throw new Error(`Can only build one app, not ${params.app.length}, if using path: ${params.path}`);
+  }
+
   // Force deployments to be sequential so the logs are readable.
   return sequentialDeploy(params.app, async (app) => {
     return dockerReleaseOne({ ...params, app });
@@ -8135,8 +8142,18 @@ function getProxyUrl(serverUrl) {
     return proxyUrl ? proxyUrl.href : '';
 }
 exports.getProxyUrl = getProxyUrl;
-const HttpRedirectCodes = [HttpCodes.MovedPermanently, HttpCodes.ResourceMoved, HttpCodes.SeeOther, HttpCodes.TemporaryRedirect, HttpCodes.PermanentRedirect];
-const HttpResponseRetryCodes = [HttpCodes.BadGateway, HttpCodes.ServiceUnavailable, HttpCodes.GatewayTimeout];
+const HttpRedirectCodes = [
+    HttpCodes.MovedPermanently,
+    HttpCodes.ResourceMoved,
+    HttpCodes.SeeOther,
+    HttpCodes.TemporaryRedirect,
+    HttpCodes.PermanentRedirect
+];
+const HttpResponseRetryCodes = [
+    HttpCodes.BadGateway,
+    HttpCodes.ServiceUnavailable,
+    HttpCodes.GatewayTimeout
+];
 const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
@@ -8261,18 +8278,22 @@ class HttpClient {
      */
     async request(verb, requestUrl, data, headers) {
         if (this._disposed) {
-            throw new Error("Client has already been disposed.");
+            throw new Error('Client has already been disposed.');
         }
         let parsedUrl = url.parse(requestUrl);
         let info = this._prepareRequest(verb, parsedUrl, headers);
         // Only perform retries on reads since writes may not be idempotent.
-        let maxTries = (this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1) ? this._maxRetries + 1 : 1;
+        let maxTries = this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1
+            ? this._maxRetries + 1
+            : 1;
         let numTries = 0;
         let response;
         while (numTries < maxTries) {
             response = await this.requestRaw(info, data);
             // Check if it's an authentication challenge
-            if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
+            if (response &&
+                response.message &&
+                response.message.statusCode === HttpCodes.Unauthorized) {
                 let authenticationHandler;
                 for (let i = 0; i < this.handlers.length; i++) {
                     if (this.handlers[i].canHandleAuthentication(response)) {
@@ -8290,21 +8311,32 @@ class HttpClient {
                 }
             }
             let redirectsRemaining = this._maxRedirects;
-            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1
-                && this._allowRedirects
-                && redirectsRemaining > 0) {
-                const redirectUrl = response.message.headers["location"];
+            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1 &&
+                this._allowRedirects &&
+                redirectsRemaining > 0) {
+                const redirectUrl = response.message.headers['location'];
                 if (!redirectUrl) {
                     // if there's no location to redirect to, we won't
                     break;
                 }
                 let parsedRedirectUrl = url.parse(redirectUrl);
-                if (parsedUrl.protocol == 'https:' && parsedUrl.protocol != parsedRedirectUrl.protocol && !this._allowRedirectDowngrade) {
-                    throw new Error("Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.");
+                if (parsedUrl.protocol == 'https:' &&
+                    parsedUrl.protocol != parsedRedirectUrl.protocol &&
+                    !this._allowRedirectDowngrade) {
+                    throw new Error('Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.');
                 }
                 // we need to finish reading the response before reassigning response
                 // which will leak the open socket.
                 await response.readBody();
+                // strip authorization header if redirected to a different hostname
+                if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
+                    for (let header in headers) {
+                        // header names are case insensitive
+                        if (header.toLowerCase() === 'authorization') {
+                            delete headers[header];
+                        }
+                    }
+                }
                 // let's make the request with the new redirectUrl
                 info = this._prepareRequest(verb, parsedRedirectUrl, headers);
                 response = await this.requestRaw(info, data);
@@ -8355,8 +8387,8 @@ class HttpClient {
      */
     requestRawWithCallback(info, data, onResult) {
         let socket;
-        if (typeof (data) === 'string') {
-            info.options.headers["Content-Length"] = Buffer.byteLength(data, 'utf8');
+        if (typeof data === 'string') {
+            info.options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
         }
         let callbackCalled = false;
         let handleResult = (err, res) => {
@@ -8369,7 +8401,7 @@ class HttpClient {
             let res = new HttpClientResponse(msg);
             handleResult(null, res);
         });
-        req.on('socket', (sock) => {
+        req.on('socket', sock => {
             socket = sock;
         });
         // If we ever get disconnected, we want the socket to timeout eventually
@@ -8384,10 +8416,10 @@ class HttpClient {
             // res should have headers
             handleResult(err, null);
         });
-        if (data && typeof (data) === 'string') {
+        if (data && typeof data === 'string') {
             req.write(data, 'utf8');
         }
-        if (data && typeof (data) !== 'string') {
+        if (data && typeof data !== 'string') {
             data.on('close', function () {
                 req.end();
             });
@@ -8414,31 +8446,34 @@ class HttpClient {
         const defaultPort = usingSsl ? 443 : 80;
         info.options = {};
         info.options.host = info.parsedUrl.hostname;
-        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
-        info.options.path = (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
+        info.options.port = info.parsedUrl.port
+            ? parseInt(info.parsedUrl.port)
+            : defaultPort;
+        info.options.path =
+            (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
         info.options.method = method;
         info.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-            info.options.headers["user-agent"] = this.userAgent;
+            info.options.headers['user-agent'] = this.userAgent;
         }
         info.options.agent = this._getAgent(info.parsedUrl);
         // gives handlers an opportunity to participate
         if (this.handlers) {
-            this.handlers.forEach((handler) => {
+            this.handlers.forEach(handler => {
                 handler.prepareRequest(info.options);
             });
         }
         return info;
     }
     _mergeHeaders(headers) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         if (this.requestOptions && this.requestOptions.headers) {
             return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers));
         }
         return lowercaseKeys(headers || {});
     }
     _getExistingOrDefaultHeader(additionalHeaders, header, _default) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         let clientHeader;
         if (this.requestOptions && this.requestOptions.headers) {
             clientHeader = lowercaseKeys(this.requestOptions.headers)[header];
@@ -8476,7 +8511,7 @@ class HttpClient {
                     proxyAuth: proxyUrl.auth,
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
-                },
+                }
             };
             let tunnelAgent;
             const overHttps = proxyUrl.protocol === 'https:';
@@ -8503,7 +8538,9 @@ class HttpClient {
             // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
             // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
             // we have to cast it to any and change it directly
-            agent.options = Object.assign(agent.options || {}, { rejectUnauthorized: false });
+            agent.options = Object.assign(agent.options || {}, {
+                rejectUnauthorized: false
+            });
         }
         return agent;
     }
@@ -8564,7 +8601,7 @@ class HttpClient {
                     msg = contents;
                 }
                 else {
-                    msg = "Failed request: (" + statusCode + ")";
+                    msg = 'Failed request: (' + statusCode + ')';
                 }
                 let err = new Error(msg);
                 // attach statusCode and body obj (if available) to the error object
@@ -22157,11 +22194,12 @@ const { dockerRelease } = __webpack_require__(167);
 const { inputList } = __webpack_require__(521);
 
 const params = {
-  repo: core.getInput('repo'),
-  username: core.getInput('username'),
-  password: core.getInput('password'),
-  app: inputList(core.getInput('app')),
+  username: core.getInput('username', { required: true }),
+  password: core.getInput('password', { required: true }),
+  app: inputList(core.getInput('app'), { required: true }),
   tagPrefix: core.getInput('tag-prefix'),
+  path: core.getInput('path'),
+  repo: core.getInput('repo'),
   registry: core.getInput('registry'),
 };
 
@@ -23297,7 +23335,7 @@ function sync (path, options) {
 const { info } = __webpack_require__(470);
 const util = __webpack_require__(669);
 
-const { exec } = __webpack_require__(686);
+const { exec, sh } = __webpack_require__(686);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
 
@@ -23325,6 +23363,15 @@ async function dockerLogin({ username, password, registry = 'docker.pkg.github.c
   } catch (err) {
     // Retry once
     await exec(`echo "${password}" | docker login -u "${username}" --password-stdin ${registry}`);
+  }
+}
+
+async function dockerPush(dockerImage, tag) {
+  try {
+    await sh(`docker push ${dockerImage}:${tag}`);
+  } catch (err) {
+    // Retry once
+    await sh(`docker push ${dockerImage}:${tag}`);
   }
 }
 
@@ -23365,6 +23412,7 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
 
 module.exports.deleteVersion = deleteVersion;
 module.exports.dockerLogin = dockerLogin;
+module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
@@ -25751,12 +25799,10 @@ function getProxyUrl(reqUrl) {
     }
     let proxyVar;
     if (usingSsl) {
-        proxyVar = process.env["https_proxy"] ||
-            process.env["HTTPS_PROXY"];
+        proxyVar = process.env['https_proxy'] || process.env['HTTPS_PROXY'];
     }
     else {
-        proxyVar = process.env["http_proxy"] ||
-            process.env["HTTP_PROXY"];
+        proxyVar = process.env['http_proxy'] || process.env['HTTP_PROXY'];
     }
     if (proxyVar) {
         proxyUrl = url.parse(proxyVar);
@@ -25768,7 +25814,7 @@ function checkBypass(reqUrl) {
     if (!reqUrl.hostname) {
         return false;
     }
-    let noProxy = process.env["no_proxy"] || process.env["NO_PROXY"] || '';
+    let noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
     if (!noProxy) {
         return false;
     }
@@ -25789,7 +25835,10 @@ function checkBypass(reqUrl) {
         upperReqHosts.push(`${upperReqHosts[0]}:${reqPort}`);
     }
     // Compare request host against noproxy
-    for (let upperNoProxyItem of noProxy.split(',').map(x => x.trim().toUpperCase()).filter(x => x)) {
+    for (let upperNoProxyItem of noProxy
+        .split(',')
+        .map(x => x.trim().toUpperCase())
+        .filter(x => x)) {
         if (upperReqHosts.some(x => x === upperNoProxyItem)) {
             return true;
         }
