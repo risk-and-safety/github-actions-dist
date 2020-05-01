@@ -9073,21 +9073,21 @@ async function actionsRelease(params) {
 
   const branch = await getSrcBranch();
 
-  await sh(
-    `cd "${TEMP_GIT_DIR}"
-     git fetch
-     git checkout ${DEFAULT_BRANCH}
-     git checkout ${branch} || git checkout -b ${branch}
-     git pull origin ${branch} || true`,
-  );
-
   if (preRelease) {
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+      git fetch
+      git checkout ${branch} || git checkout -b ${branch}
+      git pull origin ${branch} || true`,
+    );
+
     await copyFilesAndCommit(buildDir);
   } else if (branch !== DEFAULT_BRANCH) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
+      ${!dryRun ? `git pull origin ${branch}` : ''}
       git checkout ${DEFAULT_BRANCH}
-      git merge ${branch}`,
+      git merge ${branch} -Xours`,
     );
   }
 
@@ -9399,12 +9399,12 @@ module.exports.inputList = function inputList(input) {
   return list.filter(Boolean);
 };
 
-module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
-    throw new Error(`Invalid repo name [${repo}]`);
+module.exports.validateRepo = function validateRepo(repoUrl) {
+  if (!repoUrl || !/^(https:\/\/|git@)[\w-.]+[/:][\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repoUrl)) {
+    throw new Error(`Invalid repo URL "${repoUrl}"`);
   }
 
-  return repo;
+  return repoUrl;
 };
 
 module.exports.validateAppName = function validateAppName(name) {
@@ -24873,20 +24873,6 @@ const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
-const { validateRepo } = __webpack_require__(521);
-
-function getRepo(repoUrl) {
-  if (repoUrl && repoUrl.trim()) {
-    const urlParts = validateRepo(repoUrl).split('/');
-
-    return {
-      repo: urlParts.pop().replace('.git', ''),
-      owner: urlParts.pop(),
-    };
-  }
-
-  return github.context.repo;
-}
 
 async function getShortCommit() {
   try {
@@ -25000,7 +24986,6 @@ async function trueUpGitHistory() {
   }
 }
 
-module.exports.getRepo = getRepo;
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
