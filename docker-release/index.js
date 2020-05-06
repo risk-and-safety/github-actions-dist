@@ -2063,10 +2063,6 @@ const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
-  if (github.context.actor) {
-    await trueUpGitHistory();
-  }
-
   const app = validateAppName(params.app);
   const commit = await getShortCommit();
   const env = await getEnv();
@@ -2114,6 +2110,10 @@ async function dockerReleaseOne(params) {
 async function dockerRelease(params) {
   if (params.path && params.app.length !== 1) {
     throw new Error(`The build path: "${params.path}" is only supported for a single app`);
+  }
+
+  if (github.context.actor) {
+    await trueUpGitHistory();
   }
 
   // Force deployments to be sequential so the logs are readable.
