@@ -16971,7 +16971,7 @@ module.exports = process
 
 module.exports.DEPLOY_TYPES = {
   NONE: 'NONE', // Placeholder so the deploy job ignores this package
-  DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
+  DOCKER_BUILD: 'DOCKER_BUILD',
   KUBE_JOB: 'KUBE_JOB',
   KUBE_DAEMONSET: 'KUBE_DAEMONSET',
   KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
@@ -22902,11 +22902,7 @@ function findDeployTypes(packagesPath, name, pkgJson) {
 
   if (
     !deployTypes.includes(DOCKER_BUILD) &&
-    (deployTypes.includes(KUBE_DAEMONSET) ||
-      deployTypes.includes(KUBE_DEPLOYMENT) ||
-      deployTypes.includes(KUBE_JOB) ||
-      // For packages that don't have a package.json but do have a Dockerfile mark as DOCKER_BUILD
-      fs.existsSync(`${packagesPath}/${name}/Dockerfile`))
+    (deployTypes.includes(KUBE_DAEMONSET) || deployTypes.includes(KUBE_DEPLOYMENT) || deployTypes.includes(KUBE_JOB))
   ) {
     deployTypes.push(DOCKER_BUILD);
   } else if (deployTypes.length) {
@@ -22918,13 +22914,17 @@ function findDeployTypes(packagesPath, name, pkgJson) {
   }
 
   if (!deployTypes.length) {
-    warning(`Missing deploy type for ${name}`);
+    if (!fs.existsSync(`${packagesPath}/${name}/package.json`)) {
+      throw new Error(`Missing package.json for ${name}`);
+    } else {
+      warning(`Missing deploy type for ${name}`);
+    }
   }
 
   return deployTypes;
 }
 
-async function groupDeployTypes({ packages = [], prefix = '' }) {
+async function groupDeployTypes({ packages = [], prefix = 'deploy:' }) {
   const packageNames = packages
     .map((pkg) => (typeof pkg === 'string' ? pkg : pkg.name))
     .filter((name) => name && (!prefix || name.startsWith(prefix)))
