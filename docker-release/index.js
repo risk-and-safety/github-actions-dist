@@ -22112,6 +22112,7 @@ function getPageLinks (link) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { warning } = __webpack_require__(470);
+const util = __webpack_require__(669);
 
 module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
   warning(`Deploying: [${apps}]`);
@@ -22133,9 +22134,9 @@ module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) 
 
   if (failed.length) {
     const failedApps = failed.map(({ app }) => app).join(', ');
-    const errors = failed.map(({ err }) => err.message).join('\n');
+    const errors = failed.map(({ err }) => util.inspect(err)).join('\n');
 
-    throw new Error(`Failed to deploy: ${failedApps}\n\n${errors}`);
+    throw new Error(`Failed to deploy: ${failedApps}\n${errors}`);
   }
 
   return results;
