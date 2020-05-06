@@ -1694,7 +1694,6 @@ async function dockerStageOne(params) {
   const { srcTagPrefix } = params.srcTagPrefix;
   const tag = kebabCase(await getSrcBranch());
   const app = validateAppName(params.app);
-  const path = cleanPath(params.path);
   const { owner, repo } = github.context.repo;
   const { password, registry = 'docker.pkg.github.com' } = params;
 
@@ -1718,6 +1717,8 @@ async function dockerStageOne(params) {
     await sh(`docker pull ${dockerImage}:${srcTag}`);
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
   } else {
+    const path = cleanPath(params.path);
+    
     await tryDockerPull(dockerImage, tag);
 
     const now = new Date().toISOString();
@@ -1728,8 +1729,8 @@ async function dockerStageOne(params) {
 }
 
 async function dockerStage(params) {
-  if (params.path && params.app.length !== 1) {
-    throw new Error(`The build path: "${params.path}" is only supported for a single app`);
+  if (params.app.length > 1 && !params.srcTagPrefix) {
+    throw new Error(`When staging more than one app, a src-tag-prefix must be provided instead of a path`);
   }
 
   await Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
