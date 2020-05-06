@@ -2056,13 +2056,17 @@ const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getEnv, getShortCommit, getSrcBranch } = __webpack_require__(731);
+const { findGitVersion, getEnv, getShortCommit, getSrcBranch, trueUpGitHistory } = __webpack_require__(731);
 const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
+  if (github.context.actor) {
+    await trueUpGitHistory();
+  }
+
   const app = validateAppName(params.app);
   const commit = await getShortCommit();
   const env = await getEnv();
