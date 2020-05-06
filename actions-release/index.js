@@ -3007,7 +3007,7 @@ function checkMode (stat, options) {
 /***/ }),
 
 /***/ 209:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -3026,7 +3026,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 const v3 = (0, _v.default)('v3', 0x30, _md.default);
 var _default = v3;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -5752,7 +5751,7 @@ function deprecate (message) {
 /***/ }),
 
 /***/ 384:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -5771,7 +5770,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 const v5 = (0, _v.default)('v5', 0x50, _sha.default);
 var _default = v5;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -6203,7 +6201,7 @@ module.exports = readShebang;
 /***/ }),
 
 /***/ 390:
-/***/ (function(module, exports) {
+/***/ (function(__unusedmodule, exports) {
 
 "use strict";
 
@@ -6232,7 +6230,6 @@ function bytesToUuid(buf, offset) {
 
 var _default = bytesToUuid;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -6454,14 +6451,28 @@ class Command {
         return cmdStr;
     }
 }
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+exports.toCommandValue = toCommandValue;
 function escapeData(s) {
-    return (s || '')
+    return toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return (s || '')
+    return toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
@@ -8460,11 +8471,13 @@ var ExitCode;
 /**
  * Sets env variable for this action and future actions in the job
  * @param name the name of the variable to set
- * @param val the value of the variable
+ * @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    process.env[name] = val;
-    command_1.issueCommand('set-env', { name }, val);
+    const convertedVal = command_1.toCommandValue(val);
+    process.env[name] = convertedVal;
+    command_1.issueCommand('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -8503,12 +8516,22 @@ exports.getInput = getInput;
  * Sets the value of an output.
  *
  * @param     name     name of the output to set
- * @param     value    value to store
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setOutput(name, value) {
     command_1.issueCommand('set-output', { name }, value);
 }
 exports.setOutput = setOutput;
+/**
+ * Enables or disables the echoing of commands into stdout for the rest of the step.
+ * Echoing is disabled by default if ACTIONS_STEP_DEBUG is not set.
+ *
+ */
+function setCommandEcho(enabled) {
+    command_1.issue('echo', enabled ? 'on' : 'off');
+}
+exports.setCommandEcho = setCommandEcho;
 //-----------------------------------------------------------------------
 // Results
 //-----------------------------------------------------------------------
@@ -8542,18 +8565,18 @@ function debug(message) {
 exports.debug = debug;
 /**
  * Adds an error issue
- * @param message error issue message
+ * @param message error issue message. Errors will be converted to string via toString()
  */
 function error(message) {
-    command_1.issue('error', message);
+    command_1.issue('error', message instanceof Error ? message.toString() : message);
 }
 exports.error = error;
 /**
  * Adds an warning issue
- * @param message warning issue message
+ * @param message warning issue message. Errors will be converted to string via toString()
  */
 function warning(message) {
-    command_1.issue('warning', message);
+    command_1.issue('warning', message instanceof Error ? message.toString() : message);
 }
 exports.warning = warning;
 /**
@@ -8611,8 +8634,9 @@ exports.group = group;
  * Saves state for current action, the state can only be retrieved by this action's post job execution.
  *
  * @param     name     name of the state to store
- * @param     value    value to store
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function saveState(name, value) {
     command_1.issueCommand('save-state', { name }, value);
 }
@@ -9161,7 +9185,7 @@ module.exports = resolveCommand;
 /***/ }),
 
 /***/ 498:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -9187,7 +9211,6 @@ function sha1(bytes) {
 
 var _default = sha1;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -25000,7 +25023,7 @@ module.exports.trueUpGitHistory = trueUpGitHistory;
 /***/ }),
 
 /***/ 733:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -25043,7 +25066,6 @@ function v4(options, buf, offset) {
 
 var _default = v4;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -25543,7 +25565,7 @@ exports.getUserAgent = getUserAgent;
 /***/ }),
 
 /***/ 803:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -25569,7 +25591,6 @@ function md5(bytes) {
 
 var _default = md5;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 
@@ -25839,7 +25860,7 @@ module.exports = require("url");
 /***/ }),
 
 /***/ 844:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -25856,8 +25877,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function rng() {
   return _crypto.default.randomBytes(16);
 }
-
-module.exports = exports.default;
 
 /***/ }),
 
@@ -28317,7 +28336,7 @@ function authenticationPlugin(octokit, options) {
 /***/ }),
 
 /***/ 893:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
@@ -28427,7 +28446,6 @@ function v1(options, buf, offset) {
 
 var _default = v1;
 exports.default = _default;
-module.exports = exports.default;
 
 /***/ }),
 

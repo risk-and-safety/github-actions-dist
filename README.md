@@ -3,10 +3,11 @@
 Common GitHub Actions for Risk and Safety Solution.
 
 * actions-release
-* docker-build
 * docker-release
+* docker-stage
 * kube-status
 * lambda-deploy
-* lerna-version
+* lerna-group-deploy-types
+* package-labeler
 * s3-deploy
-* s3-stage (upload or download)
+* s3-stage (upload or promote)
