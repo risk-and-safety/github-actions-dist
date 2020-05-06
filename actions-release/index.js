@@ -9077,8 +9077,8 @@ async function actionsRelease(params) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
       git fetch
-      git checkout ${branch} || git checkout -b ${branch}
-      git pull origin ${branch} || true`,
+      git pull origin ${DEFAULT_BRANCH}
+      git checkout ${branch} && git pull || git checkout -b ${branch}`,
     );
 
     await copyFilesAndCommit(buildDir);
