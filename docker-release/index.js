@@ -2056,7 +2056,7 @@ const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getEnv, getShortCommit, getSrcBranch, trueUpGitHistory } = __webpack_require__(731);
+const { findGitVersion, getEnv, getShortCommit, getSrcBranch } = __webpack_require__(731);
 const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
@@ -2110,10 +2110,6 @@ async function dockerReleaseOne(params) {
 async function dockerRelease(params) {
   if (params.path && params.app.length !== 1) {
     throw new Error(`The build path: "${params.path}" is only supported for a single app`);
-  }
-
-  if (github.context.actor) {
-    await trueUpGitHistory();
   }
 
   // Force deployments to be sequential so the logs are readable.
@@ -22510,22 +22506,24 @@ module.exports = (promise, onFinally) => {
 /***/ 731:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info, warning } = __webpack_require__(470);
+const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(686);
 
 async function getShortCommit() {
-  try {
-    return await exec('git rev-parse --short=8 HEAD');
-  } catch (err) {
-    if (!err.message.includes('not a git repository')) {
-      throw err;
-    }
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  if (pull_request) {
+    return (pull_request.merge_commit_sha || pull_request.head.sha).substring(0, 8);
+  }
+  /* eslint-enable camelcase */
 
-    warning('No local git found, using GitHub context payload');
+  if (github.context.sha) {
     return github.context.sha.substring(0, 8);
   }
+
+  return exec('git rev-parse --short=8 HEAD');
 }
 
 async function getDestBranch() {
