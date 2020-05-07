@@ -1696,10 +1696,6 @@ async function dockerStageOne(params) {
   const { owner, repo } = github.context.repo;
   const { password, registry = 'docker.pkg.github.com' } = params;
 
-  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
-    throw new Error('Missing yarn.lock or package-lock.json file');
-  }
-
   await dockerLogin(params);
 
   const dockerImage = `${registry}/${owner}/${repo}/${app}`;
@@ -1708,7 +1704,7 @@ async function dockerStageOne(params) {
     const srcTagPrefix = await getEnv({ branch: params.srcTagPrefix });
     const srcTagPattern = `${srcTagPrefix}-[0-9a-f]{7,8}`;
     const gitHubClient = new github.GitHub(password);
-    const [srcTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
+    const [{ version: srcTag }] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
 
     if (!srcTag) {
       throw new Error(`No Docker image matching ${app}:${srcTagPattern} found`);
@@ -1719,6 +1715,10 @@ async function dockerStageOne(params) {
   } else {
     const path = cleanPath(params.path);
 
+    if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+      throw new Error('Missing yarn.lock or package-lock.json file');
+    }
+
     await tryDockerPull(dockerImage, tag);
 
     const now = new Date().toISOString();
@@ -1726,6 +1726,8 @@ async function dockerStageOne(params) {
   }
 
   await dockerPush(dockerImage, tag);
+
+  return tag;
 }
 
 async function dockerStage(params) {
@@ -1733,7 +1735,7 @@ async function dockerStage(params) {
     throw new Error(`When staging ${params.app.length} apps src-tag-prefix is required, instead of path`);
   }
 
-  await Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
+  return Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
 }
 
 module.exports.dockerStage = dockerStage;

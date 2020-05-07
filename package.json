@@ -14,7 +14,7 @@
   "scripts": {
     "lint": "eslint .",
     "compile": "bash ./compile.sh",
-    "test": "cross-env AWS_PROFILE=mgmt jest"
+    "test": "node jest.setup.js && cross-env AWS_PROFILE=mgmt jest"
   },
   "dependencies": {
     "@actions/core": "1.2.4",
