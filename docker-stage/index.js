@@ -1705,7 +1705,7 @@ async function dockerStageOne(params) {
   const dockerImage = `${registry}/${owner}/${repo}/${app}`;
 
   if (params.srcTagPrefix) {
-    const srcTagPrefix = getEnv({ branch: params.srcTagPrefix });
+    const srcTagPrefix = await getEnv({ branch: params.srcTagPrefix });
     const srcTagPattern = `${srcTagPrefix}-[0-9a-f]{7,8}`;
     const gitHubClient = new github.GitHub(password);
     const [srcTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
