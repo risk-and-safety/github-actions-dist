@@ -8051,25 +8051,29 @@ module.exports = moveSync
 /* 97 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
+const github = __webpack_require__(469);
 const collectUpdates = __webpack_require__(444);
 const Project = __webpack_require__(278);
 const PackageGraph = __webpack_require__(17);
 const fs = __webpack_require__(201);
 
-const { exec } = __webpack_require__(603);
 const { LABEL_PREFIX } = __webpack_require__(824);
+const { trueUpGitHistory } = __webpack_require__(731);
+const { exec } = __webpack_require__(603);
+
 const { addLabels } = __webpack_require__(379);
 
 async function changedPackages(project) {
   const packageGraph = new PackageGraph(await project.getPackages());
   const execOpts = { cwd: project.rootPath };
+  const options = { ...project.config, includeMergedTags: true };
 
-  const updates = collectUpdates(packageGraph.rawPackageList, packageGraph, execOpts, project.config);
+  const updates = collectUpdates(packageGraph.rawPackageList, packageGraph, execOpts, options);
 
   return updates.map((node) => node.pkg.name);
 }
 
-async function hasChangesSinceLastTag(pkg) {
+async function hasChangedSinceLastTag(pkg) {
   const pattern = `refs/tags/${pkg}@*`;
   const refsTags = await exec(`git for-each-ref --sort=-taggerdate --format '%(refname)' ${pattern}`);
   const tags = refsTags
@@ -8078,12 +8082,12 @@ async function hasChangesSinceLastTag(pkg) {
     .map((refTag) => refTag.replace('refs/tags/', ''));
 
   if (!tags.length) {
-    return pkg;
+    return true;
   }
 
   const changedFiles = await exec(`git diff --name-only ${tags[0]}`);
 
-  return changedFiles.length ? pkg : null;
+  return changedFiles.length > 0;
 }
 
 async function changedNonJsPackages(project) {
@@ -8091,21 +8095,24 @@ async function changedNonJsPackages(project) {
 
   const allPackageDirs = await fs.readdir(project.packageParentDirs[0]);
   const nonJsPackageDirs = allPackageDirs.filter((pkg) => !pkgJsons.some((pkgJson) => pkgJson.location.endsWith(pkg)));
-  const nonJsPackages = await Promise.all(nonJsPackageDirs.map(hasChangesSinceLastTag));
-
-  return nonJsPackages.filter(Boolean);
+  return Promise.all(nonJsPackageDirs.filter(hasChangedSinceLastTag));
 }
 
-async function labelerSinceTag({ gitHubClient, additionalLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
+async function labelerSinceTag({ gitHubClient, dryRun = false, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
+
+  if (github.context.actor) {
+    await trueUpGitHistory();
+  }
 
   const packages = await changedPackages(project);
   const nonJsPackages = await changedNonJsPackages(project);
-  const labels = [...packages, ...nonJsPackages].map((pkg) => `${prefix}${pkg}`).concat(additionalLabels);
+  const labels = [...packages, ...nonJsPackages].map((pkg) => `${prefix}${pkg}`);
 
   if (!dryRun) {
     await addLabels(gitHubClient, labels);
   }
+
   return labels;
 }
 
@@ -17510,85 +17517,7 @@ module.exports = isAccessorDescriptor;
 module.exports = require("https");
 
 /***/ }),
-/* 212 */
-/***/ (function(module) {
-
-"use strict";
-
-
-const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
-	options = Object.assign({
-		concurrency: Infinity
-	}, options);
-
-	if (typeof mapper !== 'function') {
-		throw new TypeError('Mapper function is required');
-	}
-
-	const {concurrency} = options;
-
-	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
-		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
-	}
-
-	const ret = [];
-	const iterator = iterable[Symbol.iterator]();
-	let isRejected = false;
-	let isIterableDone = false;
-	let resolvingCount = 0;
-	let currentIndex = 0;
-
-	const next = () => {
-		if (isRejected) {
-			return;
-		}
-
-		const nextItem = iterator.next();
-		const i = currentIndex;
-		currentIndex++;
-
-		if (nextItem.done) {
-			isIterableDone = true;
-
-			if (resolvingCount === 0) {
-				resolve(ret);
-			}
-
-			return;
-		}
-
-		resolvingCount++;
-
-		Promise.resolve(nextItem.value)
-			.then(element => mapper(element, i))
-			.then(
-				value => {
-					ret[i] = value;
-					resolvingCount--;
-					next();
-				},
-				error => {
-					isRejected = true;
-					reject(error);
-				}
-			);
-	};
-
-	for (let i = 0; i < concurrency; i++) {
-		next();
-
-		if (isIterableDone) {
-			break;
-		}
-	}
-});
-
-module.exports = pMap;
-// TODO: Remove this for the next major release
-module.exports.default = pMap;
-
-
-/***/ }),
+/* 212 */,
 /* 213 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -22815,7 +22744,7 @@ const globby = __webpack_require__(625);
 const globParent = __webpack_require__(920);
 const loadJsonFile = __webpack_require__(869);
 const log = __webpack_require__(533);
-const pMap = __webpack_require__(212);
+const pMap = __webpack_require__(521);
 const path = __webpack_require__(622);
 const writeJsonFile = __webpack_require__(294);
 
@@ -28623,7 +28552,7 @@ async function findPackageName(pkgDir) {
   return pkgDir.split('/').pop();
 }
 
-async function labeler({ gitHubClient, additionalLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
+async function labeler({ gitHubClient, dryRun = false, prefix = LABEL_PREFIX }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -28655,11 +28584,12 @@ async function labeler({ gitHubClient, additionalLabels = [], dryRun = false, pr
 
   const uniqChangePkgDirs = [...new Set(changedPkgDirs)];
   const packages = await Promise.all(uniqChangePkgDirs.map(findPackageName));
-  const labels = packages.map((pkg) => `${prefix}${pkg}`).concat(additionalLabels);
+  const labels = packages.map((pkg) => `${prefix}${pkg}`);
 
   if (!dryRun) {
     await addLabels(gitHubClient, labels);
   }
+
   return labels;
 }
 
@@ -29310,7 +29240,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "6.0.0";
+const VERSION = "6.0.1";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
@@ -32040,14 +31970,28 @@ class Command {
         return cmdStr;
     }
 }
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+exports.toCommandValue = toCommandValue;
 function escapeData(s) {
-    return (s || '')
+    return toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return (s || '')
+    return toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
@@ -32941,7 +32885,7 @@ module.exports = function isDataDescriptor(obj, prop) {
 
 
 const globby = __webpack_require__(625);
-const pMap = __webpack_require__(212);
+const pMap = __webpack_require__(521);
 const path = __webpack_require__(622);
 const ValidationError = __webpack_require__(793);
 
@@ -36863,7 +36807,19 @@ exports.RequestError = RequestError;
 
 
 /***/ }),
-/* 464 */,
+/* 464 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+var arrayUniq = __webpack_require__(738);
+
+module.exports = function () {
+	return arrayUniq([].concat.apply([], arguments));
+};
+
+
+/***/ }),
 /* 465 */,
 /* 466 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -37194,11 +37150,13 @@ var ExitCode;
 /**
  * Sets env variable for this action and future actions in the job
  * @param name the name of the variable to set
- * @param val the value of the variable
+ * @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    process.env[name] = val;
-    command_1.issueCommand('set-env', { name }, val);
+    const convertedVal = command_1.toCommandValue(val);
+    process.env[name] = convertedVal;
+    command_1.issueCommand('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -37237,12 +37195,22 @@ exports.getInput = getInput;
  * Sets the value of an output.
  *
  * @param     name     name of the output to set
- * @param     value    value to store
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setOutput(name, value) {
     command_1.issueCommand('set-output', { name }, value);
 }
 exports.setOutput = setOutput;
+/**
+ * Enables or disables the echoing of commands into stdout for the rest of the step.
+ * Echoing is disabled by default if ACTIONS_STEP_DEBUG is not set.
+ *
+ */
+function setCommandEcho(enabled) {
+    command_1.issue('echo', enabled ? 'on' : 'off');
+}
+exports.setCommandEcho = setCommandEcho;
 //-----------------------------------------------------------------------
 // Results
 //-----------------------------------------------------------------------
@@ -37276,18 +37244,18 @@ function debug(message) {
 exports.debug = debug;
 /**
  * Adds an error issue
- * @param message error issue message
+ * @param message error issue message. Errors will be converted to string via toString()
  */
 function error(message) {
-    command_1.issue('error', message);
+    command_1.issue('error', message instanceof Error ? message.toString() : message);
 }
 exports.error = error;
 /**
  * Adds an warning issue
- * @param message warning issue message
+ * @param message warning issue message. Errors will be converted to string via toString()
  */
 function warning(message) {
-    command_1.issue('warning', message);
+    command_1.issue('warning', message instanceof Error ? message.toString() : message);
 }
 exports.warning = warning;
 /**
@@ -37345,8 +37313,9 @@ exports.group = group;
  * Saves state for current action, the state can only be retrieved by this action's post job execution.
  *
  * @param     name     name of the state to store
- * @param     value    value to store
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function saveState(name, value) {
     command_1.issueCommand('save-state', { name }, value);
 }
@@ -37580,14 +37549,11 @@ module.exports = x => {
 const core = __webpack_require__(470);
 const gitHub = __webpack_require__(469);
 
-const { inputList } = __webpack_require__(521);
-
 const { labeler } = __webpack_require__(379);
 const { labelerSinceTag } = __webpack_require__(97);
 
 const params = {
   gitHubClient: new gitHub.GitHub(core.getInput('GITHUB_TOKEN')),
-  additionalLabels: inputList(core.getInput('additional-labels')),
   dryRun: core.getInput('dry-run') === 'true',
   prefix: core.getInput('prefix'),
 };
@@ -39613,102 +39579,79 @@ module.exports = {
 /* 521 */
 /***/ (function(module) {
 
-module.exports.inputList = function inputList(input) {
-  let list = input || [];
+"use strict";
 
-  if (typeof input === 'string') {
-    try {
-      list = JSON.parse(input);
-    } catch (err) {
-      list = input.split(/[,\r\n]/g);
-    }
-  }
 
-  return list.map((item) => item.trim()).filter(Boolean);
-};
+const pMap = (iterable, mapper, options) => new Promise((resolve, reject) => {
+	options = Object.assign({
+		concurrency: Infinity
+	}, options);
 
-module.exports.validateRepo = function validateRepo(repo) {
-  if (!repo || !/^((https:\/\/|git@)[\w-.]+[/:])?[\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repo)) {
-    throw new Error(`Invalid repo name [${repo}]`);
-  }
+	if (typeof mapper !== 'function') {
+		throw new TypeError('Mapper function is required');
+	}
 
-  return repo;
-};
+	const {concurrency} = options;
 
-module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name [${name}]`);
-  }
+	if (!(typeof concurrency === 'number' && concurrency >= 1)) {
+		throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${concurrency}\` (${typeof concurrency})`);
+	}
 
-  return name;
-};
+	const ret = [];
+	const iterator = iterable[Symbol.iterator]();
+	let isRejected = false;
+	let isIterableDone = false;
+	let resolvingCount = 0;
+	let currentIndex = 0;
 
-module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
-    throw new Error(`Invalid env or namespace name [${namespace}]`);
-  }
+	const next = () => {
+		if (isRejected) {
+			return;
+		}
 
-  return namespace;
-};
+		const nextItem = iterator.next();
+		const i = currentIndex;
+		currentIndex++;
 
-module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
-  const zipPath = uncleanZipPath || '.';
+		if (nextItem.done) {
+			isIterableDone = true;
 
-  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
-    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
-  }
+			if (resolvingCount === 0) {
+				resolve(ret);
+			}
 
-  return zipPath;
-};
+			return;
+		}
 
-module.exports.cleanPath = function cleanPath(uncleanPath) {
-  const path = uncleanPath || '.';
+		resolvingCount++;
 
-  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
-    throw new Error(`Invalid path [${uncleanPath}]`);
-  }
+		Promise.resolve(nextItem.value)
+			.then(element => mapper(element, i))
+			.then(
+				value => {
+					ret[i] = value;
+					resolvingCount--;
+					next();
+				},
+				error => {
+					isRejected = true;
+					reject(error);
+				}
+			);
+	};
 
-  return path;
-};
+	for (let i = 0; i < concurrency; i++) {
+		next();
 
-module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
-  let buildDir = uncleanBuildDir;
+		if (isIterableDone) {
+			break;
+		}
+	}
+});
 
-  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
-    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
-  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
-    throw new Error('Build directory should not be empty or the root of the project');
-  }
-
-  // Append trailing slash
-  if (!buildDir.endsWith('/')) {
-    buildDir = `${buildDir}/`;
-  }
-
-  return buildDir;
-};
-
-module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
-  let context = uncleanContext === '/' ? '' : uncleanContext;
-
-  if (context !== '') {
-    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
-      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
-    }
-
-    // Append trailing slash
-    if (!context.endsWith('/')) {
-      context = `${context}/`;
-    }
-
-    // Remove leading slash
-    if (context.startsWith('/')) {
-      context = context.substring(1);
-    }
-  }
-
-  return context;
-};
+module.exports = pMap;
+// TODO: Remove this for the next major release
+module.exports.default = pMap;
 
 
 /***/ }),
@@ -40381,8 +40324,18 @@ function getProxyUrl(serverUrl) {
     return proxyUrl ? proxyUrl.href : '';
 }
 exports.getProxyUrl = getProxyUrl;
-const HttpRedirectCodes = [HttpCodes.MovedPermanently, HttpCodes.ResourceMoved, HttpCodes.SeeOther, HttpCodes.TemporaryRedirect, HttpCodes.PermanentRedirect];
-const HttpResponseRetryCodes = [HttpCodes.BadGateway, HttpCodes.ServiceUnavailable, HttpCodes.GatewayTimeout];
+const HttpRedirectCodes = [
+    HttpCodes.MovedPermanently,
+    HttpCodes.ResourceMoved,
+    HttpCodes.SeeOther,
+    HttpCodes.TemporaryRedirect,
+    HttpCodes.PermanentRedirect
+];
+const HttpResponseRetryCodes = [
+    HttpCodes.BadGateway,
+    HttpCodes.ServiceUnavailable,
+    HttpCodes.GatewayTimeout
+];
 const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
@@ -40507,18 +40460,22 @@ class HttpClient {
      */
     async request(verb, requestUrl, data, headers) {
         if (this._disposed) {
-            throw new Error("Client has already been disposed.");
+            throw new Error('Client has already been disposed.');
         }
         let parsedUrl = url.parse(requestUrl);
         let info = this._prepareRequest(verb, parsedUrl, headers);
         // Only perform retries on reads since writes may not be idempotent.
-        let maxTries = (this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1) ? this._maxRetries + 1 : 1;
+        let maxTries = this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1
+            ? this._maxRetries + 1
+            : 1;
         let numTries = 0;
         let response;
         while (numTries < maxTries) {
             response = await this.requestRaw(info, data);
             // Check if it's an authentication challenge
-            if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
+            if (response &&
+                response.message &&
+                response.message.statusCode === HttpCodes.Unauthorized) {
                 let authenticationHandler;
                 for (let i = 0; i < this.handlers.length; i++) {
                     if (this.handlers[i].canHandleAuthentication(response)) {
@@ -40536,21 +40493,32 @@ class HttpClient {
                 }
             }
             let redirectsRemaining = this._maxRedirects;
-            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1
-                && this._allowRedirects
-                && redirectsRemaining > 0) {
-                const redirectUrl = response.message.headers["location"];
+            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1 &&
+                this._allowRedirects &&
+                redirectsRemaining > 0) {
+                const redirectUrl = response.message.headers['location'];
                 if (!redirectUrl) {
                     // if there's no location to redirect to, we won't
                     break;
                 }
                 let parsedRedirectUrl = url.parse(redirectUrl);
-                if (parsedUrl.protocol == 'https:' && parsedUrl.protocol != parsedRedirectUrl.protocol && !this._allowRedirectDowngrade) {
-                    throw new Error("Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.");
+                if (parsedUrl.protocol == 'https:' &&
+                    parsedUrl.protocol != parsedRedirectUrl.protocol &&
+                    !this._allowRedirectDowngrade) {
+                    throw new Error('Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.');
                 }
                 // we need to finish reading the response before reassigning response
                 // which will leak the open socket.
                 await response.readBody();
+                // strip authorization header if redirected to a different hostname
+                if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
+                    for (let header in headers) {
+                        // header names are case insensitive
+                        if (header.toLowerCase() === 'authorization') {
+                            delete headers[header];
+                        }
+                    }
+                }
                 // let's make the request with the new redirectUrl
                 info = this._prepareRequest(verb, parsedRedirectUrl, headers);
                 response = await this.requestRaw(info, data);
@@ -40601,8 +40569,8 @@ class HttpClient {
      */
     requestRawWithCallback(info, data, onResult) {
         let socket;
-        if (typeof (data) === 'string') {
-            info.options.headers["Content-Length"] = Buffer.byteLength(data, 'utf8');
+        if (typeof data === 'string') {
+            info.options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
         }
         let callbackCalled = false;
         let handleResult = (err, res) => {
@@ -40615,7 +40583,7 @@ class HttpClient {
             let res = new HttpClientResponse(msg);
             handleResult(null, res);
         });
-        req.on('socket', (sock) => {
+        req.on('socket', sock => {
             socket = sock;
         });
         // If we ever get disconnected, we want the socket to timeout eventually
@@ -40630,10 +40598,10 @@ class HttpClient {
             // res should have headers
             handleResult(err, null);
         });
-        if (data && typeof (data) === 'string') {
+        if (data && typeof data === 'string') {
             req.write(data, 'utf8');
         }
-        if (data && typeof (data) !== 'string') {
+        if (data && typeof data !== 'string') {
             data.on('close', function () {
                 req.end();
             });
@@ -40660,31 +40628,34 @@ class HttpClient {
         const defaultPort = usingSsl ? 443 : 80;
         info.options = {};
         info.options.host = info.parsedUrl.hostname;
-        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
-        info.options.path = (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
+        info.options.port = info.parsedUrl.port
+            ? parseInt(info.parsedUrl.port)
+            : defaultPort;
+        info.options.path =
+            (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
         info.options.method = method;
         info.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-            info.options.headers["user-agent"] = this.userAgent;
+            info.options.headers['user-agent'] = this.userAgent;
         }
         info.options.agent = this._getAgent(info.parsedUrl);
         // gives handlers an opportunity to participate
         if (this.handlers) {
-            this.handlers.forEach((handler) => {
+            this.handlers.forEach(handler => {
                 handler.prepareRequest(info.options);
             });
         }
         return info;
     }
     _mergeHeaders(headers) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         if (this.requestOptions && this.requestOptions.headers) {
             return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers));
         }
         return lowercaseKeys(headers || {});
     }
     _getExistingOrDefaultHeader(additionalHeaders, header, _default) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
         let clientHeader;
         if (this.requestOptions && this.requestOptions.headers) {
             clientHeader = lowercaseKeys(this.requestOptions.headers)[header];
@@ -40722,7 +40693,7 @@ class HttpClient {
                     proxyAuth: proxyUrl.auth,
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
-                },
+                }
             };
             let tunnelAgent;
             const overHttps = proxyUrl.protocol === 'https:';
@@ -40749,7 +40720,9 @@ class HttpClient {
             // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
             // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
             // we have to cast it to any and change it directly
-            agent.options = Object.assign(agent.options || {}, { rejectUnauthorized: false });
+            agent.options = Object.assign(agent.options || {}, {
+                rejectUnauthorized: false
+            });
         }
         return agent;
     }
@@ -40810,7 +40783,7 @@ class HttpClient {
                     msg = contents;
                 }
                 else {
-                    msg = "Failed request: (" + statusCode + ")";
+                    msg = 'Failed request: (' + statusCode + ')';
                 }
                 let err = new Error(msg);
                 // attach statusCode and body obj (if available) to the error object
@@ -57236,6 +57209,14 @@ if (typeof Symbol === 'function' && typeof Symbol.for === 'function') {
 
 function noop () {}
 
+function publishQueue(context, queue) {
+  Object.defineProperty(context, gracefulQueue, {
+    get: function() {
+      return queue
+    }
+  })
+}
+
 var debug = noop
 if (util.debuglog)
   debug = util.debuglog('gfs4')
@@ -57247,14 +57228,10 @@ else if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || ''))
   }
 
 // Once time initialization
-if (!global[gracefulQueue]) {
+if (!fs[gracefulQueue]) {
   // This queue can be shared by multiple loaded instances
-  var queue = []
-  Object.defineProperty(global, gracefulQueue, {
-    get: function() {
-      return queue
-    }
-  })
+  var queue = global[gracefulQueue] || []
+  publishQueue(fs, queue)
 
   // Patch fs.close/closeSync to shared queue version, because we need
   // to retry() whenever a close happens *anywhere* in the program.
@@ -57294,10 +57271,14 @@ if (!global[gracefulQueue]) {
 
   if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || '')) {
     process.on('exit', function() {
-      debug(global[gracefulQueue])
-      __webpack_require__(357).equal(global[gracefulQueue].length, 0)
+      debug(fs[gracefulQueue])
+      __webpack_require__(357).equal(fs[gracefulQueue].length, 0)
     })
   }
+}
+
+if (!global[gracefulQueue]) {
+  publishQueue(global, fs[gracefulQueue]);
 }
 
 module.exports = patch(clone(fs))
@@ -57549,11 +57530,11 @@ function patch (fs) {
 
 function enqueue (elem) {
   debug('ENQUEUE', elem[0].name, elem[1])
-  global[gracefulQueue].push(elem)
+  fs[gracefulQueue].push(elem)
 }
 
 function retry () {
-  var elem = global[gracefulQueue].shift()
+  var elem = fs[gracefulQueue].shift()
   if (elem) {
     debug('RETRY', elem[0].name, elem[1])
     elem[0].apply(null, elem[1])
@@ -58788,19 +58769,7 @@ module.exports = require("http");
 
 /***/ }),
 /* 606 */,
-/* 607 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-var arrayUniq = __webpack_require__(738);
-
-module.exports = function () {
-	return arrayUniq([].concat.apply([], arguments));
-};
-
-
-/***/ }),
+/* 607 */,
 /* 608 */
 /***/ (function(module) {
 
@@ -59315,7 +59284,7 @@ function readdirStream (dir, options, internalOptions) {
 "use strict";
 
 const fs = __webpack_require__(747);
-const arrayUnion = __webpack_require__(607);
+const arrayUnion = __webpack_require__(464);
 const glob = __webpack_require__(402);
 const fastGlob = __webpack_require__(191);
 const dirGlob = __webpack_require__(895);
@@ -65065,22 +65034,24 @@ module.exports = fillRange;
 /* 731 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info, warning } = __webpack_require__(470);
+const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { exec, sh } = __webpack_require__(603);
 
 async function getShortCommit() {
-  try {
-    return await exec('git rev-parse --short=8 HEAD');
-  } catch (err) {
-    if (!err.message.includes('not a git repository')) {
-      throw err;
-    }
+  /* eslint-disable camelcase */
+  const { pull_request } = github.context.payload;
+  if (pull_request) {
+    return (pull_request.merge_commit_sha || pull_request.head.sha).substring(0, 8);
+  }
+  /* eslint-enable camelcase */
 
-    warning('No local git found, using GitHub context payload');
+  if (github.context.sha) {
     return github.context.sha.substring(0, 8);
   }
+
+  return exec('git rev-parse --short=8 HEAD');
 }
 
 async function getDestBranch() {
@@ -65101,22 +65072,14 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv(envList = ['qa', 'prod']) {
-  const destBranch = await getDestBranch();
+async function getEnv({ branch, envList = ['qa', 'prod'] } = {}) {
+  const destBranch = branch || (await getDestBranch());
 
   if (envList.includes(destBranch)) {
     return destBranch;
   }
 
   return 'dev';
-}
-
-function getPrevBranch(env) {
-  if (env === 'prod') {
-    return 'qa';
-  }
-
-  return 'master';
 }
 
 async function findGitTags(commitish = 'HEAD') {
@@ -65175,12 +65138,15 @@ async function trueUpGitHistory() {
 
   const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
   if (isShallowFetch) {
-    const srcBranch = await getSrcBranch();
     const destBranch = await getDestBranch();
+    const srcBranch = await getSrcBranch();
+    const merged = github.context.payload && github.context.payload.pull_request.merged;
+
     await sh(
-      `git fetch --prune --unshallow
+      `git fetch --prune --unshallow --tags
       git checkout ${destBranch}
-      git checkout ${srcBranch}`,
+      git pull origin ${destBranch} --rebase
+      ${!merged ? `git checkout ${srcBranch}` : ''}`,
     );
   } else {
     await sh('git fetch --tags');
@@ -65196,6 +65162,11 @@ async function gitMerge(params = {}) {
   const destBranches = params.destBranches
     ? params.destBranches.filter((branch) => branch !== srcBranch)
     : [await getDestBranch()];
+
+  await sh(
+    `git pull origin ${srcBranch} --rebase
+    git push --follow-tags`,
+  );
 
   // eslint-disable-next-line no-restricted-syntax
   for (const destBranch of destBranches) {
@@ -65214,7 +65185,6 @@ module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
-module.exports.getPrevBranch = getPrevBranch;
 module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
@@ -65745,7 +65715,7 @@ var isPlainObject = _interopDefault(__webpack_require__(548));
 var nodeFetch = _interopDefault(__webpack_require__(454));
 var requestError = __webpack_require__(257);
 
-const VERSION = "5.4.0";
+const VERSION = "5.4.2";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
@@ -71743,8 +71713,9 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 module.exports.DEPLOY_TYPES = {
   NONE: 'NONE', // Placeholder so the deploy job ignores this package
-  DOCKER_BUILD: 'DOCKER_BUILD', // Fallback if package folder has a Dockerfile
+  DOCKER_BUILD: 'DOCKER_BUILD',
   KUBE_JOB: 'KUBE_JOB',
+  KUBE_DAEMONSET: 'KUBE_DAEMONSET',
   KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
   LAMBDA: 'LAMBDA',
   MAVEN: 'MAVEN',
@@ -79010,12 +78981,10 @@ function getProxyUrl(reqUrl) {
     }
     let proxyVar;
     if (usingSsl) {
-        proxyVar = process.env["https_proxy"] ||
-            process.env["HTTPS_PROXY"];
+        proxyVar = process.env['https_proxy'] || process.env['HTTPS_PROXY'];
     }
     else {
-        proxyVar = process.env["http_proxy"] ||
-            process.env["HTTP_PROXY"];
+        proxyVar = process.env['http_proxy'] || process.env['HTTP_PROXY'];
     }
     if (proxyVar) {
         proxyUrl = url.parse(proxyVar);
@@ -79027,7 +78996,7 @@ function checkBypass(reqUrl) {
     if (!reqUrl.hostname) {
         return false;
     }
-    let noProxy = process.env["no_proxy"] || process.env["NO_PROXY"] || '';
+    let noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
     if (!noProxy) {
         return false;
     }
@@ -79048,7 +79017,10 @@ function checkBypass(reqUrl) {
         upperReqHosts.push(`${upperReqHosts[0]}:${reqPort}`);
     }
     // Compare request host against noproxy
-    for (let upperNoProxyItem of noProxy.split(',').map(x => x.trim().toUpperCase()).filter(x => x)) {
+    for (let upperNoProxyItem of noProxy
+        .split(',')
+        .map(x => x.trim().toUpperCase())
+        .filter(x => x)) {
         if (upperReqHosts.some(x => x === upperNoProxyItem)) {
             return true;
         }
