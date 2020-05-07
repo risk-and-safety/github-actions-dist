@@ -9097,19 +9097,18 @@ async function actionsRelease(params) {
 
   const branch = await getSrcBranch();
 
-  if (preRelease) {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git fetch
-      git pull origin ${DEFAULT_BRANCH}
-      git checkout ${branch} && git pull || git checkout -b ${branch}`,
-    );
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+    git fetch
+    git pull origin ${DEFAULT_BRANCH}
+    git checkout ${branch} && git pull || git checkout -b ${branch}`,
+  );
 
+  if (preRelease) {
     await copyFilesAndCommit(buildDir);
   } else if (branch !== DEFAULT_BRANCH) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
-      ${!dryRun ? `git pull origin ${branch}` : ''}
       git checkout ${DEFAULT_BRANCH}
       git merge ${branch} -Xours`,
     );
