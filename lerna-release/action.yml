@@ -2,7 +2,7 @@ name: Lerna Release
 description: Increments package versions, generates release notes and creates a GitHub Release
 inputs:
   packages:
-    description: "Serialized JSON array of packages (eg [{ name: 'deploy:app-a'}, ...])"
+    description: "Comma delimited list or serialized JSON array of packages (eg [{ name: 'deploy:app-a'}, ...])"
     required: true
   GITHUB_TOKEN:
     description: GitHub security token for editing a release or comment
@@ -22,10 +22,18 @@ inputs:
     description: Indicates if the GitHub Release is still in draft (ie the Pull Request is still open)
     required: false
     default: "true"
+  pre-release:
+    description: GitHub Release and Slack message should be pre-releases
+    required: false
+    default: "false"
   prefix:
     description: Label prefix for targeting labels that relate to a package deployment
     required: false
     default: "deploy:"
+  time-zone:
+    description: Time zone for dates in the release notes.
+    required: false
+    default: "America/Los_Angeles"
 runs:
   using: node12
   main: index.js
