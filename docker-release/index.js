@@ -22651,7 +22651,7 @@ async function gitMerge(params = {}) {
     await sh(
       `git checkout ${destBranch}
       git merge ${srcBranch}
-      git "${gitUrl}" push --follow-tags`,
+      git push "${gitUrl}" --follow-tags`,
     );
 
     srcBranch = destBranch;
