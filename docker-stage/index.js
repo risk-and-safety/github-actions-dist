@@ -22595,9 +22595,15 @@ async function gitMerge(params = {}) {
     ? params.destBranches.filter((branch) => branch !== srcBranch)
     : [await getDestBranch()];
 
+  const { GITHUB_TOKEN } = params;
+  const { owner, repo } = github.context.repo;
+  const { actor } = github.context;
+
+  const gitUrl = `https://${actor}:${GITHUB_TOKEN}@github.com/${owner}/${repo}.git`;
+
   await sh(
     `git pull origin ${srcBranch} --rebase
-    git push --follow-tags`,
+    git push "${gitUrl}" --follow-tags`,
   );
 
   // eslint-disable-next-line no-restricted-syntax
@@ -22606,7 +22612,7 @@ async function gitMerge(params = {}) {
     await sh(
       `git checkout ${destBranch}
       git merge ${srcBranch}
-      git push --follow-tags`,
+      git "${gitUrl}" push --follow-tags`,
     );
 
     srcBranch = destBranch;
@@ -24411,36 +24417,6 @@ function registerPlugin(plugins, pluginFunction) {
 
 /***/ }),
 
-/***/ 862:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var osName = _interopDefault(__webpack_require__(2));
-
-function getUserAgent() {
-  try {
-    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`;
-  } catch (error) {
-    if (/wmic os get Caption/.test(error.message)) {
-      return "Windows <version undetectable>";
-    }
-
-    throw error;
-  }
-}
-
-exports.getUserAgent = getUserAgent;
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
 /***/ 866:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -25631,9 +25607,9 @@ function authenticationPlugin(octokit, options) {
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var request = __webpack_require__(753);
-var universalUserAgent = __webpack_require__(862);
+var universalUserAgent = __webpack_require__(796);
 
-const VERSION = "4.3.1";
+const VERSION = "4.4.0";
 
 class GraphqlError extends Error {
   constructor(request, response) {
@@ -25652,7 +25628,7 @@ class GraphqlError extends Error {
 
 }
 
-const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query"];
+const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query", "mediaType"];
 function graphql(request, query, options) {
   options = typeof query === "string" ? options = Object.assign({
     query
