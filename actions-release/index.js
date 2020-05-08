@@ -9095,7 +9095,27 @@ async function actionsRelease(params) {
     await setGitUser(user, TEMP_GIT_DIR);
   }
 
+  await sh(
+    `cd "${TEMP_GIT_DIR}"
+      git fetch
+      git pull origin ${DEFAULT_BRANCH}`,
+  );
+
   const branch = await getSrcBranch();
+  const remoteExists = await exec(`git ls-remote --heads origin refs/heads/${branch}`);
+
+  if (remoteExists) {
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+      git checkout ${branch}
+      git pull`,
+    );
+  } else {
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+      git checkout ${branch} || git checkout -b ${branch}`,
+    );
+  }
 
   if (preRelease) {
     await sh(
