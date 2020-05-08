@@ -22601,8 +22601,10 @@ async function gitMerge(params = {}) {
 
   const gitUrl = `https://${actor}:${GITHUB_TOKEN}@github.com/${owner}/${repo}.git`;
 
+  // Remove the GitHub Action bot token extraheader from local git config, so we can use GITHUB_TOKEN
   await sh(
-    `git pull origin ${srcBranch} --rebase
+    `git config --local --unset-all http.https://github.com/.extraheader
+    git pull "${gitUrl}" ${srcBranch} --rebase
     git push "${gitUrl}" --follow-tags`,
   );
 
