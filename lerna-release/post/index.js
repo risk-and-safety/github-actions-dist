@@ -21986,7 +21986,8 @@ async function gitMerge(params = {}) {
   const gitUrl = `https://${actor}:${GITHUB_TOKEN}@github.com/${owner}/${repo}.git`;
 
   await sh(
-    `git pull origin ${srcBranch} --rebase
+    `git config --local --unset-all http.https://github.com/.extraheader
+    git pull origin ${srcBranch} --rebase
     git push "${gitUrl}" --follow-tags`,
   );
 
