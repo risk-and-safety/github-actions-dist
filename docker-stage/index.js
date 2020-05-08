@@ -22475,15 +22475,12 @@ const github = __webpack_require__(469);
 const { exec, sh } = __webpack_require__(686);
 
 async function getShortCommit() {
-  /* eslint-disable camelcase */
-  const { pull_request } = github.context.payload;
-  if (pull_request) {
-    return (pull_request.merge_commit_sha || pull_request.head.sha).substring(0, 8);
-  }
-  /* eslint-enable camelcase */
-
-  if (github.context.sha) {
-    return github.context.sha.substring(0, 8);
+  if (github.context.payload) {
+    /* eslint-disable camelcase */
+    const { pull_request } = github.context.payload;
+    const sha = !pull_request || pull_request.merged ? github.context.sha : pull_request.head.sha;
+    return sha.substring(0, 8);
+    /* eslint-enable camelcase */
   }
 
   return exec('git rev-parse --short=8 HEAD');
