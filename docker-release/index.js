@@ -3546,7 +3546,7 @@ const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getEnv, getShortCommit, getSrcBranch } = __webpack_require__(731);
+const { findGitVersion, getEnv, getShortCommit, getSrcBranch, trueUpGitHistory } = __webpack_require__(731);
 const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
@@ -3600,6 +3600,10 @@ async function dockerReleaseOne(params) {
 async function dockerRelease(params) {
   if (params.path && params.app.length !== 1) {
     throw new Error(`The build path: "${params.path}" is only supported for a single app`);
+  }
+
+  if (github.context.actor) {
+    await trueUpGitHistory();
   }
 
   // Force deployments to be sequential so the logs are readable.
