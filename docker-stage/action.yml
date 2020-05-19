@@ -17,6 +17,9 @@ inputs:
     description: Docker build directory to build from instead of tagging an existing image.
     required: false
     default: '.'
+  repo:
+    description: Repository "owner/name" or url. Defaults to the repo calling this action.
+    required: false
   registry:
     description: Docker registry
     required: false

@@ -9117,19 +9117,24 @@ async function actionsRelease(params) {
     );
   }
 
-  if (preRelease) {
+  if (remoteExists) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
-      git fetch
-      git pull origin ${DEFAULT_BRANCH}
-      git checkout ${branch} && git pull || git checkout -b ${branch}`,
+      git checkout ${branch}
+      git pull`,
     );
+  } else {
+    await sh(
+      `cd "${TEMP_GIT_DIR}"
+      git checkout ${branch} || git checkout -b ${branch}`,
+    );
+  }
 
+  if (preRelease) {
     await copyFilesAndCommit(buildDir);
   } else if (branch !== DEFAULT_BRANCH) {
     await sh(
       `cd "${TEMP_GIT_DIR}"
-      ${!dryRun ? `git pull origin ${branch}` : ''}
       git checkout ${DEFAULT_BRANCH}
       git merge ${branch} -Xours`,
     );
