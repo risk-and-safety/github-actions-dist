@@ -9102,7 +9102,7 @@ async function actionsRelease(params) {
   );
 
   const branch = await getSrcBranch();
-  const remoteExists = await exec(`git ls-remote --heads origin refs/heads/${branch}`);
+  const remoteExists = await exec(`cd "${TEMP_GIT_DIR}" && git ls-remote --heads origin refs/heads/${branch}`);
 
   if (remoteExists) {
     await sh(
