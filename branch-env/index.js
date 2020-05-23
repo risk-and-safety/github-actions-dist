@@ -22028,7 +22028,17 @@ async function trueUpGitHistory() {
 
   const isShallowFetch = (await exec('git rev-parse --is-shallow-repository')) === 'true';
   if (isShallowFetch) {
-    await sh(`git fetch --prune --unshallow --tags`);
+    const destBranch = await getDestBranch();
+    const srcBranch = await getSrcBranch();
+    /* eslint-disable camelcase */
+    const { pull_request } = github.context.payload;
+    const merged = pull_request && pull_request.merged;
+    /* eslint-enable camelcase */
+
+    await sh(
+      `git fetch --prune --unshallow --tags
+      git checkout ${merged ? destBranch : srcBranch}`,
+    );
   } else {
     await sh('git fetch --tags');
   }
