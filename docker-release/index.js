@@ -22115,11 +22115,11 @@ function getPageLinks (link) {
 /***/ 585:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { warning } = __webpack_require__(470);
+const { info } = __webpack_require__(470);
 const util = __webpack_require__(669);
 
 module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
-  warning(`Deploying: [${apps}]`);
+  info(`Deploying: [${apps}]`);
 
   const failed = [];
   const results = [];
@@ -22591,15 +22591,15 @@ async function getGitUser() {
   return user;
 }
 
-async function setGitUser(user, dir = '.') {
-  const currentUsername = await exec(`git -C "${dir}" config user.name || true`);
+async function setGitUser(user) {
+  const currentUsername = await exec(`git config user.name || true`);
   if (!currentUsername) {
-    await sh(`git -C "${dir}" config user.name "${user.username}"`);
+    await sh(`git config user.name "${user.username}"`);
   }
 
-  const currentEmail = await exec(`git -C "${dir}" config user.email || true`);
+  const currentEmail = await exec(`git config user.email || true`);
   if (!currentEmail) {
-    await sh(`git -C "${dir}" config user.email "${user.email}"`);
+    await sh(`git config user.email "${user.email}"`);
   }
 }
 
@@ -22613,13 +22613,14 @@ async function trueUpGitHistory() {
   if (isShallowFetch) {
     const destBranch = await getDestBranch();
     const srcBranch = await getSrcBranch();
-    const merged = github.context.payload && github.context.payload.pull_request.merged;
+    /* eslint-disable camelcase */
+    const { pull_request } = github.context.payload;
+    const merged = pull_request && pull_request.merged;
+    /* eslint-enable camelcase */
 
     await sh(
       `git fetch --prune --unshallow --tags
-      git checkout ${destBranch}
-      git pull origin ${destBranch} --rebase
-      ${!merged ? `git checkout ${srcBranch}` : ''}`,
+      git checkout ${merged ? destBranch : srcBranch}`,
     );
   } else {
     await sh('git fetch --tags');

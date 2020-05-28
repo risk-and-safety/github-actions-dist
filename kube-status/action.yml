@@ -27,6 +27,10 @@ inputs:
     description: Kibana host where the logs reside
     required: false
     default: https://logs.risksafety.io
+  retries:
+    description: Number of times to retry Flux release
+    required: false
+    default: 5
 runs:
   using: 'node12'
   main: 'index.js'

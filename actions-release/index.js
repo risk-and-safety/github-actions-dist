@@ -9027,25 +9027,21 @@ const TEMP_GIT_DIR = `${os.tmpdir()}/actions-release-${uuid()}/`;
 const DEFAULT_BRANCH = 'master';
 
 async function copyFilesAndCommit(buildDir) {
-  await fs.copy(buildDir, TEMP_GIT_DIR);
+  await fs.copy(buildDir, '.');
 
-  await sh(
-    `cd "${TEMP_GIT_DIR}"
-    git add -N .`,
-  );
+  await sh(`git add -N .`);
 
-  const changes = (await exec(`cd "${TEMP_GIT_DIR}" && git diff --exit-code >/dev/null || echo true`)) === 'true';
+  const changes = (await exec(`git diff --exit-code >/dev/null || echo true`)) === 'true';
 
   if (!changes) {
     info('no changes found');
     return;
   }
 
-  const { version } = await fs.readJson(path.join(TEMP_GIT_DIR, 'package.json'));
+  const { version } = await fs.readJson('./package.json');
 
   await sh(
-    `cd "${TEMP_GIT_DIR}"
-git add .
+    `git add .
 git commit -m "chore(release): push compiled code"
 git tag -a -m "v${version}" v${version} || true`,
   );
@@ -9084,67 +9080,44 @@ async function actionsRelease(params) {
     originUrl = repo.replace('github.com', repoName);
   }
 
-  if (!fs.existsSync(TEMP_GIT_DIR)) {
-    await fs.ensureDir(TEMP_GIT_DIR);
+  const cwd = process.cwd();
 
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-       git init
-       git remote add origin "${originUrl}"`,
-    );
-    await setGitUser(user, TEMP_GIT_DIR);
-  }
+  try {
+    const dirExists = fs.existsSync(TEMP_GIT_DIR);
 
-  await sh(
-    `cd "${TEMP_GIT_DIR}"
-      git fetch
-      git pull origin ${DEFAULT_BRANCH}`,
-  );
+    if (!dirExists) {
+      await fs.ensureDir(TEMP_GIT_DIR);
+    }
 
-  const branch = await getSrcBranch();
-  const remoteExists = await exec(`cd "${TEMP_GIT_DIR}" && git ls-remote --heads origin refs/heads/${branch}`);
+    process.chdir(TEMP_GIT_DIR);
 
-  if (remoteExists) {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git checkout ${branch}
-      git pull`,
-    );
-  } else {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git checkout ${branch} || git checkout -b ${branch}`,
-    );
-  }
+    if (!dirExists) {
+      await sh(`git init && git remote add origin "${originUrl}"`);
+      await setGitUser(user);
+    }
 
-  if (remoteExists) {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git checkout ${branch}
-      git pull`,
-    );
-  } else {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git checkout ${branch} || git checkout -b ${branch}`,
-    );
-  }
+    await sh(`git fetch && git pull origin ${DEFAULT_BRANCH}`);
 
-  if (preRelease) {
-    await copyFilesAndCommit(buildDir);
-  } else if (branch !== DEFAULT_BRANCH) {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git checkout ${DEFAULT_BRANCH}
-      git merge ${branch} -Xours`,
-    );
-  }
+    const branch = await getSrcBranch();
+    const remoteExists = await exec(`git ls-remote --heads origin refs/heads/${branch}`);
 
-  if (!dryRun) {
-    await sh(
-      `cd "${TEMP_GIT_DIR}"
-      git push origin ${preRelease ? branch : DEFAULT_BRANCH} --follow-tags`,
-    );
+    if (remoteExists) {
+      await sh(`git checkout ${branch} && git pull`);
+    } else {
+      await sh(`git checkout ${branch} || git checkout -b ${branch}`);
+    }
+
+    if (preRelease) {
+      await copyFilesAndCommit(path.join(cwd, buildDir));
+    } else if (branch !== DEFAULT_BRANCH) {
+      await sh(`git checkout ${DEFAULT_BRANCH} && git merge ${branch} -Xours`);
+    }
+
+    if (!dryRun) {
+      await sh(`git push origin ${preRelease ? branch : DEFAULT_BRANCH} --follow-tags`);
+    }
+  } finally {
+    process.chdir(cwd);
   }
 }
 
@@ -24998,15 +24971,15 @@ async function getGitUser() {
   return user;
 }
 
-async function setGitUser(user, dir = '.') {
-  const currentUsername = await exec(`git -C "${dir}" config user.name || true`);
+async function setGitUser(user) {
+  const currentUsername = await exec(`git config user.name || true`);
   if (!currentUsername) {
-    await sh(`git -C "${dir}" config user.name "${user.username}"`);
+    await sh(`git config user.name "${user.username}"`);
   }
 
-  const currentEmail = await exec(`git -C "${dir}" config user.email || true`);
+  const currentEmail = await exec(`git config user.email || true`);
   if (!currentEmail) {
-    await sh(`git -C "${dir}" config user.email "${user.email}"`);
+    await sh(`git config user.email "${user.email}"`);
   }
 }
 
@@ -25020,13 +24993,14 @@ async function trueUpGitHistory() {
   if (isShallowFetch) {
     const destBranch = await getDestBranch();
     const srcBranch = await getSrcBranch();
-    const merged = github.context.payload && github.context.payload.pull_request.merged;
+    /* eslint-disable camelcase */
+    const { pull_request } = github.context.payload;
+    const merged = pull_request && pull_request.merged;
+    /* eslint-enable camelcase */
 
     await sh(
       `git fetch --prune --unshallow --tags
-      git checkout ${destBranch}
-      git pull origin ${destBranch} --rebase
-      ${!merged ? `git checkout ${srcBranch}` : ''}`,
+      git checkout ${merged ? destBranch : srcBranch}`,
     );
   } else {
     await sh('git fetch --tags');
