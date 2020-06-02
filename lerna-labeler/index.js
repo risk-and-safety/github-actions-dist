@@ -22752,7 +22752,7 @@ const ValidationError = __webpack_require__(793);
 const Package = __webpack_require__(725);
 const applyExtends = __webpack_require__(762);
 const deprecateConfig = __webpack_require__(976);
-const makeFileFinder = __webpack_require__(448);
+const { makeFileFinder, makeSyncFileFinder } = __webpack_require__(448);
 
 class Project {
   constructor(cwd) {
@@ -22913,6 +22913,16 @@ class Project {
     return this.fileFinder("package.json", filePaths => pMap(filePaths, mapper, { concurrency: 50 }));
   }
 
+  getPackagesSync() {
+    return makeSyncFileFinder(this.rootPath, this.packageConfigs)("package.json", packageConfigPath => {
+      return new Package(
+        loadJsonFile.sync(packageConfigPath),
+        path.dirname(packageConfigPath),
+        this.rootPath
+      );
+    });
+  }
+
   getPackageLicensePaths() {
     return this.fileFinder(Project.LICENSE_GLOB, null, { case: false });
   }
@@ -22934,6 +22944,7 @@ Project.LICENSE_GLOB = "LICEN{S,C}E{,.*}";
 
 module.exports = Project;
 module.exports.getPackages = cwd => new Project(cwd).getPackages();
+module.exports.getPackagesSync = cwd => new Project(cwd).getPackagesSync();
 
 
 /***/ }),
@@ -32889,12 +32900,14 @@ const pMap = __webpack_require__(521);
 const path = __webpack_require__(622);
 const ValidationError = __webpack_require__(793);
 
-module.exports = makeFileFinder;
+module.exports.makeFileFinder = makeFileFinder;
+module.exports.makeSyncFileFinder = makeSyncFileFinder;
 
-function makeFileFinder(rootPath, packageConfigs) {
+function getGlobOpts(rootPath, packageConfigs) {
   const globOpts = {
     cwd: rootPath,
     absolute: true,
+    expandDirectories: false,
     followSymlinkedDirectories: false,
     // POSIX results always need to be normalized
     transform: fp => path.normalize(fp),
@@ -32915,10 +32928,16 @@ function makeFileFinder(rootPath, packageConfigs) {
     ];
   }
 
+  return globOpts;
+}
+
+function makeFileFinder(rootPath, packageConfigs) {
+  const globOpts = getGlobOpts(rootPath, packageConfigs);
+
   return (fileName, fileMapper, customGlobOpts) => {
     const options = Object.assign({}, customGlobOpts, globOpts);
     const promise = pMap(
-      packageConfigs.sort(),
+      Array.from(packageConfigs).sort(),
       globPath => {
         let chain = globby(path.join(globPath, fileName), options);
 
@@ -32935,12 +32954,26 @@ function makeFileFinder(rootPath, packageConfigs) {
     );
 
     // always flatten the results
-    return promise.then(flattenResults);
+    return promise.then(results => results.reduce((acc, result) => acc.concat(result), []));
   };
 }
 
-function flattenResults(results) {
-  return results.reduce((acc, result) => acc.concat(result), []);
+function makeSyncFileFinder(rootPath, packageConfigs) {
+  const globOpts = getGlobOpts(rootPath, packageConfigs);
+
+  return (fileName, fileMapper, customGlobOpts) => {
+    const options = Object.assign({}, customGlobOpts, globOpts);
+    const patterns = packageConfigs.map(globPath => path.join(globPath, fileName)).sort();
+
+    let results = globby.sync(patterns, options);
+
+    /* istanbul ignore else */
+    if (fileMapper) {
+      results = results.map(fileMapper);
+    }
+
+    return results;
+  };
 }
 
 
@@ -37046,13 +37079,15 @@ class GitHub extends rest_1.Octokit {
     static getOctokitOptions(args) {
         const token = args[0];
         const options = Object.assign({}, args[1]); // Shallow clone - don't mutate the object provided by the caller
+        // Base URL - GHES or Dotcom
+        options.baseUrl = options.baseUrl || this.getApiBaseUrl();
         // Auth
         const auth = GitHub.getAuthString(token, options);
         if (auth) {
             options.auth = auth;
         }
         // Proxy
-        const agent = GitHub.getProxyAgent(options);
+        const agent = GitHub.getProxyAgent(options.baseUrl, options);
         if (agent) {
             // Shallow clone - don't mutate the object provided by the caller
             options.request = options.request ? Object.assign({}, options.request) : {};
@@ -37063,6 +37098,7 @@ class GitHub extends rest_1.Octokit {
     }
     static getGraphQL(args) {
         const defaults = {};
+        defaults.baseUrl = this.getGraphQLBaseUrl();
         const token = args[0];
         const options = args[1];
         // Authorization
@@ -37073,7 +37109,7 @@ class GitHub extends rest_1.Octokit {
             };
         }
         // Proxy
-        const agent = GitHub.getProxyAgent(options);
+        const agent = GitHub.getProxyAgent(defaults.baseUrl, options);
         if (agent) {
             defaults.request = { agent };
         }
@@ -37089,16 +37125,30 @@ class GitHub extends rest_1.Octokit {
         }
         return typeof options.auth === 'string' ? options.auth : `token ${token}`;
     }
-    static getProxyAgent(options) {
+    static getProxyAgent(destinationUrl, options) {
         var _a;
         if (!((_a = options.request) === null || _a === void 0 ? void 0 : _a.agent)) {
-            const serverUrl = 'https://api.github.com';
-            if (httpClient.getProxyUrl(serverUrl)) {
+            if (httpClient.getProxyUrl(destinationUrl)) {
                 const hc = new httpClient.HttpClient();
-                return hc.getAgent(serverUrl);
+                return hc.getAgent(destinationUrl);
             }
         }
         return undefined;
+    }
+    static getApiBaseUrl() {
+        return process.env['GITHUB_API_URL'] || 'https://api.github.com';
+    }
+    static getGraphQLBaseUrl() {
+        let url = process.env['GITHUB_GRAPHQL_URL'] || 'https://api.github.com/graphql';
+        // Shouldn't be a trailing slash, but remove if so
+        if (url.endsWith('/')) {
+            url = url.substr(0, url.length - 1);
+        }
+        // Remove trailing "/graphql"
+        if (url.toUpperCase().endsWith('/GRAPHQL')) {
+            url = url.substr(0, url.length - '/graphql'.length);
+        }
+        return url;
     }
 }
 exports.GitHub = GitHub;

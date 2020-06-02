@@ -3155,7 +3155,6 @@ module.exports = require("child_process");
 /***/ 135:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const { info, warning } = __webpack_require__(470);
 const github = __webpack_require__(469);
 const fs = __webpack_require__(747);
 const kebabCase = __webpack_require__(256);
@@ -3164,21 +3163,6 @@ const { getEnv, getSrcBranch } = __webpack_require__(731);
 const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
 const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName } = __webpack_require__(521);
-
-async function tryDockerPull(dockerImage, destTag) {
-  try {
-    // Try to pull image first for Docker layer caching
-    await sh(`docker pull ${dockerImage}:${destTag}`);
-  } catch (err) {
-    if (err.message.includes('not found: name unknown: docker package')) {
-      info('Existing docker repo not found ...');
-    } else if (err.message.includes('not found: manifest unknown:')) {
-      info('Existing docker image not found ...');
-    } else {
-      warning(`Failed to pull image ${dockerImage}:${destTag}: ${err.message}`);
-    }
-  }
-}
 
 async function dockerStageOne(params) {
   const tag = kebabCase(await getSrcBranch());
@@ -3208,8 +3192,6 @@ async function dockerStageOne(params) {
     if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
       throw new Error('Missing yarn.lock or package-lock.json file');
     }
-
-    await tryDockerPull(dockerImage, tag);
 
     const now = new Date().toISOString();
     await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
@@ -7511,13 +7493,15 @@ class GitHub extends rest_1.Octokit {
     static getOctokitOptions(args) {
         const token = args[0];
         const options = Object.assign({}, args[1]); // Shallow clone - don't mutate the object provided by the caller
+        // Base URL - GHES or Dotcom
+        options.baseUrl = options.baseUrl || this.getApiBaseUrl();
         // Auth
         const auth = GitHub.getAuthString(token, options);
         if (auth) {
             options.auth = auth;
         }
         // Proxy
-        const agent = GitHub.getProxyAgent(options);
+        const agent = GitHub.getProxyAgent(options.baseUrl, options);
         if (agent) {
             // Shallow clone - don't mutate the object provided by the caller
             options.request = options.request ? Object.assign({}, options.request) : {};
@@ -7528,6 +7512,7 @@ class GitHub extends rest_1.Octokit {
     }
     static getGraphQL(args) {
         const defaults = {};
+        defaults.baseUrl = this.getGraphQLBaseUrl();
         const token = args[0];
         const options = args[1];
         // Authorization
@@ -7538,7 +7523,7 @@ class GitHub extends rest_1.Octokit {
             };
         }
         // Proxy
-        const agent = GitHub.getProxyAgent(options);
+        const agent = GitHub.getProxyAgent(defaults.baseUrl, options);
         if (agent) {
             defaults.request = { agent };
         }
@@ -7554,16 +7539,30 @@ class GitHub extends rest_1.Octokit {
         }
         return typeof options.auth === 'string' ? options.auth : `token ${token}`;
     }
-    static getProxyAgent(options) {
+    static getProxyAgent(destinationUrl, options) {
         var _a;
         if (!((_a = options.request) === null || _a === void 0 ? void 0 : _a.agent)) {
-            const serverUrl = 'https://api.github.com';
-            if (httpClient.getProxyUrl(serverUrl)) {
+            if (httpClient.getProxyUrl(destinationUrl)) {
                 const hc = new httpClient.HttpClient();
-                return hc.getAgent(serverUrl);
+                return hc.getAgent(destinationUrl);
             }
         }
         return undefined;
+    }
+    static getApiBaseUrl() {
+        return process.env['GITHUB_API_URL'] || 'https://api.github.com';
+    }
+    static getGraphQLBaseUrl() {
+        let url = process.env['GITHUB_GRAPHQL_URL'] || 'https://api.github.com/graphql';
+        // Shouldn't be a trailing slash, but remove if so
+        if (url.endsWith('/')) {
+            url = url.substr(0, url.length - 1);
+        }
+        // Remove trailing "/graphql"
+        if (url.toUpperCase().endsWith('/GRAPHQL')) {
+            url = url.substr(0, url.length - '/graphql'.length);
+        }
+        return url;
     }
 }
 exports.GitHub = GitHub;
