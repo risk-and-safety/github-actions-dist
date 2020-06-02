@@ -14687,7 +14687,7 @@ const ValidationError = __webpack_require__(793);
 const Package = __webpack_require__(725);
 const applyExtends = __webpack_require__(762);
 const deprecateConfig = __webpack_require__(446);
-const makeFileFinder = __webpack_require__(448);
+const { makeFileFinder, makeSyncFileFinder } = __webpack_require__(448);
 
 class Project {
   constructor(cwd) {
@@ -14848,6 +14848,16 @@ class Project {
     return this.fileFinder("package.json", filePaths => pMap(filePaths, mapper, { concurrency: 50 }));
   }
 
+  getPackagesSync() {
+    return makeSyncFileFinder(this.rootPath, this.packageConfigs)("package.json", packageConfigPath => {
+      return new Package(
+        loadJsonFile.sync(packageConfigPath),
+        path.dirname(packageConfigPath),
+        this.rootPath
+      );
+    });
+  }
+
   getPackageLicensePaths() {
     return this.fileFinder(Project.LICENSE_GLOB, null, { case: false });
   }
@@ -14869,6 +14879,7 @@ Project.LICENSE_GLOB = "LICEN{S,C}E{,.*}";
 
 module.exports = Project;
 module.exports.getPackages = cwd => new Project(cwd).getPackages();
+module.exports.getPackagesSync = cwd => new Project(cwd).getPackagesSync();
 
 
 /***/ }),
@@ -24266,12 +24277,14 @@ const pMap = __webpack_require__(212);
 const path = __webpack_require__(622);
 const ValidationError = __webpack_require__(793);
 
-module.exports = makeFileFinder;
+module.exports.makeFileFinder = makeFileFinder;
+module.exports.makeSyncFileFinder = makeSyncFileFinder;
 
-function makeFileFinder(rootPath, packageConfigs) {
+function getGlobOpts(rootPath, packageConfigs) {
   const globOpts = {
     cwd: rootPath,
     absolute: true,
+    expandDirectories: false,
     followSymlinkedDirectories: false,
     // POSIX results always need to be normalized
     transform: fp => path.normalize(fp),
@@ -24292,10 +24305,16 @@ function makeFileFinder(rootPath, packageConfigs) {
     ];
   }
 
+  return globOpts;
+}
+
+function makeFileFinder(rootPath, packageConfigs) {
+  const globOpts = getGlobOpts(rootPath, packageConfigs);
+
   return (fileName, fileMapper, customGlobOpts) => {
     const options = Object.assign({}, customGlobOpts, globOpts);
     const promise = pMap(
-      packageConfigs.sort(),
+      Array.from(packageConfigs).sort(),
       globPath => {
         let chain = globby(path.join(globPath, fileName), options);
 
@@ -24312,12 +24331,26 @@ function makeFileFinder(rootPath, packageConfigs) {
     );
 
     // always flatten the results
-    return promise.then(flattenResults);
+    return promise.then(results => results.reduce((acc, result) => acc.concat(result), []));
   };
 }
 
-function flattenResults(results) {
-  return results.reduce((acc, result) => acc.concat(result), []);
+function makeSyncFileFinder(rootPath, packageConfigs) {
+  const globOpts = getGlobOpts(rootPath, packageConfigs);
+
+  return (fileName, fileMapper, customGlobOpts) => {
+    const options = Object.assign({}, customGlobOpts, globOpts);
+    const patterns = packageConfigs.map(globPath => path.join(globPath, fileName)).sort();
+
+    let results = globby.sync(patterns, options);
+
+    /* istanbul ignore else */
+    if (fileMapper) {
+      results = results.map(fileMapper);
+    }
+
+    return results;
+  };
 }
 
 
@@ -32882,14 +32915,6 @@ if (typeof Symbol === 'function' && typeof Symbol.for === 'function') {
 
 function noop () {}
 
-function publishQueue(context, queue) {
-  Object.defineProperty(context, gracefulQueue, {
-    get: function() {
-      return queue
-    }
-  })
-}
-
 var debug = noop
 if (util.debuglog)
   debug = util.debuglog('gfs4')
@@ -32901,10 +32926,14 @@ else if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || ''))
   }
 
 // Once time initialization
-if (!fs[gracefulQueue]) {
+if (!global[gracefulQueue]) {
   // This queue can be shared by multiple loaded instances
-  var queue = global[gracefulQueue] || []
-  publishQueue(fs, queue)
+  var queue = []
+  Object.defineProperty(global, gracefulQueue, {
+    get: function() {
+      return queue
+    }
+  })
 
   // Patch fs.close/closeSync to shared queue version, because we need
   // to retry() whenever a close happens *anywhere* in the program.
@@ -32944,14 +32973,10 @@ if (!fs[gracefulQueue]) {
 
   if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || '')) {
     process.on('exit', function() {
-      debug(fs[gracefulQueue])
-      __webpack_require__(357).equal(fs[gracefulQueue].length, 0)
+      debug(global[gracefulQueue])
+      __webpack_require__(357).equal(global[gracefulQueue].length, 0)
     })
   }
-}
-
-if (!global[gracefulQueue]) {
-  publishQueue(global, fs[gracefulQueue]);
 }
 
 module.exports = patch(clone(fs))
@@ -33203,11 +33228,11 @@ function patch (fs) {
 
 function enqueue (elem) {
   debug('ENQUEUE', elem[0].name, elem[1])
-  fs[gracefulQueue].push(elem)
+  global[gracefulQueue].push(elem)
 }
 
 function retry () {
-  var elem = fs[gracefulQueue].shift()
+  var elem = global[gracefulQueue].shift()
   if (elem) {
     debug('RETRY', elem[0].name, elem[1])
     elem[0].apply(null, elem[1])
