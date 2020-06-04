@@ -3603,7 +3603,7 @@ async function dockerRelease(params) {
   }
 
   if (github.context.actor) {
-    // Needed for finding the current git tag
+    // Needed for finding the current app git tag
     await trueUpGitHistory();
   }
 
