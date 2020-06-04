@@ -1,13 +1,18 @@
-name: lambda-deploy
+name: Lambda Deploy
 description: Deploy the S3 zip files to AWS Lambda
 inputs:
   function:
     description: Function name or comma separated list of functions
     required: true
-  staging-bucket-prefix:
-    description: S3 artifact bucket prefix excluding env suffix [dev,qa,prod]
+  env:
+    description: Override the target env [dev,qa,prod,hc]. Defaults to the branch name.
     required: false
-    default: 'rss-config-'
+  staging-bucket:
+    description: S3 artifact bucket
+    required: false
+    default: rss-artifact
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: node12
+  main: index.js
+  post: post/index.js
+  post-if: success()

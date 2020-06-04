@@ -15,10 +15,10 @@ inputs:
   build-dir:
     description: Path to the source code directory for "upload" command
     required: true
-  staging-bucket-prefix:
-    description: S3 artifact bucket prefix excluding env suffix [dev,qa,prod]
+  staging-bucket:
+    description: S3 artifact bucket
     required: false
-    default: rss-config-
+    default: rss-artifact
 runs:
   using: node12
   main: index.js

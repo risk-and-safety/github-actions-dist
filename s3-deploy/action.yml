@@ -4,15 +4,18 @@ inputs:
   app:
     description: Client app name or comma separated list of apps
     required: true
-  staging-bucket-prefix:
-    description: S3 artifact bucket prefix excluding env suffix [dev,qa,prod]
+  env:
+    description: Override the target env [dev,qa,prod,hc]. Defaults to the branch name.
     required: false
-    default: rss-config-
+  staging-bucket:
+    description: S3 artifact bucket
+    required: false
+    default: rss-artifact
   website:
     description: S3 website. Defaults to the "branch-env + website-suffix".
     required: false
   website-suffix:
-    description: S3 website suffix excluding env prefix [dev,qa,prod]. Ignored if website is defined.
+    description: S3 website suffix excluding env prefix [dev,qa,prod,hc]. Ignored if website is defined.
     required: false
     default: riskandsafety.com
   dry-run:
@@ -22,3 +25,5 @@ inputs:
 runs:
   using: node12
   main: index.js
+  post: post/index.js
+  post-if: success()
