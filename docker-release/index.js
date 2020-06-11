@@ -3596,7 +3596,7 @@ async function dockerReleaseOne(params) {
   await dockerPush(dockerImage, tag);
 
   if (env === 'prod') {
-    const version = await findGitVersion(app, commit);
+    const version = await findGitVersion(app, 'HEAD');
 
     if (version) {
       await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
