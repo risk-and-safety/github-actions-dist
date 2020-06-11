@@ -3544,10 +3544,9 @@ module.exports.MaxBufferError = MaxBufferError;
 
 const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
-const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getEnv, getShortCommit, getSrcBranch, trueUpGitHistory } = __webpack_require__(731);
-const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
+const { findGitVersion, getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(731);
+const { dockerLogin, dockerPush, findImages, oldStagedTag, stagedTag } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName, validateEnv } = __webpack_require__(521);
@@ -3577,9 +3576,20 @@ async function dockerReleaseOne(params) {
     const now = new Date().toISOString();
     await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
   } else {
-    const srcTag = kebabCase(await getSrcBranch());
+    let srcTag = await stagedTag();
 
-    await sh(`docker pull ${dockerImage}:${srcTag}`);
+    try {
+      await sh(`docker pull ${dockerImage}:${srcTag}`);
+    } catch (err) {
+      // TODO: remove retry when backward compatibility is no longer needed
+      if (err.message.includes('not found: manifest unknown:')) {
+        srcTag = await oldStagedTag();
+        await sh(`docker pull ${dockerImage}:${srcTag}`);
+      } else {
+        throw err;
+      }
+    }
+
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
   }
 
@@ -23413,8 +23423,10 @@ function sync (path, options) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { info, warning } = __webpack_require__(470);
+const kebabCase = __webpack_require__(256);
 const util = __webpack_require__(669);
 
+const { getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -23490,10 +23502,25 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
+async function stagedTag() {
+  const srcBranch = await getSrcBranch();
+
+  return `RC_${kebabCase(srcBranch)}`;
+}
+
+// TODO: remove when backward compatibility is no longer needed
+async function oldStagedTag() {
+  const srcBranch = await getSrcBranch();
+
+  return kebabCase(srcBranch);
+}
+
 module.exports.deleteVersion = deleteVersion;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
+module.exports.oldStagedTag = oldStagedTag;
+module.exports.stagedTag = stagedTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 
