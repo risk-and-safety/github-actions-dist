@@ -3544,19 +3544,18 @@ module.exports.MaxBufferError = MaxBufferError;
 
 const github = __webpack_require__(469);
 
-const { getSrcBranch } = __webpack_require__(731);
-const { deleteVersion, findImages } = __webpack_require__(819);
+const { deleteVersion, findImages, stagingTag } = __webpack_require__(819);
 
 async function prune(params) {
   const { owner, repo } = github.context.repo;
   const { gitHubClient, apps } = params;
-  const tag = await getSrcBranch();
+  const tag = await stagingTag();
 
   if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
     throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
 
     // Leave master and qa so the deploy can be replayed
-  } else if (!['master', 'qa'].includes(tag)) {
+  } else if (tag !== 'RC_master' && tag !== 'RC_qa') {
     const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
 
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
