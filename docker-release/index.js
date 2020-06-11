@@ -3546,7 +3546,7 @@ const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 const { findGitVersion, getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(731);
-const { dockerLogin, dockerPush, findImages, oldStagedTag, stagedTag } = __webpack_require__(819);
+const { dockerLogin, dockerPush, findImages, oldStagingTag, stagingTag } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName, validateEnv } = __webpack_require__(521);
@@ -3576,14 +3576,14 @@ async function dockerReleaseOne(params) {
     const now = new Date().toISOString();
     await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
   } else {
-    let srcTag = await stagedTag();
+    let srcTag = await stagingTag();
 
     try {
       await sh(`docker pull ${dockerImage}:${srcTag}`);
     } catch (err) {
       // TODO: remove retry when backward compatibility is no longer needed
       if (err.message.includes('not found: manifest unknown:')) {
-        srcTag = await oldStagedTag();
+        srcTag = await oldStagingTag();
         await sh(`docker pull ${dockerImage}:${srcTag}`);
       } else {
         throw err;
@@ -23502,14 +23502,14 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagedTag() {
+async function stagingTag() {
   const srcBranch = await getSrcBranch();
 
   return `RC_${kebabCase(srcBranch)}`;
 }
 
 // TODO: remove when backward compatibility is no longer needed
-async function oldStagedTag() {
+async function oldStagingTag() {
   const srcBranch = await getSrcBranch();
 
   return kebabCase(srcBranch);
@@ -23519,8 +23519,8 @@ module.exports.deleteVersion = deleteVersion;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagedTag = oldStagedTag;
-module.exports.stagedTag = stagedTag;
+module.exports.oldStagingTag = oldStagingTag;
+module.exports.stagingTag = stagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 

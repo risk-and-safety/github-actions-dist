@@ -23400,14 +23400,14 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagedTag() {
+async function stagingTag() {
   const srcBranch = await getSrcBranch();
 
   return `RC_${kebabCase(srcBranch)}`;
 }
 
 // TODO: remove when backward compatibility is no longer needed
-async function oldStagedTag() {
+async function oldStagingTag() {
   const srcBranch = await getSrcBranch();
 
   return kebabCase(srcBranch);
@@ -23417,8 +23417,8 @@ module.exports.deleteVersion = deleteVersion;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagedTag = oldStagedTag;
-module.exports.stagedTag = stagedTag;
+module.exports.oldStagingTag = oldStagingTag;
+module.exports.stagingTag = stagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 
