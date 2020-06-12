@@ -3549,13 +3549,12 @@ const { findGitVersion, getEnv, getShortCommit, trueUpGitHistory } = __webpack_r
 const { dockerLogin, dockerPush, findImages, oldStagingTag, stagingTag } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
-const { cleanPath, validateAppName, validateEnv } = __webpack_require__(521);
+const { cleanPath, validateAppName, validateNamespace, validateEnv } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
   const app = validateAppName(params.app);
   const commit = await getShortCommit();
-  const env = await getEnv();
-  const tagPrefix = validateEnv(params.tagPrefix || env);
+  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : validateEnv(await getEnv());
   const tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
