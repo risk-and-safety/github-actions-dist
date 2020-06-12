@@ -3544,19 +3544,18 @@ module.exports.MaxBufferError = MaxBufferError;
 
 const { info } = __webpack_require__(470);
 const github = __webpack_require__(469);
-const kebabCase = __webpack_require__(256);
 
-const { findGitVersion, getEnv, getShortCommit, getSrcBranch, trueUpGitHistory } = __webpack_require__(731);
-const { dockerLogin, dockerPush, findImages } = __webpack_require__(819);
+const { findGitVersion, getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(731);
+const { dockerLogin, dockerPush, findImages, oldStagingTag, stagingTag } = __webpack_require__(819);
 const { sequentialDeploy } = __webpack_require__(585);
 const { sh } = __webpack_require__(686);
-const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(521);
+const { cleanPath, validateAppName, validateEnv } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
   const app = validateAppName(params.app);
   const commit = await getShortCommit();
   const env = await getEnv();
-  const tagPrefix = validateNamespace(params.tagPrefix || env);
+  const tagPrefix = validateEnv(params.tagPrefix || env);
   const tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
@@ -3577,16 +3576,27 @@ async function dockerReleaseOne(params) {
     const now = new Date().toISOString();
     await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
   } else {
-    const srcTag = kebabCase(await getSrcBranch());
+    let srcTag = await stagingTag();
 
-    await sh(`docker pull ${dockerImage}:${srcTag}`);
+    try {
+      await sh(`docker pull ${dockerImage}:${srcTag}`);
+    } catch (err) {
+      // TODO: remove retry when backward compatibility is no longer needed
+      if (err.message.includes('not found: manifest unknown:')) {
+        srcTag = await oldStagingTag();
+        await sh(`docker pull ${dockerImage}:${srcTag}`);
+      } else {
+        throw err;
+      }
+    }
+
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
   }
 
   await dockerPush(dockerImage, tag);
 
   if (env === 'prod') {
-    const version = await findGitVersion(app, commit);
+    const version = await findGitVersion(app, 'HEAD');
 
     if (version) {
       await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
@@ -3603,6 +3613,7 @@ async function dockerRelease(params) {
   }
 
   if (github.context.actor) {
+    // Needed for finding the current app git tag
     await trueUpGitHistory();
   }
 
@@ -7947,15 +7958,23 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
 
 module.exports.validateAppName = function validateAppName(name) {
   if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name [${name}]`);
+    throw new Error(`Invalid app name "${name}"`);
   }
 
   return name;
 };
 
+module.exports.validateEnv = function validateEnv(env) {
+  if (!['dev', 'qa', 'prod', 'hc'].includes(env)) {
+    throw new Error(`Invalid env "${env}"`);
+  }
+
+  return env;
+};
+
 module.exports.validateNamespace = function validateNamespace(namespace) {
   if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
-    throw new Error(`Invalid env or namespace name [${namespace}]`);
+    throw new Error(`Invalid namespace name "${namespace}"`);
   }
 
   return namespace;
@@ -7965,7 +7984,7 @@ module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
   const zipPath = uncleanZipPath || '.';
 
   if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
-    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+    throw new Error(`Invalid zip path "${uncleanZipPath}"`);
   }
 
   return zipPath;
@@ -7975,7 +7994,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
   const path = uncleanPath || '.';
 
   if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
-    throw new Error(`Invalid path [${uncleanPath}]`);
+    throw new Error(`Invalid path "${uncleanPath}"`);
   }
 
   return path;
@@ -7985,7 +8004,7 @@ module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
   if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
-    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
+    throw new Error(`Invalid build dir "${uncleanBuildDir}"`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
   }
@@ -8003,7 +8022,7 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
 
   if (context !== '') {
     if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
-      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
+      throw new Error(`Invalid web context "${uncleanContext}". Only lowercase and dash`);
     }
 
     // Append trailing slash
@@ -23404,8 +23423,10 @@ function sync (path, options) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { info, warning } = __webpack_require__(470);
+const kebabCase = __webpack_require__(256);
 const util = __webpack_require__(669);
 
+const { getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -23481,10 +23502,25 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
+async function stagingTag() {
+  const srcBranch = await getSrcBranch();
+
+  return `RC_${kebabCase(srcBranch)}`;
+}
+
+// TODO: remove when backward compatibility is no longer needed
+async function oldStagingTag() {
+  const srcBranch = await getSrcBranch();
+
+  return kebabCase(srcBranch);
+}
+
 module.exports.deleteVersion = deleteVersion;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
+module.exports.oldStagingTag = oldStagingTag;
+module.exports.stagingTag = stagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 

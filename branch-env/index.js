@@ -7427,15 +7427,23 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
 
 module.exports.validateAppName = function validateAppName(name) {
   if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name [${name}]`);
+    throw new Error(`Invalid app name "${name}"`);
   }
 
   return name;
 };
 
+module.exports.validateEnv = function validateEnv(env) {
+  if (!['dev', 'qa', 'prod', 'hc'].includes(env)) {
+    throw new Error(`Invalid env "${env}"`);
+  }
+
+  return env;
+};
+
 module.exports.validateNamespace = function validateNamespace(namespace) {
   if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
-    throw new Error(`Invalid env or namespace name [${namespace}]`);
+    throw new Error(`Invalid namespace name "${namespace}"`);
   }
 
   return namespace;
@@ -7445,7 +7453,7 @@ module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
   const zipPath = uncleanZipPath || '.';
 
   if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
-    throw new Error(`Invalid zip path [${uncleanZipPath}]`);
+    throw new Error(`Invalid zip path "${uncleanZipPath}"`);
   }
 
   return zipPath;
@@ -7455,7 +7463,7 @@ module.exports.cleanPath = function cleanPath(uncleanPath) {
   const path = uncleanPath || '.';
 
   if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
-    throw new Error(`Invalid path [${uncleanPath}]`);
+    throw new Error(`Invalid path "${uncleanPath}"`);
   }
 
   return path;
@@ -7465,7 +7473,7 @@ module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
   let buildDir = uncleanBuildDir;
 
   if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
-    throw new Error(`Invalid build dir [${uncleanBuildDir}]`);
+    throw new Error(`Invalid build dir "${uncleanBuildDir}"`);
   } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
     throw new Error('Build directory should not be empty or the root of the project');
   }
@@ -7483,7 +7491,7 @@ module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
 
   if (context !== '') {
     if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
-      throw new Error(`Invalid web context [${uncleanContext}]. Only lowercase and dash`);
+      throw new Error(`Invalid web context "${uncleanContext}". Only lowercase and dash`);
     }
 
     // Append trailing slash
