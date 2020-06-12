@@ -13,7 +13,7 @@ inputs:
     required: false
     default: deployment
   tag-prefix:
-    description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the env [dev,qa,prod,hc]
+    description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the branch-env [dev,qa,prod,hc]
     required: false
   cluster-name:
     description: Kubernetes cluster name
@@ -32,5 +32,5 @@ inputs:
     required: false
     default: 5
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: node12
+  main: index.js
