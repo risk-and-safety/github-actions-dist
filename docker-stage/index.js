@@ -3163,6 +3163,15 @@ const { dockerLogin, dockerPush, findImages, stagingTag } = __webpack_require__(
 const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName } = __webpack_require__(521);
 
+async function tagPattern(tagPrefix) {
+  if (['master', 'qa', 'prod', 'hc'].includes(tagPrefix)) {
+    const env = getEnv({ branch: tagPrefix });
+    return `${env}-[0-9a-f]{7,8}`;
+  }
+
+  return stagingTag(tagPrefix);
+}
+
 async function dockerStageOne(params) {
   const tag = await stagingTag();
   const app = validateAppName(params.app);
@@ -3174,8 +3183,7 @@ async function dockerStageOne(params) {
   const dockerImage = `${registry}/${owner}/${repo}/${app}`;
 
   if (params.srcTagPrefix) {
-    const srcTagPrefix = await getEnv({ branch: params.srcTagPrefix });
-    const srcTagPattern = `${srcTagPrefix}-[0-9a-f]{7,8}`;
+    const srcTagPattern = await tagPattern(params.srcTagPrefix);
     const gitHubClient = new github.GitHub(password);
     const [{ version: srcTag }] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
 
