@@ -2142,9 +2142,9 @@ const windowsRelease = release => {
 	if ((!release || release === os.release()) && ['6.1', '6.2', '6.3', '10.0'].includes(ver)) {
 		let stdout;
 		try {
-			stdout = execa.sync('powershell', ['(Get-CimInstance -ClassName Win32_OperatingSystem).caption']).stdout || '';
-		} catch (_) {
 			stdout = execa.sync('wmic', ['os', 'get', 'Caption']).stdout || '';
+		} catch (_) {
+			stdout = execa.sync('powershell', ['(Get-CimInstance -ClassName Win32_OperatingSystem).caption']).stdout || '';
 		}
 
 		const year = (stdout.match(/2008|2012|2016|2019/) || [])[0];
@@ -6141,7 +6141,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "6.0.2";
+const VERSION = "6.0.3";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
@@ -9412,7 +9412,9 @@ module.exports = {
 /***/ }),
 
 /***/ 521:
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { ENV_BRANCHES } = __webpack_require__(731);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -9445,7 +9447,7 @@ module.exports.validateAppName = function validateAppName(name) {
 };
 
 module.exports.validateEnv = function validateEnv(env) {
-  if (!['dev', 'qa', 'prod', 'hc'].includes(env)) {
+  if (env !== 'dev' && !ENV_BRANCHES.includes(env)) {
     throw new Error(`Invalid env "${env}"`);
   }
 
@@ -24911,6 +24913,8 @@ const github = __webpack_require__(861);
 
 const { exec, sh } = __webpack_require__(686);
 
+const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
+
 async function getShortCommit() {
   if (github.context.payload) {
     /* eslint-disable camelcase */
@@ -24941,10 +24945,10 @@ async function getSrcBranch() {
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
-async function getEnv({ branch, envList = ['qa', 'prod'] } = {}) {
+async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
   const destBranch = branch || (await getDestBranch());
 
-  if (envList.includes(destBranch)) {
+  if (destBranch !== 'master' && envList.includes(destBranch)) {
     return destBranch;
   }
 
@@ -25059,6 +25063,7 @@ async function gitMerge(params = {}) {
   }
 }
 
+module.exports.ENV_BRANCHES = ENV_BRANCHES;
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
@@ -25259,7 +25264,7 @@ var isPlainObject = _interopDefault(__webpack_require__(548));
 var nodeFetch = _interopDefault(__webpack_require__(454));
 var requestError = __webpack_require__(257);
 
-const VERSION = "5.4.4";
+const VERSION = "5.4.5";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
@@ -28502,7 +28507,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var request = __webpack_require__(753);
 var universalUserAgent = __webpack_require__(796);
 
-const VERSION = "4.5.0";
+const VERSION = "4.5.1";
 
 class GraphqlError extends Error {
   constructor(request, response) {
