@@ -22847,13 +22847,18 @@ const { inputList } = __webpack_require__(521);
 
 async function calculateEnv() {
   const envList = inputList(core.getInput('env-list'));
-  return getEnv({ envList });
+  const env = await getEnv({ envList });
+
+  const prevEnv = envList.indexOf(env) > 0 ? envList.slice(0, envList.indexOf(env)).pop() : 'dev';
+
+  return { env, prevEnv };
 }
 
 calculateEnv()
-  .then((env) => {
+  .then(({ env, prevEnv }) => {
     const varName = core.getInput('var-name');
     core.exportVariable(varName, env);
+    core.exportVariable(`prev-${varName}`, prevEnv);
   })
   .catch((err) => {
     console.error(err);
