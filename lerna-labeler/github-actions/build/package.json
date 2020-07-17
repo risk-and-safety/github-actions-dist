@@ -29,7 +29,7 @@
     "@octokit/rest": "17.9.2",
     "@rss/common-nodejs": "0.3.64",
     "@slack/web-api": "5.9.0",
-    "aws-sdk": "2.638.0",
+    "aws-sdk": "2.706.0",
     "axios": "0.19.2",
     "conventional-changelog-angular": "5.0.10",
     "date-fns": "2.14.0",
