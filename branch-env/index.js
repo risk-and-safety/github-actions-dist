@@ -22001,6 +22001,10 @@ async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
   return 'dev';
 }
 
+async function getPrevEnv({ env, envList = ENV_BRANCHES } = {}) {
+  return envList.indexOf(env) > 0 ? envList.slice(0, envList.indexOf(env)).pop() : 'dev';
+}
+
 async function findGitTags(commitish = 'HEAD') {
   const tags = await exec(`git tag -l --points-at ${commitish}`);
 
@@ -22114,6 +22118,7 @@ module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
+module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
@@ -22842,14 +22847,13 @@ module.exports = require("url");
 
 const core = __webpack_require__(470);
 
-const { getEnv } = __webpack_require__(731);
+const { getEnv, getPrevEnv } = __webpack_require__(731);
 const { inputList } = __webpack_require__(521);
 
 async function calculateEnv() {
   const envList = inputList(core.getInput('env-list'));
   const env = await getEnv({ envList });
-
-  const prevEnv = envList.indexOf(env) > 0 ? envList.slice(0, envList.indexOf(env)).pop() : 'dev';
+  const prevEnv = await getPrevEnv({ env, envList });
 
   return { env, prevEnv };
 }

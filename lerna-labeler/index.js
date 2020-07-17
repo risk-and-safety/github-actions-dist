@@ -65211,6 +65211,10 @@ async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
   return 'dev';
 }
 
+async function getPrevEnv({ env, envList = ENV_BRANCHES } = {}) {
+  return envList.indexOf(env) > 0 ? envList.slice(0, envList.indexOf(env)).pop() : 'dev';
+}
+
 async function findGitTags(commitish = 'HEAD') {
   const tags = await exec(`git tag -l --points-at ${commitish}`);
 
@@ -65324,6 +65328,7 @@ module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
+module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
