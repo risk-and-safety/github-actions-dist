@@ -3164,7 +3164,7 @@ const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName } = __webpack_require__(521);
 
 async function tagPattern(tagPrefix) {
-  if (ENV_BRANCHES.includes(tagPrefix)) {
+  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
     const env = await getEnv({ branch: tagPrefix });
     return `${env}-[0-9a-f]{7,8}`;
   }
