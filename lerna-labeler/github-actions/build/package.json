@@ -41,7 +41,7 @@
     "semver": "7.3.2",
     "slackify-markdown": "2.1.0",
     "tweetsodium": "0.0.5",
-    "uuid": "8.1.0",
+    "uuid": "8.2.0",
     "yargs": "15.3.1"
   },
   "devDependencies": {
