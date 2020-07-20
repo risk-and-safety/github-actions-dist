@@ -22002,7 +22002,8 @@ async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
 }
 
 async function getPrevEnv({ env, envList = ENV_BRANCHES } = {}) {
-  return envList.indexOf(env) > 0 ? envList.slice(0, envList.indexOf(env)).pop() : 'dev';
+  const pos = envList.indexOf(env);
+  return pos > 0 ? envList[pos - 1] : 'dev';
 }
 
 async function findGitTags(commitish = 'HEAD') {
