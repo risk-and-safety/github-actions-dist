@@ -22494,7 +22494,7 @@ async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
 
 async function getPrevEnv({ env, envList = ENV_BRANCHES } = {}) {
   const pos = envList.indexOf(env);
-  return pos > 0 ? envList[pos - 1] : 'dev';
+  return pos > 1 ? envList[pos - 1] : 'dev';
 }
 
 async function findGitTags(commitish = 'HEAD') {
@@ -23334,7 +23334,7 @@ const { info, warning } = __webpack_require__(470);
 const kebabCase = __webpack_require__(256);
 const util = __webpack_require__(669);
 
-const { getSrcBranch } = __webpack_require__(731);
+const { getEnv, getPrevEnv, getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -23411,16 +23411,17 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
 }
 
 async function stagingTag(branch) {
-  const srcBranch = branch || (await getSrcBranch());
+  const env = await getEnv({ branch });
+  const prevEnv = await getPrevEnv({ env });
 
-  return `RC_${kebabCase(srcBranch)}`;
+  return `RC_${kebabCase(prevEnv)}`;
 }
 
 // TODO: remove when backward compatibility is no longer needed
 async function oldStagingTag() {
   const srcBranch = await getSrcBranch();
 
-  return kebabCase(srcBranch);
+  return `RC_${kebabCase(srcBranch)}`;
 }
 
 module.exports.deleteVersion = deleteVersion;
