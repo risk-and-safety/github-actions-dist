@@ -23334,7 +23334,7 @@ const { info, warning } = __webpack_require__(470);
 const kebabCase = __webpack_require__(256);
 const util = __webpack_require__(669);
 
-const { getEnv, getPrevEnv, getSrcBranch } = __webpack_require__(731);
+const { getSrcBranch } = __webpack_require__(731);
 const { exec, sh } = __webpack_require__(686);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -23411,10 +23411,9 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
 }
 
 async function stagingTag(branch) {
-  const env = await getEnv({ branch });
-  const prevEnv = await getPrevEnv({ env });
+  const srcBranch = branch || (await getSrcBranch());
 
-  return `RC_${kebabCase(prevEnv)}`;
+  return `RC_${kebabCase(srcBranch)}`;
 }
 
 // TODO: remove when backward compatibility is no longer needed
