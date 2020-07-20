@@ -23420,7 +23420,7 @@ async function stagingTag(branch) {
 async function oldStagingTag() {
   const srcBranch = await getSrcBranch();
 
-  return `RC_${kebabCase(srcBranch)}`;
+  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
