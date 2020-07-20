@@ -9,10 +9,8 @@ inputs:
     description: Name of the env variable to export
     required: true
 outputs:
-  var-name:
+  "var-name":
     description: The current branch env exported to the GitHub Actions "env" object (eg env.{var-name}). Defaults to "dev".
-  prev-var-name:
-    description: The precursor env exported to the GitHub Actions "env" object (eg env.prev-{var-name}). Defaults to "dev".
 runs:
   using: 'node12'
   main: 'index.js'

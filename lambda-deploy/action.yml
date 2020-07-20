@@ -5,10 +5,7 @@ inputs:
     description: Function name or comma separated list of functions
     required: true
   env:
-    description: Override the target env [dev,qa,prod,hc]. Defaults to the target branch.
-    required: false
-  src-env:
-    description: The artifact name to deploy. Defaults to the PR src branch.
+    description: Override the target env [dev,qa,prod,hc]. Defaults to the branch name.
     required: false
   staging-bucket:
     description: S3 artifact bucket

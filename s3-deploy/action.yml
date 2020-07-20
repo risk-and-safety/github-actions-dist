@@ -7,9 +7,6 @@ inputs:
   env:
     description: Override the target env [dev,qa,prod,hc]. Defaults to the branch name.
     required: false
-  src-env:
-    description: The artifact name to deploy. Defaults to the PR src branch.
-    required: false
   staging-bucket:
     description: S3 artifact bucket
     required: false

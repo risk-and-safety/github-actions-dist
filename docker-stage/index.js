@@ -3169,7 +3169,7 @@ async function tagPattern(tagPrefix) {
     return `${env}-[0-9a-f]{7,8}`;
   }
 
-  return stagingTag(tagPrefix);
+  return null;
 }
 
 async function dockerStageOne(params) {
@@ -3183,7 +3183,7 @@ async function dockerStageOne(params) {
   const dockerImage = `${registry}/${owner}/${repo}/${app}`;
 
   if (params.srcTagPrefix) {
-    const srcTagPattern = await tagPattern(params.srcTagPrefix);
+    const srcTagPattern = (await tagPattern(params.srcTagPrefix)) || tag;
     const gitHubClient = new github.GitHub(password);
     const [{ version: srcTag }] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
 
@@ -22516,10 +22516,17 @@ async function getDestBranch() {
 async function getSrcBranch() {
   /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
-  const branch = (pull_request && pull_request.head && pull_request.head.ref) || github.context.ref;
+  if (pull_request) {
+    return pull_request.head.ref;
+  }
   /* eslint-enable camelcase */
 
-  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+  const branch = github.context.ref
+    ? github.context.ref.split('/').pop()
+    : await exec('git rev-parse --abbrev-ref HEAD');
+
+  const pos = ENV_BRANCHES.indexOf(branch);
+  return pos >= 2 ? ENV_BRANCHES[pos - 1] : 'dev';
 }
 
 async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
@@ -22530,11 +22537,6 @@ async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
   }
 
   return 'dev';
-}
-
-async function getPrevEnv({ env, envList = ENV_BRANCHES } = {}) {
-  const pos = envList.indexOf(env);
-  return pos > 1 ? envList[pos - 1] : 'dev';
 }
 
 async function findGitTags(commitish = 'HEAD') {
@@ -22650,7 +22652,6 @@ module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
-module.exports.getPrevEnv = getPrevEnv;
 module.exports.findGitTags = findGitTags;
 module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
