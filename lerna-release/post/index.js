@@ -21911,7 +21911,7 @@ async function getSrcBranch() {
     : await exec('git rev-parse --abbrev-ref HEAD');
 
   const pos = ENV_BRANCHES.indexOf(branch);
-  return pos >= 2 ? ENV_BRANCHES[pos - 1] : 'dev';
+  return pos > 0 ? ENV_BRANCHES[pos - 1] : ENV_BRANCHES[0];
 }
 
 async function getEnv({ branch, envList = ENV_BRANCHES } = {}) {
