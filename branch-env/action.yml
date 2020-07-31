@@ -4,10 +4,13 @@ inputs:
   env-list:
     description: List of branches that match the AWS environments. Falls back to "dev" if none match.
     required: false
-    default: qa,prod
+    default: qa,prod,hc
   var-name:
     description: Name of the env variable to export
     required: true
+outputs:
+  "var-name":
+    description: The current branch env exported to the GitHub Actions "env" object (eg env.{var-name}). Defaults to "dev".
 runs:
   using: 'node12'
   main: 'index.js'
