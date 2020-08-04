@@ -2,7 +2,7 @@ name: kube-status
 description: Watch the deployment status using FluxCD and Kubernetes APIs
 inputs:
   app:
-    description: App name or comma separated list of apps
+    description: App name or comma separated list of apps. Use "app/image-name" if the Docker image name is different from the app name.
     required: true
   namespace:
     description: Kubernetes namespace for the app
@@ -30,7 +30,7 @@ inputs:
   retries:
     description: Number of times to retry Flux release
     required: false
-    default: 5
+    default: "5"
 runs:
   using: node12
   main: index.js

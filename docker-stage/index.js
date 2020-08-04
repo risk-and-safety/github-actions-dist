@@ -3166,14 +3166,16 @@ async function tagPattern(tagPrefix) {
 }
 
 async function dockerStageOne(params) {
+  const [app, dockerName = app] = params.app.split('/');
+  validateAppName(app);
+  validateAppName(dockerName);
   const tag = await stagingTag();
-  const app = validateAppName(params.app);
   const { owner, repo } = github.context.repo;
   const { password, registry = 'docker.pkg.github.com' } = params;
 
   await dockerLogin(params);
 
-  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   if (params.srcTagPrefix) {
     const srcTagPattern = (await tagPattern(params.srcTagPrefix)) || tag;
@@ -25687,6 +25689,9 @@ class GraphqlError extends Error {
     const message = response.data.errors[0].message;
     super(message);
     Object.assign(this, response.data);
+    Object.assign(this, {
+      headers: response.headers
+    });
     this.name = "GraphqlError";
     this.request = request; // Maintains proper stack trace (only available on V8)
 
@@ -25719,7 +25724,14 @@ function graphql(request, query, options) {
   }, {});
   return request(requestOptions).then(response => {
     if (response.data.errors) {
+      const headers = {};
+
+      for (const key of Object.keys(response.headers)) {
+        headers[key] = response.headers[key];
+      }
+
       throw new GraphqlError(requestOptions, {
+        headers,
         data: response.data
       });
     }

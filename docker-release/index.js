@@ -3545,7 +3545,9 @@ const { sh } = __webpack_require__(686);
 const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(521);
 
 async function dockerReleaseOne(params) {
-  const app = validateAppName(params.app);
+  const [app, dockerName = app] = params.app.split('/');
+  validateAppName(app);
+  validateAppName(dockerName);
   const commit = await getShortCommit();
   const env = await getEnv();
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
@@ -3563,7 +3565,7 @@ async function dockerReleaseOne(params) {
     return;
   }
 
-  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   if (path) {
     const now = new Date().toISOString();
@@ -25743,6 +25745,9 @@ class GraphqlError extends Error {
     const message = response.data.errors[0].message;
     super(message);
     Object.assign(this, response.data);
+    Object.assign(this, {
+      headers: response.headers
+    });
     this.name = "GraphqlError";
     this.request = request; // Maintains proper stack trace (only available on V8)
 
@@ -25775,7 +25780,14 @@ function graphql(request, query, options) {
   }, {});
   return request(requestOptions).then(response => {
     if (response.data.errors) {
+      const headers = {};
+
+      for (const key of Object.keys(response.headers)) {
+        headers[key] = response.headers[key];
+      }
+
       throw new GraphqlError(requestOptions, {
+        headers,
         data: response.data
       });
     }
