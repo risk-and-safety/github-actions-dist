@@ -52933,6 +52933,14 @@ module.exports.sync = (input, opts) => {
 
 const isObj = __webpack_require__(807);
 
+const disallowedKeys = [
+	'__proto__',
+	'prototype',
+	'constructor'
+];
+
+const isValidPath = pathSegments => !pathSegments.some(segment => disallowedKeys.includes(segment));
+
 function getPathSegments(path) {
 	const pathArr = path.split('.');
 	const parts = [];
@@ -52948,6 +52956,10 @@ function getPathSegments(path) {
 		parts.push(p);
 	}
 
+	if (!isValidPath(parts)) {
+		return [];
+	}
+
 	return parts;
 }
 
@@ -52958,6 +52970,9 @@ module.exports = {
 		}
 
 		const pathArr = getPathSegments(path);
+		if (pathArr.length === 0) {
+			return;
+		}
 
 		for (let i = 0; i < pathArr.length; i++) {
 			if (!Object.prototype.propertyIsEnumerable.call(obj, pathArr[i])) {
@@ -52990,6 +53005,9 @@ module.exports = {
 
 		const root = obj;
 		const pathArr = getPathSegments(path);
+		if (pathArr.length === 0) {
+			return;
+		}
 
 		for (let i = 0; i < pathArr.length; i++) {
 			const p = pathArr[i];
@@ -69793,7 +69811,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var request = __webpack_require__(753);
 var universalUserAgent = __webpack_require__(796);
 
-const VERSION = "4.5.3";
+const VERSION = "4.5.4";
 
 class GraphqlError extends Error {
   constructor(request, response) {
