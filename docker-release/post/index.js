@@ -6482,6 +6482,12 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
+async function dockerBuild(dockerImage, tag, path, commit) {
+  const now = new Date().toISOString();
+  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
+}
+
 async function dockerLogin({ username, password, registry = 'docker.pkg.github.com' }) {
   if (!username || !password) {
     throw new Error('Missing Docker credentials');
@@ -6554,6 +6560,7 @@ async function oldStagingTag() {
 }
 
 module.exports.deleteVersion = deleteVersion;
+module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;

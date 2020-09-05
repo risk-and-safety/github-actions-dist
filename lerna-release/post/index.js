@@ -13,7 +13,7 @@ async function gitMergeBack() {
   const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN', { required: true });
   const destBranch = await getDestBranch();
 
-  if (core.getInput('draft') !== 'false' || ENV_BRANCHES.indexOf(destBranch) < 1) {
+  if (core.getInput('draft') !== 'false' || !ENV_BRANCHES.includes(destBranch)) {
     return;
   }
 

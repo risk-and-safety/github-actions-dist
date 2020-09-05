@@ -8,9 +8,16 @@ module.exports =
 const github = __webpack_require__(5438);
 
 const { getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(8762);
-const { dockerLogin, dockerPush, findImages, oldStagingTag, stagingTag } = __webpack_require__(91);
+const {
+  dockerBuild,
+  dockerLogin,
+  dockerPush,
+  findImages,
+  oldStagingTag,
+  stagingTag,
+} = __webpack_require__(91);
 const { sequentialDeploy } = __webpack_require__(552);
-const { sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(6264);
 const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(2381);
 
 async function dockerReleaseOne(params) {
@@ -18,7 +25,7 @@ async function dockerReleaseOne(params) {
   const commit = await getShortCommit();
   const env = await getEnv();
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
-  const tag = `${tagPrefix}-${commit}`;
+  let tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
   const { dockerName = app, password, registry = 'docker.pkg.github.com' } = params;
@@ -37,8 +44,7 @@ async function dockerReleaseOne(params) {
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   if (path) {
-    const now = new Date().toISOString();
-    await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
+    await dockerBuild(dockerImage, tag, path, commit);
   } else {
     let srcTag = await stagingTag();
 
@@ -54,6 +60,8 @@ async function dockerReleaseOne(params) {
       }
     }
 
+    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${srcTag}`);
+    tag = origCommit ? `${tagPrefix}-${origCommit}` : tag;
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
   }
 
@@ -6539,6 +6547,12 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
+async function dockerBuild(dockerImage, tag, path, commit) {
+  const now = new Date().toISOString();
+  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
+}
+
 async function dockerLogin({ username, password, registry = 'docker.pkg.github.com' }) {
   if (!username || !password) {
     throw new Error('Missing Docker credentials');
@@ -6611,6 +6625,7 @@ async function oldStagingTag() {
 }
 
 module.exports.deleteVersion = deleteVersion;
+module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;

@@ -8,8 +8,8 @@ module.exports =
 const github = __webpack_require__(5438);
 const fs = __webpack_require__(5747);
 
-const { getEnv, ENV_BRANCHES } = __webpack_require__(8762);
-const { dockerLogin, dockerPush, findImages, stagingTag } = __webpack_require__(91);
+const { ENV_BRANCHES, getEnv, getShortCommit } = __webpack_require__(8762);
+const { dockerBuild, dockerLogin, dockerPush, findImages, stagingTag } = __webpack_require__(91);
 const { sh } = __webpack_require__(6264);
 const { cleanPath, validateAppName } = __webpack_require__(2381);
 
@@ -25,6 +25,7 @@ async function tagPattern(tagPrefix) {
 async function dockerStageOne(params) {
   const app = validateAppName(params.app);
   const tag = await stagingTag();
+  const commit = await getShortCommit();
   const { owner, repo } = github.context.repo;
   const { dockerName = app, password, registry = 'docker.pkg.github.com' } = params;
   validateAppName(dockerName);
@@ -57,8 +58,7 @@ async function dockerStageOne(params) {
       throw new Error('Missing yarn.lock or package-lock.json file');
     }
 
-    const now = new Date().toISOString();
-    await sh(`docker build -t ${dockerImage}:${tag} ${path} --label org.opencontainers.image.created=${now}`);
+    await dockerBuild(dockerImage, tag, path, commit);
   }
 
   await dockerPush(dockerImage, tag);
@@ -6537,6 +6537,12 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
+async function dockerBuild(dockerImage, tag, path, commit) {
+  const now = new Date().toISOString();
+  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
+}
+
 async function dockerLogin({ username, password, registry = 'docker.pkg.github.com' }) {
   if (!username || !password) {
     throw new Error('Missing Docker credentials');
@@ -6609,6 +6615,7 @@ async function oldStagingTag() {
 }
 
 module.exports.deleteVersion = deleteVersion;
+module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
