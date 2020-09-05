@@ -18,6 +18,9 @@ inputs:
   tag-prefix:
     description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the branch-env [dev,qa,prod,hc]
     required: false
+  env:
+    description: Override the target env [dev,qa,prod,hc]. Defaults to the branch-env.
+    required: false
   cluster-name:
     description: Kubernetes cluster name
     required: false
