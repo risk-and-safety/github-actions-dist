@@ -5,7 +5,7 @@ inputs:
     description: App name or comma separated list of apps
     required: true
   docker-name:
-    description: Docker image name is different from the app name
+    description: Docker image name if different from the app name
     required: false
   namespace:
     description: Kubernetes namespace for the app

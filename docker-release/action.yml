@@ -11,7 +11,7 @@ inputs:
     description: App name or comma separated list of apps to tag for release
     required: true
   docker-name:
-    description: Docker image name is different from the app name
+    description: Docker image name if different from the app name
     required: false
   tag-prefix:
     description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the env [dev,qa,prod,hc]
