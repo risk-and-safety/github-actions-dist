@@ -2,8 +2,11 @@ name: kube-status
 description: Watch the deployment status using FluxCD and Kubernetes APIs
 inputs:
   app:
-    description: App name or comma separated list of apps. Use "app/image-name" if the Docker image name is different from the app name.
+    description: App name or comma separated list of apps
     required: true
+  docker-name:
+    description: Docker image name if different from the app name
+    required: false
   namespace:
     description: Kubernetes namespace for the app
     required: false
@@ -14,6 +17,9 @@ inputs:
     default: deployment
   tag-prefix:
     description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the branch-env [dev,qa,prod,hc]
+    required: false
+  env:
+    description: Override the target env [dev,qa,prod,hc]. Defaults to the branch-env.
     required: false
   cluster-name:
     description: Kubernetes cluster name
