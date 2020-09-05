@@ -50775,6 +50775,7 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
 
 module.exports.inputList = function inputList(input) {
@@ -50800,11 +50801,14 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name "${name}"`);
+  const owner = github && github.context && github.context.repo && github.context.repo.owner;
+  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+
+  if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
+    throw new Error(`Invalid app name "${cleanName}"`);
   }
 
-  return name;
+  return cleanName;
 };
 
 module.exports.validateEnv = function validateEnv(env) {

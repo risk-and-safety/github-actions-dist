@@ -23,12 +23,11 @@ async function tagPattern(tagPrefix) {
 }
 
 async function dockerStageOne(params) {
-  const [app, dockerName = app] = params.app.split('/');
-  validateAppName(app);
-  validateAppName(dockerName);
+  const app = validateAppName(params.app);
   const tag = await stagingTag();
   const { owner, repo } = github.context.repo;
-  const { password, registry = 'docker.pkg.github.com' } = params;
+  const { dockerName = app, password, registry = 'docker.pkg.github.com' } = params;
+  validateAppName(dockerName);
 
   await dockerLogin(params);
 
@@ -37,10 +36,16 @@ async function dockerStageOne(params) {
   if (params.srcTagPrefix) {
     const srcTagPattern = (await tagPattern(params.srcTagPrefix)) || tag;
     const gitHubClient = github.getOctokit(password);
-    const [{ version: srcTag }] = await findImages({ gitHubClient, owner, repo, apps: [app], tag: srcTagPattern });
+    const [{ version: srcTag }] = await findImages({
+      gitHubClient,
+      owner,
+      repo,
+      apps: [dockerName],
+      tag: srcTagPattern,
+    });
 
     if (!srcTag) {
-      throw new Error(`No Docker image matching ${app}:${srcTagPattern} found`);
+      throw new Error(`No Docker image matching ${dockerName}:${srcTagPattern} found`);
     }
 
     await sh(`docker pull ${dockerImage}:${srcTag}`);
@@ -86,6 +91,7 @@ const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
   app: inputList(core.getInput('app'), { required: true }),
+  dockerName: core.getInput('docker-name'),
   srcTagPrefix: core.getInput('src-tag-prefix'),
   path: core.getInput('path'),
   repo: core.getInput('repo'),
@@ -6675,6 +6681,7 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
 
 module.exports.inputList = function inputList(input) {
@@ -6700,11 +6707,14 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name "${name}"`);
+  const owner = github && github.context && github.context.repo && github.context.repo.owner;
+  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+
+  if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
+    throw new Error(`Invalid app name "${cleanName}"`);
   }
 
-  return name;
+  return cleanName;
 };
 
 module.exports.validateEnv = function validateEnv(env) {

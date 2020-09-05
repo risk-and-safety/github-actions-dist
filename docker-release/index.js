@@ -5,31 +5,30 @@ module.exports =
 /***/ 7582:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { findGitVersion, getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(8762);
+const { getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(8762);
 const { dockerLogin, dockerPush, findImages, oldStagingTag, stagingTag } = __webpack_require__(91);
 const { sequentialDeploy } = __webpack_require__(552);
 const { sh } = __webpack_require__(6264);
 const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(2381);
 
 async function dockerReleaseOne(params) {
-  const [app, dockerName = app] = params.app.split('/');
-  validateAppName(app);
-  validateAppName(dockerName);
+  const app = validateAppName(params.app);
   const commit = await getShortCommit();
   const env = await getEnv();
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
   const tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
-  const { password, registry = 'docker.pkg.github.com' } = params;
+  const { dockerName = app, password, registry = 'docker.pkg.github.com' } = params;
+
+  validateAppName(dockerName);
 
   await dockerLogin(params);
 
   const gitHubClient = github.getOctokit(password);
-  const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
+  const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [dockerName], tag });
 
   if (existingTag) {
     return;
@@ -59,17 +58,6 @@ async function dockerReleaseOne(params) {
   }
 
   await dockerPush(dockerImage, tag);
-
-  if (env === 'prod') {
-    const version = await findGitVersion(app, 'HEAD');
-
-    if (version) {
-      await sh(`docker tag ${dockerImage}:${tag} ${dockerImage}:${version}`);
-      await dockerPush(dockerImage, version);
-    } else {
-      info(`No git tag found for app "${app}" and commit "${commit}"`);
-    }
-  }
 }
 
 async function dockerRelease(params) {
@@ -105,6 +93,7 @@ const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
   app: inputList(core.getInput('app'), { required: true }),
+  dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
   path: core.getInput('path'),
   repo: core.getInput('repo'),
@@ -6731,6 +6720,7 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
 
 module.exports.inputList = function inputList(input) {
@@ -6756,11 +6746,14 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
 };
 
 module.exports.validateAppName = function validateAppName(name) {
-  if (!name || !/^[0-9a-z-]{2,50}$/g.test(name)) {
-    throw new Error(`Invalid app name "${name}"`);
+  const owner = github && github.context && github.context.repo && github.context.repo.owner;
+  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+
+  if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
+    throw new Error(`Invalid app name "${cleanName}"`);
   }
 
-  return name;
+  return cleanName;
 };
 
 module.exports.validateEnv = function validateEnv(env) {
