@@ -8,8 +8,11 @@ inputs:
     description: Password/token for the repo
     required: true
   app:
-    description: App name or comma separated list of apps to stage. Use "app/image-name" if the Docker image name is different from the app name.
+    description: App name or comma separated list of apps to stage
     required: true
+  docker-name:
+    description: Docker image name is different from the app name
+    required: false
   src-tag-prefix:
     description: If provided uses the latest image with this prefix instead of doing a docker build
     required: false
