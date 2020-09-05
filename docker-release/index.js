@@ -60,7 +60,7 @@ async function dockerReleaseOne(params) {
     }
 
     const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${srcTag}`);
-    tag = origCommit ? `${tagPrefix}-${origCommit}` : tag;
+    tag = origCommit && origCommit !== '<no value>' ? `${tagPrefix}-${origCommit}` : tag;
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
   }
 
