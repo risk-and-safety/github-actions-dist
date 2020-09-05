@@ -28,9 +28,8 @@ async function dockerReleaseOne(params) {
   let tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
-  const { dockerName = app, password, registry = 'docker.pkg.github.com' } = params;
-
-  validateAppName(dockerName);
+  const { password, registry = 'docker.pkg.github.com' } = params;
+  const dockerName = validateAppName(params.dockerName || app);
 
   await dockerLogin(params);
 
@@ -100,7 +99,7 @@ const { inputList } = __webpack_require__(2381);
 const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
-  app: inputList(core.getInput('app'), { required: true }),
+  app: inputList(core.getInput('app', { required: true })),
   dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
   path: core.getInput('path'),
