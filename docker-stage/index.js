@@ -7458,6 +7458,7 @@ module.exports = /******/ (() => {
         const owner = github && github.context && github.context.repo && github.context.repo.owner;
         const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
 
+        console.log('validateAppName', name, owner, cleanName);
         if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
           throw new Error(`Invalid app name "${cleanName}"`);
         }
@@ -7677,11 +7678,10 @@ module.exports = /******/ (() => {
     /******/
     /******/ /******/ return module.exports;
     /******/
-  } /* webpack/runtime/compat */
+  } /* webpack/runtime/compat */ /******/
   /******/
   /************************************************************************/
-  /******/ /******/
-  /******/ __webpack_require__.ab =
+  /******/ /******/ __webpack_require__.ab =
     __dirname + '/'; /************************************************************************/ // module exports must be returned from runtime so entry inlining is disabled // startup // Load entry module and return exports
   /******/ /******/ /******/ /******/ return __webpack_require__(7408);
   /******/
