@@ -1875,7 +1875,7 @@ function applyExtends(config, cwd, seen = new Set()) {
 "use strict";
 
 
-const dotProp = __webpack_require__(1528);
+const dotProp = __webpack_require__(2042);
 const log = __webpack_require__(4314);
 const path = __webpack_require__(5622);
 
@@ -2095,137 +2095,6 @@ function shallowExtend(json, defaults = {}) {
     return obj;
   }, defaults);
 }
-
-
-/***/ }),
-
-/***/ 1528:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-const isObj = __webpack_require__(1389);
-
-function getPathSegments(path) {
-	const pathArr = path.split('.');
-	const parts = [];
-
-	for (let i = 0; i < pathArr.length; i++) {
-		let p = pathArr[i];
-
-		while (p[p.length - 1] === '\\' && pathArr[i + 1] !== undefined) {
-			p = p.slice(0, -1) + '.';
-			p += pathArr[++i];
-		}
-
-		parts.push(p);
-	}
-
-	return parts;
-}
-
-module.exports = {
-	get(obj, path, value) {
-		if (!isObj(obj) || typeof path !== 'string') {
-			return value === undefined ? obj : value;
-		}
-
-		const pathArr = getPathSegments(path);
-
-		for (let i = 0; i < pathArr.length; i++) {
-			if (!Object.prototype.propertyIsEnumerable.call(obj, pathArr[i])) {
-				return value;
-			}
-
-			obj = obj[pathArr[i]];
-
-			if (obj === undefined || obj === null) {
-				// `obj` is either `undefined` or `null` so we want to stop the loop, and
-				// if this is not the last bit of the path, and
-				// if it did't return `undefined`
-				// it would return `null` if `obj` is `null`
-				// but we want `get({foo: null}, 'foo.bar')` to equal `undefined`, or the supplied value, not `null`
-				if (i !== pathArr.length - 1) {
-					return value;
-				}
-
-				break;
-			}
-		}
-
-		return obj;
-	},
-
-	set(obj, path, value) {
-		if (!isObj(obj) || typeof path !== 'string') {
-			return obj;
-		}
-
-		const root = obj;
-		const pathArr = getPathSegments(path);
-
-		for (let i = 0; i < pathArr.length; i++) {
-			const p = pathArr[i];
-
-			if (!isObj(obj[p])) {
-				obj[p] = {};
-			}
-
-			if (i === pathArr.length - 1) {
-				obj[p] = value;
-			}
-
-			obj = obj[p];
-		}
-
-		return root;
-	},
-
-	delete(obj, path) {
-		if (!isObj(obj) || typeof path !== 'string') {
-			return;
-		}
-
-		const pathArr = getPathSegments(path);
-
-		for (let i = 0; i < pathArr.length; i++) {
-			const p = pathArr[i];
-
-			if (i === pathArr.length - 1) {
-				delete obj[p];
-				return;
-			}
-
-			obj = obj[p];
-
-			if (!isObj(obj)) {
-				return;
-			}
-		}
-	},
-
-	has(obj, path) {
-		if (!isObj(obj) || typeof path !== 'string') {
-			return false;
-		}
-
-		const pathArr = getPathSegments(path);
-
-		for (let i = 0; i < pathArr.length; i++) {
-			if (isObj(obj)) {
-				if (!(pathArr[i] in obj)) {
-					return false;
-				}
-
-				obj = obj[pathArr[i]];
-			} else {
-				return false;
-			}
-		}
-
-		return true;
-	}
-};
 
 
 /***/ }),
@@ -4152,7 +4021,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 var request = __webpack_require__(6234);
 var universalUserAgent = __webpack_require__(5030);
 
-const VERSION = "4.5.3";
+const VERSION = "4.5.4";
 
 class GraphqlError extends Error {
   constructor(request, response) {
@@ -4252,7 +4121,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.3.1";
+const VERSION = "2.3.2";
 
 /**
  * Some “list” response that can be paginated have a different response structure
@@ -4474,11 +4343,7 @@ const Endpoints = {
     unstarRepoForAuthenticatedUser: ["DELETE /user/starred/{owner}/{repo}"]
   },
   apps: {
-    addRepoToInstallation: ["PUT /user/installations/{installation_id}/repositories/{repository_id}", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    addRepoToInstallation: ["PUT /user/installations/{installation_id}/repositories/{repository_id}"],
     checkToken: ["POST /applications/{client_id}/token"],
     createContentAttachment: ["POST /content_references/{content_reference_id}/attachments", {
       mediaType: {
@@ -4486,81 +4351,29 @@ const Endpoints = {
       }
     }],
     createFromManifest: ["POST /app-manifests/{code}/conversions"],
-    createInstallationAccessToken: ["POST /app/installations/{installation_id}/access_tokens", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    createInstallationAccessToken: ["POST /app/installations/{installation_id}/access_tokens"],
     deleteAuthorization: ["DELETE /applications/{client_id}/grant"],
-    deleteInstallation: ["DELETE /app/installations/{installation_id}", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    deleteInstallation: ["DELETE /app/installations/{installation_id}"],
     deleteToken: ["DELETE /applications/{client_id}/token"],
-    getAuthenticated: ["GET /app", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    getBySlug: ["GET /apps/{app_slug}", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    getInstallation: ["GET /app/installations/{installation_id}", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    getOrgInstallation: ["GET /orgs/{org}/installation", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    getRepoInstallation: ["GET /repos/{owner}/{repo}/installation", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    getAuthenticated: ["GET /app"],
+    getBySlug: ["GET /apps/{app_slug}"],
+    getInstallation: ["GET /app/installations/{installation_id}"],
+    getOrgInstallation: ["GET /orgs/{org}/installation"],
+    getRepoInstallation: ["GET /repos/{owner}/{repo}/installation"],
     getSubscriptionPlanForAccount: ["GET /marketplace_listing/accounts/{account_id}"],
     getSubscriptionPlanForAccountStubbed: ["GET /marketplace_listing/stubbed/accounts/{account_id}"],
-    getUserInstallation: ["GET /users/{username}/installation", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    getUserInstallation: ["GET /users/{username}/installation"],
     listAccountsForPlan: ["GET /marketplace_listing/plans/{plan_id}/accounts"],
     listAccountsForPlanStubbed: ["GET /marketplace_listing/stubbed/plans/{plan_id}/accounts"],
-    listInstallationReposForAuthenticatedUser: ["GET /user/installations/{installation_id}/repositories", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    listInstallations: ["GET /app/installations", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
-    listInstallationsForAuthenticatedUser: ["GET /user/installations", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    listInstallationReposForAuthenticatedUser: ["GET /user/installations/{installation_id}/repositories"],
+    listInstallations: ["GET /app/installations"],
+    listInstallationsForAuthenticatedUser: ["GET /user/installations"],
     listPlans: ["GET /marketplace_listing/plans"],
     listPlansStubbed: ["GET /marketplace_listing/stubbed/plans"],
-    listReposAccessibleToInstallation: ["GET /installation/repositories", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    listReposAccessibleToInstallation: ["GET /installation/repositories"],
     listSubscriptionsForAuthenticatedUser: ["GET /user/marketplace_purchases"],
     listSubscriptionsForAuthenticatedUserStubbed: ["GET /user/marketplace_purchases/stubbed"],
-    removeRepoFromInstallation: ["DELETE /user/installations/{installation_id}/repositories/{repository_id}", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    removeRepoFromInstallation: ["DELETE /user/installations/{installation_id}/repositories/{repository_id}"],
     resetToken: ["PATCH /applications/{client_id}/token"],
     revokeInstallationAccessToken: ["DELETE /installation/token"],
     suspendInstallation: ["PUT /app/installations/{installation_id}/suspended"],
@@ -4875,11 +4688,7 @@ const Endpoints = {
     getMembershipForUser: ["GET /orgs/{org}/memberships/{username}"],
     getWebhook: ["GET /orgs/{org}/hooks/{hook_id}"],
     list: ["GET /organizations"],
-    listAppInstallations: ["GET /orgs/{org}/installations", {
-      mediaType: {
-        previews: ["machine-man"]
-      }
-    }],
+    listAppInstallations: ["GET /orgs/{org}/installations"],
     listBlockedUsers: ["GET /orgs/{org}/blocks"],
     listForAuthenticatedUser: ["GET /user/orgs"],
     listForUser: ["GET /users/{username}/orgs"],
@@ -5492,7 +5301,7 @@ const Endpoints = {
   }
 };
 
-const VERSION = "4.1.3";
+const VERSION = "4.1.4";
 
 function endpointsToMethods(octokit, endpointsMap) {
   const newMethods = {};
@@ -12897,6 +12706,155 @@ module.exports.sync = (input, opts) => {
 
 	const globs = [].concat(input).map(x => pathType.dirSync(getPath(x, opts.cwd)) ? getGlob(x, opts) : x);
 	return [].concat.apply([], globs);
+};
+
+
+/***/ }),
+
+/***/ 2042:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+const isObj = __webpack_require__(1389);
+
+const disallowedKeys = [
+	'__proto__',
+	'prototype',
+	'constructor'
+];
+
+const isValidPath = pathSegments => !pathSegments.some(segment => disallowedKeys.includes(segment));
+
+function getPathSegments(path) {
+	const pathArr = path.split('.');
+	const parts = [];
+
+	for (let i = 0; i < pathArr.length; i++) {
+		let p = pathArr[i];
+
+		while (p[p.length - 1] === '\\' && pathArr[i + 1] !== undefined) {
+			p = p.slice(0, -1) + '.';
+			p += pathArr[++i];
+		}
+
+		parts.push(p);
+	}
+
+	if (!isValidPath(parts)) {
+		return [];
+	}
+
+	return parts;
+}
+
+module.exports = {
+	get(obj, path, value) {
+		if (!isObj(obj) || typeof path !== 'string') {
+			return value === undefined ? obj : value;
+		}
+
+		const pathArr = getPathSegments(path);
+		if (pathArr.length === 0) {
+			return;
+		}
+
+		for (let i = 0; i < pathArr.length; i++) {
+			if (!Object.prototype.propertyIsEnumerable.call(obj, pathArr[i])) {
+				return value;
+			}
+
+			obj = obj[pathArr[i]];
+
+			if (obj === undefined || obj === null) {
+				// `obj` is either `undefined` or `null` so we want to stop the loop, and
+				// if this is not the last bit of the path, and
+				// if it did't return `undefined`
+				// it would return `null` if `obj` is `null`
+				// but we want `get({foo: null}, 'foo.bar')` to equal `undefined`, or the supplied value, not `null`
+				if (i !== pathArr.length - 1) {
+					return value;
+				}
+
+				break;
+			}
+		}
+
+		return obj;
+	},
+
+	set(obj, path, value) {
+		if (!isObj(obj) || typeof path !== 'string') {
+			return obj;
+		}
+
+		const root = obj;
+		const pathArr = getPathSegments(path);
+		if (pathArr.length === 0) {
+			return;
+		}
+
+		for (let i = 0; i < pathArr.length; i++) {
+			const p = pathArr[i];
+
+			if (!isObj(obj[p])) {
+				obj[p] = {};
+			}
+
+			if (i === pathArr.length - 1) {
+				obj[p] = value;
+			}
+
+			obj = obj[p];
+		}
+
+		return root;
+	},
+
+	delete(obj, path) {
+		if (!isObj(obj) || typeof path !== 'string') {
+			return;
+		}
+
+		const pathArr = getPathSegments(path);
+
+		for (let i = 0; i < pathArr.length; i++) {
+			const p = pathArr[i];
+
+			if (i === pathArr.length - 1) {
+				delete obj[p];
+				return;
+			}
+
+			obj = obj[p];
+
+			if (!isObj(obj)) {
+				return;
+			}
+		}
+	},
+
+	has(obj, path) {
+		if (!isObj(obj) || typeof path !== 'string') {
+			return false;
+		}
+
+		const pathArr = getPathSegments(path);
+
+		for (let i = 0; i < pathArr.length; i++) {
+			if (isObj(obj)) {
+				if (!(pathArr[i] in obj)) {
+					return false;
+				}
+
+				obj = obj[pathArr[i]];
+			} else {
+				return false;
+			}
+		}
+
+		return true;
+	}
 };
 
 
@@ -32800,6 +32758,12 @@ function convertBody(buffer, headers) {
 	// html4
 	if (!res && str) {
 		res = /<meta[\s]+?http-equiv=(['"])content-type\1[\s]+?content=(['"])(.+?)\2/i.exec(str);
+		if (!res) {
+			res = /<meta[\s]+?content=(['"])(.+?)\1[\s]+?http-equiv=(['"])content-type\3/i.exec(str);
+			if (res) {
+				res.pop(); // drop last quote
+			}
+		}
 
 		if (res) {
 			res = /charset=(.*)/i.exec(res.pop());
@@ -33807,7 +33771,7 @@ function fetch(url, opts) {
 				// HTTP fetch step 5.5
 				switch (request.redirect) {
 					case 'error':
-						reject(new FetchError(`redirect mode is set to error: ${request.url}`, 'no-redirect'));
+						reject(new FetchError(`uri requested responds with a redirect, redirect mode is set to error: ${request.url}`, 'no-redirect'));
 						finalize();
 						return;
 					case 'manual':
@@ -33846,7 +33810,8 @@ function fetch(url, opts) {
 							method: request.method,
 							body: request.body,
 							signal: request.signal,
-							timeout: request.timeout
+							timeout: request.timeout,
+							size: request.size
 						};
 
 						// HTTP-redirect fetch step 9
