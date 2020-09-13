@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.0.0](https://github.com/risk-and-safety/platform/compare/github-actions@1.5.10...github-actions@2.0.0) (2020-09-05)
+
+
+### Bug Fixes
+
+* **deploy:** fix docker tag from label ([a4fdfac](https://github.com/risk-and-safety/platform/commit/a4fdfac89269ff443e8a5a31f1f42ddeb8a11814))
+* **deploy:** keep orig git commit as tag ([a180f62](https://github.com/risk-and-safety/platform/commit/a180f622f68170e7ac6f9adfd01983f23eae8fd8))
+* **deploy:** revert slack api version 5.11 -> 5.10 for breaking change ([abcdd8b](https://github.com/risk-and-safety/platform/commit/abcdd8b615d1f0dfec15e53d11bfe1f09d1aca11))
+
+
+### Code Refactoring
+
+* **deploy:** kube status should ignore "app not found" error ([c600eca](https://github.com/risk-and-safety/platform/commit/c600ecab5159f4e3a8700bbd87800256b824f3a0))
+
+
+### Features
+
+* **github-actions:** allow watch hc kube status ([ef5856b](https://github.com/risk-and-safety/platform/commit/ef5856b0c39fa908c7cb0a60ab6bacd93b9ded1b))
+
+
+### BREAKING CHANGES
+
+* **deploy:** using two fields for app name and docker name instead of "/" in app name
+
+
+
+
+
 ## [1.5.10-dev.7](https://github.com/risk-and-safety/kube-nodejs/compare/github-actions@1.5.10-dev.6...github-actions@1.5.10-dev.7) (2020-03-03)
 
 **Note:** Version bump only for package github-actions
