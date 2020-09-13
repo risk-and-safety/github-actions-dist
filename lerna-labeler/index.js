@@ -19340,7 +19340,7 @@ const fs = __webpack_require__(5747);
 const path = __webpack_require__(5622);
 const fastGlob = __webpack_require__(2147);
 const gitIgnore = __webpack_require__(1230);
-const pify = __webpack_require__(8176);
+const pify = __webpack_require__(4810);
 const slash = __webpack_require__(7543);
 
 const DEFAULT_IGNORE = [
@@ -19592,82 +19592,6 @@ module.exports.hasMagic = (patterns, options) => []
 	.some(pattern => glob.hasMagic(pattern, options));
 
 module.exports.gitignore = gitignore;
-
-
-/***/ }),
-
-/***/ 8176:
-/***/ ((module) => {
-
-"use strict";
-
-
-const processFn = (fn, options) => function (...args) {
-	const P = options.promiseModule;
-
-	return new P((resolve, reject) => {
-		if (options.multiArgs) {
-			args.push((...result) => {
-				if (options.errorFirst) {
-					if (result[0]) {
-						reject(result);
-					} else {
-						result.shift();
-						resolve(result);
-					}
-				} else {
-					resolve(result);
-				}
-			});
-		} else if (options.errorFirst) {
-			args.push((error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(result);
-				}
-			});
-		} else {
-			args.push(resolve);
-		}
-
-		fn.apply(this, args);
-	});
-};
-
-module.exports = (input, options) => {
-	options = Object.assign({
-		exclude: [/.+(Sync|Stream)$/],
-		errorFirst: true,
-		promiseModule: Promise
-	}, options);
-
-	const objType = typeof input;
-	if (!(input !== null && (objType === 'object' || objType === 'function'))) {
-		throw new TypeError(`Expected \`input\` to be a \`Function\` or \`Object\`, got \`${input === null ? 'null' : objType}\``);
-	}
-
-	const filter = key => {
-		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
-		return options.include ? options.include.some(match) : !options.exclude.some(match);
-	};
-
-	let ret;
-	if (objType === 'function') {
-		ret = function (...args) {
-			return options.excludeMain ? input(...args) : processFn(input, options).apply(this, args);
-		};
-	} else {
-		ret = Object.create(Object.getPrototypeOf(input));
-	}
-
-	for (const key in input) { // eslint-disable-line guard-for-in
-		const property = input[key];
-		ret[key] = typeof property === 'function' && filter(key) ? processFn(property, options) : property;
-	}
-
-	return ret;
-};
 
 
 /***/ }),
@@ -26997,7 +26921,7 @@ const path = __webpack_require__(5622);
 const fs = __webpack_require__(7758);
 const stripBom = __webpack_require__(8551);
 const parseJson = __webpack_require__(6615);
-const pify = __webpack_require__(3990);
+const pify = __webpack_require__(4810);
 
 const parse = (data, filePath, options = {}) => {
 	data = stripBom(data);
@@ -27019,82 +26943,6 @@ module.exports.sync = (filePath, options) => parse(fs.readFileSync(filePath, 'ut
 
 /***/ }),
 
-/***/ 3990:
-/***/ ((module) => {
-
-"use strict";
-
-
-const processFn = (fn, options) => function (...args) {
-	const P = options.promiseModule;
-
-	return new P((resolve, reject) => {
-		if (options.multiArgs) {
-			args.push((...result) => {
-				if (options.errorFirst) {
-					if (result[0]) {
-						reject(result);
-					} else {
-						result.shift();
-						resolve(result);
-					}
-				} else {
-					resolve(result);
-				}
-			});
-		} else if (options.errorFirst) {
-			args.push((error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(result);
-				}
-			});
-		} else {
-			args.push(resolve);
-		}
-
-		fn.apply(this, args);
-	});
-};
-
-module.exports = (input, options) => {
-	options = Object.assign({
-		exclude: [/.+(Sync|Stream)$/],
-		errorFirst: true,
-		promiseModule: Promise
-	}, options);
-
-	const objType = typeof input;
-	if (!(input !== null && (objType === 'object' || objType === 'function'))) {
-		throw new TypeError(`Expected \`input\` to be a \`Function\` or \`Object\`, got \`${input === null ? 'null' : objType}\``);
-	}
-
-	const filter = key => {
-		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
-		return options.include ? options.include.some(match) : !options.exclude.some(match);
-	};
-
-	let ret;
-	if (objType === 'function') {
-		ret = function (...args) {
-			return options.excludeMain ? input(...args) : processFn(input, options).apply(this, args);
-		};
-	} else {
-		ret = Object.create(Object.getPrototypeOf(input));
-	}
-
-	for (const key in input) { // eslint-disable-line guard-for-in
-		const property = input[key];
-		ret[key] = typeof property === 'function' && filter(key) ? processFn(property, options) : property;
-	}
-
-	return ret;
-};
-
-
-/***/ }),
-
 /***/ 9126:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -27102,7 +26950,7 @@ module.exports = (input, options) => {
 
 const fs = __webpack_require__(5747);
 const path = __webpack_require__(5622);
-const pify = __webpack_require__(6250);
+const pify = __webpack_require__(4810);
 const semver = __webpack_require__(5911);
 
 const defaults = {
@@ -27237,82 +27085,6 @@ module.exports.sync = (input, options) => {
 	};
 
 	return make(path.resolve(input));
-};
-
-
-/***/ }),
-
-/***/ 6250:
-/***/ ((module) => {
-
-"use strict";
-
-
-const processFn = (fn, options) => function (...args) {
-	const P = options.promiseModule;
-
-	return new P((resolve, reject) => {
-		if (options.multiArgs) {
-			args.push((...result) => {
-				if (options.errorFirst) {
-					if (result[0]) {
-						reject(result);
-					} else {
-						result.shift();
-						resolve(result);
-					}
-				} else {
-					resolve(result);
-				}
-			});
-		} else if (options.errorFirst) {
-			args.push((error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(result);
-				}
-			});
-		} else {
-			args.push(resolve);
-		}
-
-		fn.apply(this, args);
-	});
-};
-
-module.exports = (input, options) => {
-	options = Object.assign({
-		exclude: [/.+(Sync|Stream)$/],
-		errorFirst: true,
-		promiseModule: Promise
-	}, options);
-
-	const objType = typeof input;
-	if (!(input !== null && (objType === 'object' || objType === 'function'))) {
-		throw new TypeError(`Expected \`input\` to be a \`Function\` or \`Object\`, got \`${input === null ? 'null' : objType}\``);
-	}
-
-	const filter = key => {
-		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
-		return options.include ? options.include.some(match) : !options.exclude.some(match);
-	};
-
-	let ret;
-	if (objType === 'function') {
-		ret = function (...args) {
-			return options.excludeMain ? input(...args) : processFn(input, options).apply(this, args);
-		};
-	} else {
-		ret = Object.create(Object.getPrototypeOf(input));
-	}
-
-	for (const key in input) { // eslint-disable-line guard-for-in
-		const property = input[key];
-		ret[key] = typeof property === 'function' && filter(key) ? processFn(property, options) : property;
-	}
-
-	return ret;
 };
 
 
@@ -35596,7 +35368,7 @@ module.exports.win32 = win32;
 "use strict";
 
 const fs = __webpack_require__(5747);
-const pify = __webpack_require__(4810);
+const pify = __webpack_require__(8479);
 
 function type(fn, fn2, fp) {
 	if (typeof fp !== 'string') {
@@ -35640,7 +35412,7 @@ exports.symlinkSync = typeSync.bind(null, 'lstatSync', 'isSymbolicLink');
 
 /***/ }),
 
-/***/ 4810:
+/***/ 8479:
 /***/ ((module) => {
 
 "use strict";
@@ -35724,6 +35496,82 @@ module.exports = (obj, opts) => {
 	for (const key in obj) { // eslint-disable-line guard-for-in
 		const x = obj[key];
 		ret[key] = typeof x === 'function' && filter(key) ? processFn(x, opts) : x;
+	}
+
+	return ret;
+};
+
+
+/***/ }),
+
+/***/ 4810:
+/***/ ((module) => {
+
+"use strict";
+
+
+const processFn = (fn, options) => function (...args) {
+	const P = options.promiseModule;
+
+	return new P((resolve, reject) => {
+		if (options.multiArgs) {
+			args.push((...result) => {
+				if (options.errorFirst) {
+					if (result[0]) {
+						reject(result);
+					} else {
+						result.shift();
+						resolve(result);
+					}
+				} else {
+					resolve(result);
+				}
+			});
+		} else if (options.errorFirst) {
+			args.push((error, result) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(result);
+				}
+			});
+		} else {
+			args.push(resolve);
+		}
+
+		fn.apply(this, args);
+	});
+};
+
+module.exports = (input, options) => {
+	options = Object.assign({
+		exclude: [/.+(Sync|Stream)$/],
+		errorFirst: true,
+		promiseModule: Promise
+	}, options);
+
+	const objType = typeof input;
+	if (!(input !== null && (objType === 'object' || objType === 'function'))) {
+		throw new TypeError(`Expected \`input\` to be a \`Function\` or \`Object\`, got \`${input === null ? 'null' : objType}\``);
+	}
+
+	const filter = key => {
+		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
+		return options.include ? options.include.some(match) : !options.exclude.some(match);
+	};
+
+	let ret;
+	if (objType === 'function') {
+		ret = function (...args) {
+			return options.excludeMain ? input(...args) : processFn(input, options).apply(this, args);
+		};
+	} else {
+		ret = Object.create(Object.getPrototypeOf(input));
+	}
+
+	for (const key in input) { // eslint-disable-line guard-for-in
+		const property = input[key];
+		ret[key] = typeof property === 'function' && filter(key) ? processFn(property, options) : property;
 	}
 
 	return ret;
@@ -50088,7 +49936,7 @@ const fs = __webpack_require__(7758);
 const writeFileAtomic = __webpack_require__(2221);
 const sortKeys = __webpack_require__(5603);
 const makeDir = __webpack_require__(9126);
-const pify = __webpack_require__(2175);
+const pify = __webpack_require__(4810);
 const detectIndent = __webpack_require__(3084);
 
 const init = (fn, filePath, data, options) => {
@@ -50157,82 +50005,6 @@ module.exports.default = writeJsonFile;
 module.exports.sync = (filePath, data, options) => {
 	makeDir.sync(path.dirname(filePath), {fs});
 	init(mainSync, filePath, data, options);
-};
-
-
-/***/ }),
-
-/***/ 2175:
-/***/ ((module) => {
-
-"use strict";
-
-
-const processFn = (fn, options) => function (...args) {
-	const P = options.promiseModule;
-
-	return new P((resolve, reject) => {
-		if (options.multiArgs) {
-			args.push((...result) => {
-				if (options.errorFirst) {
-					if (result[0]) {
-						reject(result);
-					} else {
-						result.shift();
-						resolve(result);
-					}
-				} else {
-					resolve(result);
-				}
-			});
-		} else if (options.errorFirst) {
-			args.push((error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(result);
-				}
-			});
-		} else {
-			args.push(resolve);
-		}
-
-		fn.apply(this, args);
-	});
-};
-
-module.exports = (input, options) => {
-	options = Object.assign({
-		exclude: [/.+(Sync|Stream)$/],
-		errorFirst: true,
-		promiseModule: Promise
-	}, options);
-
-	const objType = typeof input;
-	if (!(input !== null && (objType === 'object' || objType === 'function'))) {
-		throw new TypeError(`Expected \`input\` to be a \`Function\` or \`Object\`, got \`${input === null ? 'null' : objType}\``);
-	}
-
-	const filter = key => {
-		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
-		return options.include ? options.include.some(match) : !options.exclude.some(match);
-	};
-
-	let ret;
-	if (objType === 'function') {
-		ret = function (...args) {
-			return options.excludeMain ? input(...args) : processFn(input, options).apply(this, args);
-		};
-	} else {
-		ret = Object.create(Object.getPrototypeOf(input));
-	}
-
-	for (const key in input) { // eslint-disable-line guard-for-in
-		const property = input[key];
-		ret[key] = typeof property === 'function' && filter(key) ? processFn(property, options) : property;
-	}
-
-	return ret;
 };
 
 
@@ -50310,7 +50082,7 @@ module.exports.sync = (fp, data, opts) => {
 
 const fs = __webpack_require__(5747);
 const path = __webpack_require__(5622);
-const pify = __webpack_require__(4810);
+const pify = __webpack_require__(2067);
 
 const defaults = {
 	mode: 0o777 & (~process.umask()),
@@ -50396,6 +50168,98 @@ module.exports.sync = (input, opts) => {
 
 /***/ }),
 
+/***/ 2067:
+/***/ ((module) => {
+
+"use strict";
+
+
+const processFn = (fn, opts) => function () {
+	const P = opts.promiseModule;
+	const args = new Array(arguments.length);
+
+	for (let i = 0; i < arguments.length; i++) {
+		args[i] = arguments[i];
+	}
+
+	return new P((resolve, reject) => {
+		if (opts.errorFirst) {
+			args.push(function (err, result) {
+				if (opts.multiArgs) {
+					const results = new Array(arguments.length - 1);
+
+					for (let i = 1; i < arguments.length; i++) {
+						results[i - 1] = arguments[i];
+					}
+
+					if (err) {
+						results.unshift(err);
+						reject(results);
+					} else {
+						resolve(results);
+					}
+				} else if (err) {
+					reject(err);
+				} else {
+					resolve(result);
+				}
+			});
+		} else {
+			args.push(function (result) {
+				if (opts.multiArgs) {
+					const results = new Array(arguments.length - 1);
+
+					for (let i = 0; i < arguments.length; i++) {
+						results[i] = arguments[i];
+					}
+
+					resolve(results);
+				} else {
+					resolve(result);
+				}
+			});
+		}
+
+		fn.apply(this, args);
+	});
+};
+
+module.exports = (obj, opts) => {
+	opts = Object.assign({
+		exclude: [/.+(Sync|Stream)$/],
+		errorFirst: true,
+		promiseModule: Promise
+	}, opts);
+
+	const filter = key => {
+		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
+		return opts.include ? opts.include.some(match) : !opts.exclude.some(match);
+	};
+
+	let ret;
+	if (typeof obj === 'function') {
+		ret = function () {
+			if (opts.excludeMain) {
+				return obj.apply(this, arguments);
+			}
+
+			return processFn(obj, opts).apply(this, arguments);
+		};
+	} else {
+		ret = Object.create(Object.getPrototypeOf(obj));
+	}
+
+	for (const key in obj) { // eslint-disable-line guard-for-in
+		const x = obj[key];
+		ret[key] = typeof x === 'function' && filter(key) ? processFn(x, opts) : x;
+	}
+
+	return ret;
+};
+
+
+/***/ }),
+
 /***/ 1821:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -50406,7 +50270,7 @@ const fs = __webpack_require__(7758);
 const writeFileAtomic = __webpack_require__(2221);
 const sortKeys = __webpack_require__(5603);
 const makeDir = __webpack_require__(6973);
-const pify = __webpack_require__(4810);
+const pify = __webpack_require__(2067);
 const detectIndent = __webpack_require__(3084);
 
 const init = (fn, fp, data, opts) => {
