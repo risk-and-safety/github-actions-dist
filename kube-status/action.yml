@@ -39,7 +39,7 @@ inputs:
   retries:
     description: Number of times to retry Flux release
     required: false
-    default: "5"
+    default: "3"
 runs:
   using: node12
   main: index.js

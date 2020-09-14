@@ -57,7 +57,7 @@ async function kubeStatusOne(params) {
     kibanaHost = 'http://localhost',
     GITHUB_TOKEN = process.env.GITHUB_TOKEN,
     registry = 'docker.pkg.github.com',
-    retries = 5,
+    retries = 3,
   } = params;
   const dockerName = validateAppName(params.dockerName || app);
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
@@ -175,6 +175,7 @@ const os = __webpack_require__(2087);
 
 const { exec, sh } = __webpack_require__(6264);
 
+const TIMEOUT = '120s';
 const STATUSES = {
   FAILED: 'Failed',
   RUNNING: 'Running',
@@ -183,20 +184,15 @@ const STATUSES = {
 };
 
 module.exports.STATUSES = STATUSES;
-
-const FLUX_TIMEOUT = '30s';
-const ROLLOUT_TIMEOUT = '60s';
-
 module.exports.kubeService = {
-  env: undefined,
-  KUBECONFIG: undefined,
+  env: null,
+  KUBECONFIG: null,
 
   async init(clusterName, env) {
     this.env = env;
 
     const configFile = `${os.homedir()}/.kube/config-${this.env}`;
 
-    // TODO: use the Node.js AWS SDK updateKubeconfig function when it it available
     await sh(`AWS_PROFILE=${this.env} aws eks update-kubeconfig --name ${clusterName} --kubeconfig ${configFile}`);
 
     this.KUBECONFIG = `KUBECONFIG=${configFile}`;
@@ -250,9 +246,7 @@ module.exports.kubeService = {
   },
 
   async watchStatus(app, namespace, kind) {
-    await exec(
-      `${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${ROLLOUT_TIMEOUT} -n ${namespace}`,
-    );
+    await exec(`${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${TIMEOUT} -n ${namespace}`);
     return STATUSES.RUNNING;
   },
 
@@ -270,7 +264,7 @@ module.exports.kubeService = {
   async fluxRelease({ app, namespace, kind, dockerImage }) {
     try {
       const workload = `--workload=${namespace}:${kind}/${app} --update-image=${dockerImage}`;
-      await sh(`${this.KUBECONFIG} fluxctl release ${workload} --k8s-fwd-ns=ops --timeout=${FLUX_TIMEOUT}`);
+      await sh(`${this.KUBECONFIG} fluxctl release ${workload} --k8s-fwd-ns=ops --timeout=${TIMEOUT}`);
     } catch (err) {
       if (err.message.includes('no changes made in repo')) {
         return;
