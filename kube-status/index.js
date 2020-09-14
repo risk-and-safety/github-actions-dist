@@ -232,14 +232,16 @@ module.exports.kubeService = {
     }
 
     const { name } = newPod.metadata;
-    const { state } = newPod.status.containerStatuses[0];
+    const {
+      state: { terminated },
+    } = newPod.status.containerStatuses[0];
 
     info(`${app}: found ${name} pod in ${namespace} (${this.env}) newer than version ${previousVersion}`);
 
-    if (state.waiting) {
-      throw new Error(`${name}.${namespace} (${this.env}) waiting. ${state.waiting.message}`);
-    } else if (state.terminated) {
-      throw new Error(`${name}.${namespace} (${this.env}) terminated. ${state.waiting.message}`);
+    if (terminated) {
+      throw new Error(
+        `${name}.${namespace} (${this.env}) terminated. ${terminated.reason || JSON.stringify(terminated)}`,
+      );
     }
 
     return name;
