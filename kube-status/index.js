@@ -175,7 +175,7 @@ const os = __webpack_require__(2087);
 
 const { exec, sh } = __webpack_require__(6264);
 
-const TIMEOUT = '120s';
+const TIMEOUT = '90s';
 const STATUSES = {
   FAILED: 'Failed',
   RUNNING: 'Running',
@@ -232,12 +232,10 @@ module.exports.kubeService = {
     }
 
     const { name } = newPod.metadata;
-    const {
-      state: { terminated },
-    } = newPod.status.containerStatuses[0];
 
     info(`${app}: found ${name} pod in ${namespace} (${this.env}) newer than version ${previousVersion}`);
 
+    const { terminated } = newPod.status.containerStatuses[0].state;
     if (terminated) {
       throw new Error(
         `${name}.${namespace} (${this.env}) terminated. ${terminated.reason || JSON.stringify(terminated)}`,
@@ -248,8 +246,12 @@ module.exports.kubeService = {
   },
 
   async watchStatus(app, namespace, kind) {
-    await exec(`${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${TIMEOUT} -n ${namespace}`);
-    return STATUSES.RUNNING;
+    try {
+      await exec(`${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${TIMEOUT} -n ${namespace}`);
+      return STATUSES.RUNNING;
+    } catch (err) {
+      return STATUSES.FAILED;
+    }
   },
 
   async findWarnings(podName, namespace) {
