@@ -97,6 +97,8 @@ async function kubeStatusOne(params) {
       return status;
     }
 
+    info(`${app}: found running pod version ${previousVersion} in ${namespace} (${env})`);
+
     try {
       await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
         onFailedAttempt: (err) => info(`Retrying ${app}, ${err.message}`),
@@ -119,6 +121,12 @@ async function kubeStatusOne(params) {
 
       if (warnings.length) {
         warning(warnings.join('\n'));
+      }
+
+      const logs = await kubeService.findErrorLogs(newPodName, namespace);
+
+      if (logs.length) {
+        warning(logs);
       }
     }
   } catch (err) {
@@ -174,7 +182,7 @@ const os = __webpack_require__(2087);
 
 const { exec, sh } = __webpack_require__(6264);
 
-const TIMEOUT = '90s';
+const TIMEOUT = '60s';
 const STATUSES = {
   FAILED: 'Failed',
   RUNNING: 'Running',
@@ -198,7 +206,7 @@ module.exports.kubeService = {
   },
 
   async findOldestVersion(app, namespace) {
-    info(`${app}: find oldest version in ${namespace} (${this.env}) ...`);
+    info(`${app}: find oldest version in ${namespace} (${this.env})`);
 
     const { RUNNING } = STATUSES;
     const { items } = JSON.parse(
@@ -226,7 +234,7 @@ module.exports.kubeService = {
     const [newPod] = items.filter((pod) => parseInt(pod.metadata.resourceVersion, 10) > previousVersion);
 
     if (!newPod) {
-      info(`${app}: no pods found in ${namespace} (${this.env}) newer than version ${previousVersion}`);
+      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than version ${previousVersion}`);
       return null;
     }
 
@@ -262,6 +270,10 @@ module.exports.kubeService = {
     );
 
     return items.map((item) => item.message);
+  },
+
+  async findErrorLogs(podName, namespace) {
+    return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception"`);
   },
 
   async fluxRelease({ app, namespace, kind, dockerImage }) {
