@@ -114,7 +114,6 @@ async function kubeStatusOne(params) {
 
     if (newPodName) {
       status = await kubeService.watchStatus(app, namespace, kind);
-      info(`${app}: ${newPodName} ${status} in ${namespace}.${env}`);
 
       const warnings = await kubeService.findWarnings(newPodName, namespace);
 
@@ -133,7 +132,7 @@ async function kubeStatusOne(params) {
   }
 
   if (status === STATUSES.FAILED) {
-    throw new Error(`${app}: deployment failed in ${namespace} (${env})`);
+    throw new Error(`${app}: failed in ${namespace} (${env})`);
   }
 
   info(`---- ${app} Kibana Logs ----`);
@@ -233,7 +232,7 @@ module.exports.kubeService = {
 
     const { name } = newPod.metadata;
 
-    info(`${app}: found ${name} pod in ${namespace} (${this.env}) newer than version ${previousVersion}`);
+    info(`${app}: deployed new pod ${name} to ${namespace} (${this.env})`);
 
     const { terminated } = newPod.status.containerStatuses[0].state;
     if (terminated) {
