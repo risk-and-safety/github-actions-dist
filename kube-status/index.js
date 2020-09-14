@@ -119,7 +119,7 @@ async function kubeStatusOne(params) {
       const warnings = await kubeService.findWarnings(newPodName, namespace);
 
       if (warnings.length) {
-        warning(`\n---- ${app} Warnings ----\n${warnings.join('\n')}`);
+        warning(warnings.join('\n'));
       }
     }
   } catch (err) {
@@ -133,7 +133,7 @@ async function kubeStatusOne(params) {
   }
 
   if (status === STATUSES.FAILED) {
-    throw new Error(`${app}: deployment timed out in ${namespace}.${env}`);
+    throw new Error(`${app}: deployment failed in ${namespace} (${env})`);
   }
 
   info(`---- ${app} Kibana Logs ----`);
