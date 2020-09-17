@@ -27,6 +27,9 @@ inputs:
     description: Docker registry
     required: false
     default: docker.pkg.github.com
+outputs:
+  image:
+    description: The Docker image name or comma separated list if mulitple apps
 runs:
   using: node12
   main: index.js

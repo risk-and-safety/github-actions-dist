@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.0.0](https://github.com/risk-and-safety/platform/compare/github-actions@2.0.0...github-actions@3.0.0) (2020-09-15)
+
+
+### Bug Fixes
+
+* **deploy:** check latest image from GitHub ([ecc74f3](https://github.com/risk-and-safety/platform/commit/ecc74f38f39baad3e0392b85ebc7a1347900b203))
+
+
+### BREAKING CHANGES
+
+* **deploy:** Requires the GITHUB_TOKEN to query for the lastest image
+
+
+
+
+
 # [2.0.0](https://github.com/risk-and-safety/platform/compare/github-actions@1.5.10...github-actions@2.0.0) (2020-09-05)
 
 

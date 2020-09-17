@@ -63,7 +63,7 @@ async function dockerStageOne(params) {
 
   await dockerPush(dockerImage, tag);
 
-  return tag;
+  return `${dockerImage}:${tag}`;
 }
 
 async function dockerStage(params) {
@@ -98,10 +98,14 @@ const params = {
   registry: core.getInput('registry'),
 };
 
-dockerStage(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
+dockerStage(params)
+  .then((images) => {
+    core.setOutput('image', images.join(','));
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
 
 
 /***/ }),

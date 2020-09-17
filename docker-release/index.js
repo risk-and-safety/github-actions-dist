@@ -30,6 +30,7 @@ async function dockerReleaseOne(params) {
   const { owner, repo } = github.context.repo;
   const { password, registry = 'docker.pkg.github.com' } = params;
   const dockerName = validateAppName(params.dockerName || app);
+  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   await dockerLogin(params);
 
@@ -37,10 +38,8 @@ async function dockerReleaseOne(params) {
   const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [dockerName], tag });
 
   if (existingTag) {
-    return;
+    return `${dockerImage}:${tag}`;
   }
-
-  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   if (path) {
     await dockerBuild(dockerImage, tag, path, commit);
@@ -65,6 +64,8 @@ async function dockerReleaseOne(params) {
   }
 
   await dockerPush(dockerImage, tag);
+
+  return `${dockerImage}:${tag}`;
 }
 
 async function dockerRelease(params) {
@@ -78,9 +79,7 @@ async function dockerRelease(params) {
   }
 
   // Force deployments to be sequential so the logs are readable.
-  return sequentialDeploy(params.app, async (app) => {
-    return dockerReleaseOne({ ...params, app });
-  });
+  return sequentialDeploy(params.app, async (app) => dockerReleaseOne({ ...params, app }));
 }
 
 module.exports.dockerRelease = dockerRelease;
@@ -107,10 +106,14 @@ const params = {
   registry: core.getInput('registry'),
 };
 
-dockerRelease(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
+dockerRelease(params)
+  .then((images) => {
+    core.setOutput('image', images.join(','));
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
 
 
 /***/ }),
