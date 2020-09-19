@@ -37,13 +37,15 @@ async function dockerStageOne(params) {
   if (params.srcTagPrefix) {
     const srcTagPattern = (await tagPattern(params.srcTagPrefix)) || tag;
     const gitHubClient = github.getOctokit(password);
-    const [{ version: srcTag }] = await findImages({
+    const [latestImage] = await findImages({
       gitHubClient,
       owner,
       repo,
       apps: [dockerName],
       tag: srcTagPattern,
     });
+
+    const srcTag = latestImage && latestImage.version;
 
     if (!srcTag) {
       throw new Error(`No Docker image matching ${dockerName}:${srcTagPattern} found`);

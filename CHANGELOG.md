@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.1.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.0.0...github-actions@3.1.0) (2020-09-18)
+
+
+### Features
+
+* **github-actions:** output Docker image name(s) when building ([e88e45b](https://github.com/risk-and-safety/platform/commit/e88e45bc5372ab52b88ace5db2f16722485cd308))
+
+
+
+
+
 # [3.0.0](https://github.com/risk-and-safety/platform/compare/github-actions@2.0.0...github-actions@3.0.0) (2020-09-15)
 
 
