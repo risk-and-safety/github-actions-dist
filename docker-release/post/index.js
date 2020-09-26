@@ -6487,7 +6487,7 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     owner,
     repo,
     apps,
-    appCount: apps.length * 5, // Could potentially have same name for Docker, NPM, Maven, etc
+    appCount: apps.length * 5, // Could have same name for Docker, npm, Maven, etc
     headers: HTTP_HEADERS_PACKAGES,
   });
 
