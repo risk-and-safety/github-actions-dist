@@ -7076,7 +7076,7 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
         node {
           name
           packageType
-          versions(first: 100, orderBy: { field:CREATED_AT, direction:DESC }) {
+          versions(first: 50, orderBy: { field:CREATED_AT, direction:DESC }) {
             nodes {
               id
               version
@@ -7096,7 +7096,7 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     owner,
     repo,
     apps,
-    appCount: apps.length * 5, // Could have same name for Docker, npm, Maven, etc
+    appCount: apps.length * 3, // Could have same name for Docker, npm, Maven, etc
     headers: HTTP_HEADERS_PACKAGES,
   });
 
