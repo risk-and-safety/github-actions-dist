@@ -10,7 +10,7 @@ const Project = __webpack_require__(234);
 const fs = __webpack_require__(5630);
 const util = __webpack_require__(1669);
 
-const { DEPLOY_TYPES } = __webpack_require__(1404);
+const { DEPLOY_TYPES, LABEL_PREFIX } = __webpack_require__(1404);
 
 const { DOCKER_BUILD, KUBE_DAEMONSET, KUBE_DEPLOYMENT, KUBE_JOB } = DEPLOY_TYPES;
 
@@ -41,7 +41,7 @@ function findDeployTypes(packagesPath, name, pkgJson) {
   return deployTypes;
 }
 
-async function groupDeployTypes({ packages = [], prefix = 'deploy:' }) {
+async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
   const packageNames = packages
     .map((pkg) => (typeof pkg === 'string' ? pkg : pkg.name))
     .filter((name) => name && (!prefix || name.startsWith(prefix)))
@@ -59,7 +59,7 @@ async function groupDeployTypes({ packages = [], prefix = 'deploy:' }) {
   const pkgJsons = await project.getPackages();
 
   const deployTypesMap = packageNames.reduce((acc, name) => {
-    const pkgJson = pkgJsons.find((pkg) => pkg.name === name || pkg.location.split('/').pop() === name); // ignore npm @scope/
+    const pkgJson = pkgJsons.find((pkg) => pkg.name === name || pkg.name.split('/').pop() === name); // ignore npm @scope/
     const deployTypes = findDeployTypes(packagesPath, name, pkgJson);
 
     deployTypes.forEach((type) => {
