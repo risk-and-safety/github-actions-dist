@@ -61,6 +61,7 @@ async function kubeStatusOne(params) {
   } = params;
   const dockerName = validateAppName(params.dockerName || app);
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
+  const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}`;
   const { owner, repo } = github.context.repo;
 
   const gitHubClient = github.getOctokit(GITHUB_TOKEN);
@@ -69,15 +70,17 @@ async function kubeStatusOne(params) {
     owner,
     repo,
     apps: [dockerName],
-    tag: `${tagPrefix}-[0-9a-f]{7,8}`,
+    tag: tagPattern,
   });
 
-  if (!latestImage) {
-    warning(`${app}: no image found starting with "${tagPrefix}-"`);
+  const tag = latestImage && latestImage.version;
+
+  if (!tag) {
+    warning(`No Docker image found with pattern "${dockerName}:${tagPattern}"`);
     return STATUSES.UNCHANGED;
   }
 
-  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}:${latestImage.version}`;
+  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}:${tag}`;
 
   if (!KIND_OPTIONS.includes(kind)) {
     throw new Error(`Invalid kind value "${kind}". Must be ${KIND_OPTIONS}`);
@@ -103,6 +106,7 @@ async function kubeStatusOne(params) {
       await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
         onFailedAttempt: (err) => info(`Retrying ${app}, ${err.message}`),
         retries,
+        minTimeout: 3000,
       });
     } catch (err) {
       if (err.message.includes(`Error: timeout`)) {
@@ -7088,7 +7092,13 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     repository: {
       packages: { edges: packageEdges },
     },
-  } = await gitHubClient.graphql(query, { owner, repo, apps, appCount: apps.length, headers: HTTP_HEADERS_PACKAGES });
+  } = await gitHubClient.graphql(query, {
+    owner,
+    repo,
+    apps,
+    appCount: apps.length * 5, // Could potentially have same name for Docker, NPM, Maven, etc
+    headers: HTTP_HEADERS_PACKAGES,
+  });
 
   const compareTag = new RegExp(`^${tag}$`);
 

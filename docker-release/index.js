@@ -6550,7 +6550,13 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     repository: {
       packages: { edges: packageEdges },
     },
-  } = await gitHubClient.graphql(query, { owner, repo, apps, appCount: apps.length, headers: HTTP_HEADERS_PACKAGES });
+  } = await gitHubClient.graphql(query, {
+    owner,
+    repo,
+    apps,
+    appCount: apps.length * 5, // Could potentially have same name for Docker, NPM, Maven, etc
+    headers: HTTP_HEADERS_PACKAGES,
+  });
 
   const compareTag = new RegExp(`^${tag}$`);
 
