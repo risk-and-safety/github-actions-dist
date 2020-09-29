@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.1.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.1...github-actions@3.1.2) (2020-09-26)
+
+
+### Bug Fixes
+
+* **deploy:** multiple GH packages of same name ([d98f74c](https://github.com/risk-and-safety/platform/commit/d98f74c84c3c1946b5913bd15417bd25ec7c0778))
+
+
+
+
+
 ## [3.1.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.0...github-actions@3.1.1) (2020-09-19)
 
 **Note:** Version bump only for package github-actions
