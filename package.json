@@ -18,7 +18,7 @@
     "test": "node jest.setup.js && cross-env AWS_PROFILE=mgmt jest"
   },
   "dependencies": {
-    "@actions/core": "1.2.5",
+    "@actions/core": "1.2.6",
     "@actions/github": "4.0.0",
     "@lerna/project": "3.21.0",
     "@lerna/version": "3.22.1",
