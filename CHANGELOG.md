@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.1.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.2...github-actions@3.1.3) (2020-09-29)
+
+
+### Bug Fixes
+
+* **deploy:** limit Docker prune to <100 ([5cd40e1](https://github.com/risk-and-safety/platform/commit/5cd40e1dff7dce308f8a6ab2408ecb47982435b9))
+
+
+
+
+
 ## [3.1.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.1...github-actions@3.1.2) (2020-09-26)
 
 
