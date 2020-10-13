@@ -18,10 +18,10 @@ const {
 } = __webpack_require__(91);
 const { sequentialDeploy } = __webpack_require__(552);
 const { exec, sh } = __webpack_require__(6264);
-const { cleanPath, validateAppName, validateNamespace } = __webpack_require__(2381);
+const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
 
 async function dockerReleaseOne(params) {
-  const app = validateAppName(params.app);
+  const app = cleanAppName(params.app);
   const commit = await getShortCommit();
   const env = await getEnv();
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
@@ -29,7 +29,7 @@ async function dockerReleaseOne(params) {
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
   const { password, registry = 'docker.pkg.github.com' } = params;
-  const dockerName = validateAppName(params.dockerName || app);
+  const dockerName = cleanAppName(params.dockerName || app);
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
   await dockerLogin(params);
@@ -728,7 +728,6 @@ exports.getOctokitOptions = getOctokitOptions;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const url = __webpack_require__(8835);
 const http = __webpack_require__(8605);
 const https = __webpack_require__(7211);
 const pm = __webpack_require__(6443);
@@ -777,7 +776,7 @@ var MediaTypes;
  * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
  */
 function getProxyUrl(serverUrl) {
-    let proxyUrl = pm.getProxyUrl(url.parse(serverUrl));
+    let proxyUrl = pm.getProxyUrl(new URL(serverUrl));
     return proxyUrl ? proxyUrl.href : '';
 }
 exports.getProxyUrl = getProxyUrl;
@@ -796,6 +795,15 @@ const HttpResponseRetryCodes = [
 const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
+class HttpClientError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.name = 'HttpClientError';
+        this.statusCode = statusCode;
+        Object.setPrototypeOf(this, HttpClientError.prototype);
+    }
+}
+exports.HttpClientError = HttpClientError;
 class HttpClientResponse {
     constructor(message) {
         this.message = message;
@@ -814,7 +822,7 @@ class HttpClientResponse {
 }
 exports.HttpClientResponse = HttpClientResponse;
 function isHttps(requestUrl) {
-    let parsedUrl = url.parse(requestUrl);
+    let parsedUrl = new URL(requestUrl);
     return parsedUrl.protocol === 'https:';
 }
 exports.isHttps = isHttps;
@@ -919,7 +927,7 @@ class HttpClient {
         if (this._disposed) {
             throw new Error('Client has already been disposed.');
         }
-        let parsedUrl = url.parse(requestUrl);
+        let parsedUrl = new URL(requestUrl);
         let info = this._prepareRequest(verb, parsedUrl, headers);
         // Only perform retries on reads since writes may not be idempotent.
         let maxTries = this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1
@@ -958,7 +966,7 @@ class HttpClient {
                     // if there's no location to redirect to, we won't
                     break;
                 }
-                let parsedRedirectUrl = url.parse(redirectUrl);
+                let parsedRedirectUrl = new URL(redirectUrl);
                 if (parsedUrl.protocol == 'https:' &&
                     parsedUrl.protocol != parsedRedirectUrl.protocol &&
                     !this._allowRedirectDowngrade) {
@@ -1074,7 +1082,7 @@ class HttpClient {
      * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
      */
     getAgent(serverUrl) {
-        let parsedUrl = url.parse(serverUrl);
+        let parsedUrl = new URL(serverUrl);
         return this._getAgent(parsedUrl);
     }
     _prepareRequest(method, requestUrl, headers) {
@@ -1147,7 +1155,7 @@ class HttpClient {
                 maxSockets: maxSockets,
                 keepAlive: this._keepAlive,
                 proxy: {
-                    proxyAuth: proxyUrl.auth,
+                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`,
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
                 }
@@ -1242,12 +1250,8 @@ class HttpClient {
                 else {
                     msg = 'Failed request: (' + statusCode + ')';
                 }
-                let err = new Error(msg);
-                // attach statusCode and body obj (if available) to the error object
-                err['statusCode'] = statusCode;
-                if (response.result) {
-                    err['result'] = response.result;
-                }
+                let err = new HttpClientError(msg, statusCode);
+                err.result = response.result;
                 reject(err);
             }
             else {
@@ -1262,12 +1266,11 @@ exports.HttpClient = HttpClient;
 /***/ }),
 
 /***/ 6443:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const url = __webpack_require__(8835);
 function getProxyUrl(reqUrl) {
     let usingSsl = reqUrl.protocol === 'https:';
     let proxyUrl;
@@ -1282,7 +1285,7 @@ function getProxyUrl(reqUrl) {
         proxyVar = process.env['http_proxy'] || process.env['HTTP_PROXY'];
     }
     if (proxyVar) {
-        proxyUrl = url.parse(proxyVar);
+        proxyUrl = new URL(proxyVar);
     }
     return proxyUrl;
 }
@@ -1606,6 +1609,16 @@ function mergeDeep(defaults, options) {
   return result;
 }
 
+function removeUndefinedProperties(obj) {
+  for (const key in obj) {
+    if (obj[key] === undefined) {
+      delete obj[key];
+    }
+  }
+
+  return obj;
+}
+
 function merge(defaults, route, options) {
   if (typeof route === "string") {
     let [method, url] = route.split(" ");
@@ -1620,7 +1633,10 @@ function merge(defaults, route, options) {
   } // lowercase header names before merging with defaults to avoid duplicates
 
 
-  options.headers = lowercaseKeys(options.headers);
+  options.headers = lowercaseKeys(options.headers); // remove properties with undefined values before merging
+
+  removeUndefinedProperties(options);
+  removeUndefinedProperties(options.headers);
   const mergedOptions = mergeDeep(defaults || {}, options); // mediaType.previews arrays are merged, instead of overwritten
 
   if (defaults && defaults.mediaType.previews.length) {
@@ -1842,7 +1858,7 @@ function parse(options) {
   // https://fetch.spec.whatwg.org/#methods
   let method = options.method.toUpperCase(); // replace :varname with {varname} to make it RFC 6570 compatible
 
-  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{+$1}");
+  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
   let headers = Object.assign({}, options.headers);
   let body;
   let parameters = omit(options, ["method", "baseUrl", "url", "headers", "request", "mediaType"]); // extract variable names from URL to calculate remaining variables later
@@ -1927,7 +1943,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "6.0.6";
+const VERSION = "6.0.8";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
@@ -6378,6 +6394,27 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 1404:
+/***/ ((module) => {
+
+module.exports.DEPLOY_TYPES = {
+  NONE: 'NONE', // Placeholder so the deploy job ignores this package
+  DOCKER_BUILD: 'DOCKER_BUILD',
+  KUBE_JOB: 'KUBE_JOB',
+  KUBE_DAEMONSET: 'KUBE_DAEMONSET',
+  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
+  LAMBDA: 'LAMBDA',
+  MAVEN: 'MAVEN',
+  NPM: 'NPM',
+  S3: 'S3',
+  GIT: 'GIT',
+};
+
+module.exports.LABEL_PREFIX = 'deploy:';
+
+
+/***/ }),
+
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -6776,8 +6813,8 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
+const { LABEL_PREFIX } = __webpack_require__(1404);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -6801,15 +6838,26 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
   return repoUrl;
 };
 
-module.exports.validateAppName = function validateAppName(name) {
-  const owner = github && github.context && github.context.repo && github.context.repo.owner;
-  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+function cleanAppName(name, prefix = LABEL_PREFIX) {
+  const scopePrefix = /^@[\w-]+\//;
+  const labelPrefix = new RegExp(`^${prefix}`);
+  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
+  const cleanName = name
+    .replace(scopePrefix, '')
+    .replace(labelPrefix, '')
+    .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);
   }
 
   return cleanName;
+}
+
+module.exports.cleanAppName = cleanAppName;
+
+module.exports.appNameEquals = function appNameEquals(app1, app2) {
+  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
 };
 
 module.exports.validateEnv = function validateEnv(env) {

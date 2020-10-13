@@ -8,8 +8,8 @@ inputs:
     description: Determine what has changed by either comparing against the next branch or the most recent release tag. Options are [branch,tag]
     required: false
     default: branch
-  skip-packages:
-    description: Comma delimited list of packages to ignore
+  skip-labels:
+    description: Comma delimited list of labels to ignore
     required: false
     default: ''
   dry-run:
