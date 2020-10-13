@@ -93,14 +93,14 @@ async function kubeStatusOne(params) {
   let status = STATUSES.UNCHANGED;
 
   try {
-    const previousVersion = await kubeService.findOldestVersion(app, namespace);
+    const oldestTimestamp = await kubeService.findOldestTimestamp(app, namespace);
 
-    if (!previousVersion) {
+    if (!oldestTimestamp) {
       warning(`${app}: no pods found in ${namespace} (${env})`);
       return status;
     }
 
-    info(`${app}: found running pod version ${previousVersion} in ${namespace} (${env})`);
+    info(`${app}: found running pod from ${oldestTimestamp} in ${namespace} (${env})`);
 
     try {
       await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
@@ -116,7 +116,7 @@ async function kubeStatusOne(params) {
       }
     }
 
-    const newPodName = await kubeService.findNewPodName(app, namespace, previousVersion);
+    const newPodName = await kubeService.findNewPodName(app, namespace, oldestTimestamp);
 
     if (newPodName) {
       status = await kubeService.watchStatus(app, namespace, kind);
@@ -209,8 +209,8 @@ module.exports.kubeService = {
     this.KUBECONFIG = `KUBECONFIG=${configFile}`;
   },
 
-  async findOldestVersion(app, namespace) {
-    info(`${app}: find oldest version in ${namespace} (${this.env})`);
+  async findOldestTimestamp(app, namespace) {
+    info(`${app}: find oldest pod in ${namespace} (${this.env})`);
 
     const { RUNNING } = STATUSES;
     const { items } = JSON.parse(
@@ -223,22 +223,28 @@ module.exports.kubeService = {
       return null;
     }
 
-    const firstVersion = parseInt(items[0].metadata.resourceVersion, 10);
+    const firstTimestamp = items[0].metadata.creationTimestamp;
 
     return items
-      .map((pod) => parseInt(pod.metadata.resourceVersion, 10))
-      .reduce((previous, next) => Math.min(previous, next), firstVersion);
+      .map((pod) => pod.metadata.creationTimestamp)
+      .reduce((previous, next) => (next < previous ? next : previous), firstTimestamp);
   },
 
-  async findNewPodName(app, namespace, previousVersion) {
+  async findNewPodName(app, namespace, oldestTimestamp) {
     const { items } = JSON.parse(
       await exec(`${this.KUBECONFIG} kubectl get pods -l app=${app} -n ${namespace} -o json`),
     );
 
-    const [newPod] = items.filter((pod) => parseInt(pod.metadata.resourceVersion, 10) > previousVersion);
+    const [newPod] = items
+      .map((pod) => {
+        const creationTimestamp = new Date(pod.metadata.creationTimestamp).getTime();
+        return { ...pod, metadata: { ...pod.metadata, creationTimestamp } };
+      })
+      .filter((pod) => pod.metadata.creationTimestamp > oldestTimestamp)
+      .sort((a, b) => b.metadata.creationTimestamp.localeCompare(a.metadata.creationTimestamp));
 
     if (!newPod) {
-      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than version ${previousVersion}`);
+      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than ${oldestTimestamp}`);
       return null;
     }
 
@@ -1785,6 +1791,16 @@ function mergeDeep(defaults, options) {
   return result;
 }
 
+function removeUndefinedProperties(obj) {
+  for (const key in obj) {
+    if (obj[key] === undefined) {
+      delete obj[key];
+    }
+  }
+
+  return obj;
+}
+
 function merge(defaults, route, options) {
   if (typeof route === "string") {
     let [method, url] = route.split(" ");
@@ -1799,7 +1815,10 @@ function merge(defaults, route, options) {
   } // lowercase header names before merging with defaults to avoid duplicates
 
 
-  options.headers = lowercaseKeys(options.headers);
+  options.headers = lowercaseKeys(options.headers); // remove properties with undefined values before merging
+
+  removeUndefinedProperties(options);
+  removeUndefinedProperties(options.headers);
   const mergedOptions = mergeDeep(defaults || {}, options); // mediaType.previews arrays are merged, instead of overwritten
 
   if (defaults && defaults.mediaType.previews.length) {
@@ -2021,7 +2040,7 @@ function parse(options) {
   // https://fetch.spec.whatwg.org/#methods
   let method = options.method.toUpperCase(); // replace :varname with {varname} to make it RFC 6570 compatible
 
-  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{+$1}");
+  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
   let headers = Object.assign({}, options.headers);
   let body;
   let parameters = omit(options, ["method", "baseUrl", "url", "headers", "request", "mediaType"]); // extract variable names from URL to calculate remaining variables later
@@ -2106,7 +2125,7 @@ function withDefaults(oldDefaults, newDefaults) {
   });
 }
 
-const VERSION = "6.0.6";
+const VERSION = "6.0.8";
 
 const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`; // DEFAULTS has all properties set that EndpointOptions has, except url.
 // So we use RequestParameters and add method as additional required property.
