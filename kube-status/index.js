@@ -181,7 +181,7 @@ module.exports.kubeStatus = kubeStatus;
 /***/ 5429:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { info } = __webpack_require__(2186);
+const { info, warning } = __webpack_require__(2186);
 const os = __webpack_require__(2087);
 
 const { exec, sh } = __webpack_require__(6264);
@@ -283,7 +283,12 @@ module.exports.kubeService = {
   },
 
   async findErrorLogs(podName, namespace) {
-    return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception"`);
+    try {
+      return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception"`);
+    } catch (err) {
+      warning(err.message);
+      return '';
+    }
   },
 
   async fluxRelease({ app, namespace, kind, dockerImage }) {
