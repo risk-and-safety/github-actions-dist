@@ -10,6 +10,7 @@ const Project = __webpack_require__(234);
 const util = __webpack_require__(1669);
 
 const { DEPLOY_TYPES, LABEL_PREFIX } = __webpack_require__(1404);
+const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
 const { DOCKER_BUILD, KUBE_DAEMONSET, KUBE_DEPLOYMENT, KUBE_JOB } = DEPLOY_TYPES;
 
@@ -37,13 +38,13 @@ function findDeployTypes(pkgJson) {
 }
 
 async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
-  const packageNames = packages
+  const apps = packages
     .map((pkg) => (typeof pkg === 'string' ? pkg : pkg.name))
     .filter((name) => name && (!prefix || name.startsWith(prefix)))
-    .map((name) => (prefix ? name.substring(prefix.length) : name))
+    .map((name) => cleanAppName(name, prefix))
     .sort((a, b) => a.localeCompare(b));
 
-  if (!packageNames.length) {
+  if (!apps.length) {
     warning('List of packages is empty');
     return {};
   }
@@ -52,11 +53,11 @@ async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
   const project = new Project(cwd);
   const allPkgJsons = await project.getPackages();
 
-  const pkgJsons = packageNames.flatMap((name) => {
-    const matching = allPkgJsons.filter((pkg) => pkg.name === name || pkg.name.split('/').pop() === name); // ignore npm @scope/
+  const pkgJsons = apps.flatMap((app) => {
+    const matching = allPkgJsons.filter((pkg) => appNameEquals(app, pkg.name));
 
     if (matching.length === 0) {
-      throw new Error(`Missing package.json for ${name}`);
+      throw new Error(`Missing package.json for ${app}`);
     }
 
     return matching;
@@ -64,7 +65,8 @@ async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
 
   const deployTypesMap = pkgJsons.reduce((acc, pkgJson) => {
     findDeployTypes(pkgJson).forEach((type) => {
-      acc[type] = type in acc ? [...acc[type], pkgJson.name] : [pkgJson.name];
+      const app = cleanAppName(pkgJson.name);
+      acc[type] = type in acc ? [...acc[type], app] : [app];
     });
 
     return acc;
@@ -51477,8 +51479,8 @@ function cleanAppName(name, prefix = LABEL_PREFIX) {
   const labelPrefix = new RegExp(`^${prefix}`);
   const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
   const cleanName = name
-    .replace(scopePrefix, '')
     .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
     .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {

@@ -7385,8 +7385,8 @@ function cleanAppName(name, prefix = LABEL_PREFIX) {
   const labelPrefix = new RegExp(`^${prefix}`);
   const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
   const cleanName = name
-    .replace(scopePrefix, '')
     .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
     .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
