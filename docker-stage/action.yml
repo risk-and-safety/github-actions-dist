@@ -8,28 +8,22 @@ inputs:
     description: Password/token for the repo
     required: true
   app:
-    description: App name or comma separated list of apps to stage
+    description: App name
     required: true
   docker-name:
     description: Docker image name if different from the app name
     required: false
-  src-tag-prefix:
-    description: If provided uses the latest image with this prefix instead of doing a docker build
-    required: false
   path:
-    description: Docker build directory to build from instead of tagging an existing image.
+    description: Docker build directory.
     required: false
     default: '.'
-  repo:
-    description: Repository "owner/name" or url. Defaults to the repo calling this action.
-    required: false
   registry:
     description: Docker registry
     required: false
     default: docker.pkg.github.com
 outputs:
   image:
-    description: The Docker image name or comma separated list if mulitple apps
+    description: The Docker image name
 runs:
   using: node12
   main: index.js
