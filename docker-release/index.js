@@ -7,56 +7,56 @@ module.exports =
 
 const github = __webpack_require__(5438);
 
-const { getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(8762);
-const {
-  dockerBuild,
-  dockerLogin,
-  dockerPush,
-  findImages,
-  oldStagingTag,
-  stagingTag,
-} = __webpack_require__(91);
+const { ENV_BRANCHES, getEnv, getShortCommit, getSrcBranch } = __webpack_require__(8762);
+const { dockerBuild, dockerLogin, dockerPush, findImages, stagingTag } = __webpack_require__(91);
 const { sequentialDeploy } = __webpack_require__(552);
 const { exec, sh } = __webpack_require__(6264);
 const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
 
+async function tagPattern() {
+  const srcBranch = await getSrcBranch();
+  if (ENV_BRANCHES.includes(srcBranch)) {
+    const env = await getEnv({ branch: srcBranch });
+    return `${env}-[0-9a-f]{7,8}`;
+  }
+
+  return stagingTag();
+}
+
 async function dockerReleaseOne(params) {
+  const env = await getEnv();
   const app = cleanAppName(params.app);
   const commit = await getShortCommit();
-  const env = await getEnv();
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
   let tag = `${tagPrefix}-${commit}`;
   const path = params.path && cleanPath(params.path);
   const { owner, repo } = github.context.repo;
-  const { password, registry = 'docker.pkg.github.com' } = params;
+  const { username, password, registry = 'docker.pkg.github.com' } = params;
   const dockerName = cleanAppName(params.dockerName || app);
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
-  await dockerLogin(params);
-
-  const gitHubClient = github.getOctokit(password);
-  const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [dockerName], tag });
-
-  if (existingTag) {
-    return `${dockerImage}:${tag}`;
-  }
+  await dockerLogin({ username, password, registry });
 
   if (path) {
     await dockerBuild(dockerImage, tag, path, commit);
   } else {
-    let srcTag = await stagingTag();
+    const srcTagPattern = await tagPattern();
+    const gitHubClient = github.getOctokit(password);
+    const [latestImage] = await findImages({
+      gitHubClient,
+      owner,
+      repo,
+      apps: [dockerName],
+      tag: srcTagPattern,
+    });
 
-    try {
-      await sh(`docker pull ${dockerImage}:${srcTag}`);
-    } catch (err) {
-      // TODO: remove retry when backward compatibility is no longer needed
-      if (err.message.includes('not found: manifest unknown:')) {
-        srcTag = await oldStagingTag();
-        await sh(`docker pull ${dockerImage}:${srcTag}`);
-      } else {
-        throw err;
-      }
+    const srcTag = latestImage && latestImage.version;
+
+    if (!srcTag) {
+      throw new Error(`No Docker image matching ${dockerName}:${srcTagPattern} found`);
     }
+
+    await sh(`docker pull ${dockerImage}:${srcTag}`);
 
     const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${srcTag}`);
     tag = origCommit && origCommit !== '<no value>' ? `${tagPrefix}-${origCommit}` : tag;
@@ -71,11 +71,6 @@ async function dockerReleaseOne(params) {
 async function dockerRelease(params) {
   if (params.path && params.app.length !== 1) {
     throw new Error(`The build path: "${params.path}" is only supported for a single app`);
-  }
-
-  if (github.context.actor) {
-    // Needed for finding the current app git tag
-    await trueUpGitHistory();
   }
 
   // Force deployments to be sequential so the logs are readable.

@@ -27,6 +27,7 @@ prune({
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const github = __webpack_require__(5438);
+const { ENV_BRANCHES } = __webpack_require__(8762);
 
 const { deleteVersion, findImages, stagingTag } = __webpack_require__(91);
 
@@ -34,12 +35,11 @@ async function prune(params) {
   const { owner, repo } = github.context.repo;
   const { gitHubClient, apps } = params;
   const tag = await stagingTag();
+  const tagPrefix = tag.split('-')[0];
 
-  if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
-    throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
-
-    // Leave master and qa so the deploy can be replayed
-  } else if (tag !== 'RC_master' && tag !== 'RC_qa') {
+  if (tagPrefix === 'dev' || ENV_BRANCHES.includes(tagPrefix)) {
+    throw new Error(`The Docker tag, ${tag}, looks like an env- tag we want to keep`);
+  } else {
     const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
 
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));

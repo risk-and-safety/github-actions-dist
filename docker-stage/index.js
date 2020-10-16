@@ -8,72 +8,31 @@ module.exports =
 const github = __webpack_require__(5438);
 const fs = __webpack_require__(5747);
 
-const { ENV_BRANCHES, getEnv, getShortCommit } = __webpack_require__(8762);
-const { dockerBuild, dockerLogin, dockerPush, findImages, stagingTag } = __webpack_require__(91);
-const { sh } = __webpack_require__(6264);
+const { getShortCommit } = __webpack_require__(8762);
+const { dockerBuild, dockerLogin, dockerPush, stagingTag } = __webpack_require__(91);
 const { cleanPath, cleanAppName } = __webpack_require__(2381);
 
-async function tagPattern(tagPrefix) {
-  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
-    const env = await getEnv({ branch: tagPrefix });
-    return `${env}-[0-9a-f]{7,8}`;
-  }
-
-  return null;
-}
-
-async function dockerStageOne(params) {
+async function dockerStage(params) {
   const app = cleanAppName(params.app);
-  const tag = await stagingTag();
   const commit = await getShortCommit();
+  const tag = await stagingTag();
+  const path = cleanPath(params.path);
   const { owner, repo } = github.context.repo;
-  const { password, registry = 'docker.pkg.github.com' } = params;
+  const { username, password, registry = 'docker.pkg.github.com' } = params;
   const dockerName = cleanAppName(params.dockerName || app);
-
-  await dockerLogin(params);
-
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
 
-  if (params.srcTagPrefix) {
-    const srcTagPattern = (await tagPattern(params.srcTagPrefix)) || tag;
-    const gitHubClient = github.getOctokit(password);
-    const [latestImage] = await findImages({
-      gitHubClient,
-      owner,
-      repo,
-      apps: [dockerName],
-      tag: srcTagPattern,
-    });
+  await dockerLogin({ username, password, registry });
 
-    const srcTag = latestImage && latestImage.version;
-
-    if (!srcTag) {
-      throw new Error(`No Docker image matching ${dockerName}:${srcTagPattern} found`);
-    }
-
-    await sh(`docker pull ${dockerImage}:${srcTag}`);
-    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
-  } else {
-    const path = cleanPath(params.path);
-
-    if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
-      throw new Error('Missing yarn.lock or package-lock.json file');
-    }
-
-    await dockerBuild(dockerImage, tag, path, commit);
+  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+    throw new Error('Missing yarn.lock or package-lock.json file');
   }
+
+  await dockerBuild(dockerImage, tag, path, commit);
 
   await dockerPush(dockerImage, tag);
 
   return `${dockerImage}:${tag}`;
-}
-
-async function dockerStage(params) {
-  if (params.app.length > 1 && !params.srcTagPrefix) {
-    throw new Error(`When staging ${params.app.length} apps src-tag-prefix is required, instead of path`);
-  }
-
-  return Promise.all(params.app.map(async (app) => dockerStageOne({ ...params, app })));
 }
 
 module.exports.dockerStage = dockerStage;
@@ -94,9 +53,7 @@ const params = {
   password: core.getInput('password', { required: true }),
   app: inputList(core.getInput('app', { required: true })),
   dockerName: core.getInput('docker-name'),
-  srcTagPrefix: core.getInput('src-tag-prefix'),
   path: core.getInput('path'),
-  repo: core.getInput('repo'),
   registry: core.getInput('registry'),
 };
 
