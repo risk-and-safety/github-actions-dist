@@ -153,7 +153,7 @@ const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 const { addLabelsToPr } = __webpack_require__(4627);
 
 async function findChangedFiles(srcBranch, destBranch) {
-  const changes = await exec(`git diff --name-only ${destBranch} ${srcBranch} --`);
+  const changes = await exec(`git diff --name-only ${destBranch} ${srcBranch}`);
 
   return changes.split('\n').filter(Boolean);
 }
