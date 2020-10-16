@@ -142,24 +142,19 @@ module.exports.labelerSinceTag = labelerSinceTag;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
-const github = __webpack_require__(5438);
 const Project = __webpack_require__(234);
 const minimatch = __webpack_require__(3973);
 
 const { LABEL_PREFIX } = __webpack_require__(1404);
-const { getDestBranch, getSrcBranch, trueUpGitHistory } = __webpack_require__(8762);
+const { getDestBranch, getSrcBranch } = __webpack_require__(8762);
 const { exec } = __webpack_require__(6264);
 const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
 const { addLabelsToPr } = __webpack_require__(4627);
 
 async function findChangedFiles(srcBranch, destBranch) {
-  if (github.context.actor) {
-    // Needed for finding the current app git tag
-    await trueUpGitHistory();
-  }
-
-  const changes = await exec(`git diff --name-only ${destBranch} ${srcBranch}`);
+  const remote = await exec('git remote');
+  const changes = await exec(`git diff --name-only ${remote ? `${remote}/` : ''}${destBranch} ${srcBranch}`);
 
   return changes.split('\n').filter(Boolean);
 }
