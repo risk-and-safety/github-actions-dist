@@ -93,14 +93,14 @@ async function kubeStatusOne(params) {
   let status = STATUSES.UNCHANGED;
 
   try {
-    const previousVersion = await kubeService.findOldestVersion(app, namespace);
+    const oldestTimestamp = await kubeService.findOldestTimestamp(app, namespace);
 
-    if (!previousVersion) {
+    if (!oldestTimestamp) {
       warning(`${app}: no pods found in ${namespace} (${env})`);
       return status;
     }
 
-    info(`${app}: found running pod version ${previousVersion} in ${namespace} (${env})`);
+    info(`${app}: found running pod from ${oldestTimestamp} in ${namespace} (${env})`);
 
     try {
       await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
@@ -116,7 +116,7 @@ async function kubeStatusOne(params) {
       }
     }
 
-    const newPodName = await kubeService.findNewPodName(app, namespace, previousVersion);
+    const newPodName = await kubeService.findNewPodName(app, namespace, oldestTimestamp);
 
     if (newPodName) {
       status = await kubeService.watchStatus(app, namespace, kind);
@@ -181,7 +181,7 @@ module.exports.kubeStatus = kubeStatus;
 /***/ 5429:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { info } = __webpack_require__(2186);
+const { info, warning } = __webpack_require__(2186);
 const os = __webpack_require__(2087);
 
 const { exec, sh } = __webpack_require__(6264);
@@ -209,8 +209,8 @@ module.exports.kubeService = {
     this.KUBECONFIG = `KUBECONFIG=${configFile}`;
   },
 
-  async findOldestVersion(app, namespace) {
-    info(`${app}: find oldest version in ${namespace} (${this.env})`);
+  async findOldestTimestamp(app, namespace) {
+    info(`${app}: find oldest pod in ${namespace} (${this.env})`);
 
     const { RUNNING } = STATUSES;
     const { items } = JSON.parse(
@@ -223,22 +223,28 @@ module.exports.kubeService = {
       return null;
     }
 
-    const firstVersion = parseInt(items[0].metadata.resourceVersion, 10);
+    const firstTimestamp = items[0].metadata.creationTimestamp;
 
     return items
-      .map((pod) => parseInt(pod.metadata.resourceVersion, 10))
-      .reduce((previous, next) => Math.min(previous, next), firstVersion);
+      .map((pod) => pod.metadata.creationTimestamp)
+      .reduce((previous, next) => (next < previous ? next : previous), firstTimestamp);
   },
 
-  async findNewPodName(app, namespace, previousVersion) {
+  async findNewPodName(app, namespace, oldestTimestamp) {
     const { items } = JSON.parse(
       await exec(`${this.KUBECONFIG} kubectl get pods -l app=${app} -n ${namespace} -o json`),
     );
 
-    const [newPod] = items.filter((pod) => parseInt(pod.metadata.resourceVersion, 10) > previousVersion);
+    const [newPod] = items
+      .map((pod) => {
+        const creationTimestamp = new Date(pod.metadata.creationTimestamp).getTime();
+        return { ...pod, metadata: { ...pod.metadata, creationTimestamp } };
+      })
+      .filter((pod) => pod.metadata.creationTimestamp > oldestTimestamp)
+      .sort((a, b) => b.metadata.creationTimestamp.localeCompare(a.metadata.creationTimestamp));
 
     if (!newPod) {
-      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than version ${previousVersion}`);
+      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than ${oldestTimestamp}`);
       return null;
     }
 
@@ -277,7 +283,12 @@ module.exports.kubeService = {
   },
 
   async findErrorLogs(podName, namespace) {
-    return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception"`);
+    try {
+      return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception"`);
+    } catch (err) {
+      warning(err.message);
+      return '';
+    }
   },
 
   async fluxRelease({ app, namespace, kind, dockerImage }) {
