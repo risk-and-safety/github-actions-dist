@@ -9401,6 +9401,27 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 1404:
+/***/ ((module) => {
+
+module.exports.DEPLOY_TYPES = {
+  NONE: 'NONE', // Placeholder so the deploy job ignores this package
+  DOCKER_BUILD: 'DOCKER_BUILD',
+  KUBE_JOB: 'KUBE_JOB',
+  KUBE_DAEMONSET: 'KUBE_DAEMONSET',
+  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
+  LAMBDA: 'LAMBDA',
+  MAVEN: 'MAVEN',
+  NPM: 'NPM',
+  S3: 'S3',
+  GIT: 'GIT',
+};
+
+module.exports.LABEL_PREFIX = 'deploy:';
+
+
+/***/ }),
+
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -9643,8 +9664,8 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
+const { LABEL_PREFIX } = __webpack_require__(1404);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -9668,15 +9689,26 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
   return repoUrl;
 };
 
-module.exports.validateAppName = function validateAppName(name) {
-  const owner = github && github.context && github.context.repo && github.context.repo.owner;
-  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+function cleanAppName(name, prefix = LABEL_PREFIX) {
+  const scopePrefix = /^@[\w-]+\//;
+  const labelPrefix = new RegExp(`^${prefix}`);
+  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
+  const cleanName = name
+    .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
+    .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);
   }
 
   return cleanName;
+}
+
+module.exports.cleanAppName = cleanAppName;
+
+module.exports.appNameEquals = function appNameEquals(app1, app2) {
+  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
 };
 
 module.exports.validateEnv = function validateEnv(env) {

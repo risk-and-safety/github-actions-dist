@@ -10,6 +10,7 @@ const Project = __webpack_require__(234);
 const util = __webpack_require__(1669);
 
 const { DEPLOY_TYPES, LABEL_PREFIX } = __webpack_require__(1404);
+const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
 const { DOCKER_BUILD, KUBE_DAEMONSET, KUBE_DEPLOYMENT, KUBE_JOB } = DEPLOY_TYPES;
 
@@ -37,13 +38,13 @@ function findDeployTypes(pkgJson) {
 }
 
 async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
-  const packageNames = packages
+  const apps = packages
     .map((pkg) => (typeof pkg === 'string' ? pkg : pkg.name))
     .filter((name) => name && (!prefix || name.startsWith(prefix)))
-    .map((name) => (prefix ? name.substring(prefix.length) : name))
+    .map((name) => cleanAppName(name, prefix))
     .sort((a, b) => a.localeCompare(b));
 
-  if (!packageNames.length) {
+  if (!apps.length) {
     warning('List of packages is empty');
     return {};
   }
@@ -52,11 +53,11 @@ async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
   const project = new Project(cwd);
   const allPkgJsons = await project.getPackages();
 
-  const pkgJsons = packageNames.flatMap((name) => {
-    const matching = allPkgJsons.filter((pkg) => pkg.name === name || pkg.name.split('/').pop() === name); // ignore npm @scope/
+  const pkgJsons = apps.flatMap((app) => {
+    const matching = allPkgJsons.filter((pkg) => appNameEquals(app, pkg.name));
 
     if (matching.length === 0) {
-      throw new Error(`Missing package.json for ${name}`);
+      throw new Error(`Missing package.json for ${app}`);
     }
 
     return matching;
@@ -64,7 +65,8 @@ async function groupDeployTypes({ packages = [], prefix = LABEL_PREFIX }) {
 
   const deployTypesMap = pkgJsons.reduce((acc, pkgJson) => {
     findDeployTypes(pkgJson).forEach((type) => {
-      acc[type] = type in acc ? [...acc[type], pkgJson.name] : [pkgJson.name];
+      const app = cleanAppName(pkgJson.name);
+      acc[type] = type in acc ? [...acc[type], app] : [app];
     });
 
     return acc;
@@ -51444,8 +51446,8 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
+const { LABEL_PREFIX } = __webpack_require__(1404);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -51469,15 +51471,26 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
   return repoUrl;
 };
 
-module.exports.validateAppName = function validateAppName(name) {
-  const owner = github && github.context && github.context.repo && github.context.repo.owner;
-  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+function cleanAppName(name, prefix = LABEL_PREFIX) {
+  const scopePrefix = /^@[\w-]+\//;
+  const labelPrefix = new RegExp(`^${prefix}`);
+  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
+  const cleanName = name
+    .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
+    .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);
   }
 
   return cleanName;
+}
+
+module.exports.cleanAppName = cleanAppName;
+
+module.exports.appNameEquals = function appNameEquals(app1, app2) {
+  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
 };
 
 module.exports.validateEnv = function validateEnv(env) {

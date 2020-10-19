@@ -53,7 +53,7 @@ const { labelerSinceTag } = __webpack_require__(7637);
 
 const params = {
   gitHubClient: gitHub.getOctokit(core.getInput('GITHUB_TOKEN')),
-  skipPackages: inputList(core.getInput('skip-packages')),
+  skipLabels: inputList(core.getInput('skip-labels')),
   dryRun: core.getInput('dry-run') === 'true',
   prefix: core.getInput('prefix'),
 };
@@ -81,6 +81,7 @@ const Project = __webpack_require__(234);
 const { LABEL_PREFIX } = __webpack_require__(1404);
 const { trueUpGitHistory } = __webpack_require__(8762);
 const { exec } = __webpack_require__(6264);
+const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
 const { addLabelsToPr } = __webpack_require__(4627);
 
@@ -112,7 +113,7 @@ async function findChangedPackages(project) {
   return packages.filter(Boolean);
 }
 
-async function labelerSinceTag({ gitHubClient, skipPackages = [], dryRun = false, prefix = LABEL_PREFIX }) {
+async function labelerSinceTag({ gitHubClient, skipLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
 
   if (github.context.actor) {
@@ -120,7 +121,9 @@ async function labelerSinceTag({ gitHubClient, skipPackages = [], dryRun = false
   }
 
   const packages = await findChangedPackages(project);
-  const labels = packages.filter((name) => !skipPackages.includes(name)).map((name) => `${prefix}${name}`);
+  const labels = packages
+    .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
+    .map((name) => `${prefix}${cleanAppName(name, prefix)}`); // remove @scope/ and add deploy: prefix
 
   if (!dryRun) {
     await addLabelsToPr(gitHubClient, labels);
@@ -143,6 +146,7 @@ const Project = __webpack_require__(234);
 const { LABEL_PREFIX } = __webpack_require__(1404);
 const { getDestBranch, getSrcBranch } = __webpack_require__(8762);
 const { exec } = __webpack_require__(6264);
+const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
 const { addLabelsToPr } = __webpack_require__(4627);
 
@@ -154,12 +158,11 @@ async function findChangedFiles(srcBranch, destBranch) {
 
 async function findChangedPackages(project, changedFiles) {
   const pkgJsons = await project.getPackages();
-  const workspacePath = project.packageParentDirs[0];
-  const workspaceDir = `${workspacePath.split('/').pop()}/`;
+  const rootDir = project.packageParentDirs[0].split('/').pop();
 
   const changedPkgDirs = changedFiles
-    .filter((filename) => filename.startsWith(workspaceDir))
-    .map((filename) => filename.substring(0, filename.indexOf('/', workspaceDir.length)));
+    .filter((filename) => filename.startsWith(rootDir))
+    .map((filename) => filename.substring(0, filename.indexOf('/', rootDir.length + 1)));
 
   const uniqChangedPkgDirs = [...new Set(changedPkgDirs)];
 
@@ -169,7 +172,7 @@ async function findChangedPackages(project, changedFiles) {
   });
 }
 
-async function labeler({ gitHubClient, skipPackages = [], dryRun = false, prefix = LABEL_PREFIX }) {
+async function labeler({ gitHubClient, skipLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
 
   const srcBranch = await getSrcBranch();
@@ -188,7 +191,9 @@ async function labeler({ gitHubClient, skipPackages = [], dryRun = false, prefix
   info(changedFiles.join('\n'));
 
   const packages = await findChangedPackages(project, changedFiles);
-  const labels = packages.filter((name) => !skipPackages.includes(name)).map((name) => `${prefix}${name}`);
+  const labels = packages
+    .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
+    .map((name) => `${prefix}${cleanAppName(name, prefix)}`); // remove @scope/ and add deploy: prefix
 
   if (!dryRun) {
     await addLabelsToPr(gitHubClient, labels);
@@ -51536,8 +51541,8 @@ module.exports.exec = exec;
 /***/ 2381:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
+const { LABEL_PREFIX } = __webpack_require__(1404);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -51561,15 +51566,26 @@ module.exports.validateRepo = function validateRepo(repoUrl) {
   return repoUrl;
 };
 
-module.exports.validateAppName = function validateAppName(name) {
-  const owner = github && github.context && github.context.repo && github.context.repo.owner;
-  const cleanName = owner ? name.replace(`@${owner}/`, '') : name;
+function cleanAppName(name, prefix = LABEL_PREFIX) {
+  const scopePrefix = /^@[\w-]+\//;
+  const labelPrefix = new RegExp(`^${prefix}`);
+  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
+  const cleanName = name
+    .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
+    .replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);
   }
 
   return cleanName;
+}
+
+module.exports.cleanAppName = cleanAppName;
+
+module.exports.appNameEquals = function appNameEquals(app1, app2) {
+  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
 };
 
 module.exports.validateEnv = function validateEnv(env) {
