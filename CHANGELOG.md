@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.1.9](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.8...github-actions@3.1.9) (2020-11-11)
+
+
+### Bug Fixes
+
+* **logging:** prevent logging entire req in node 14 ([640176a](https://github.com/risk-and-safety/platform/commit/640176a8a65173c4155086876d032ac6c21e0184))
+
+
+
+
+
 ## [3.1.8](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.7...github-actions@3.1.8) (2020-10-30)
 
 **Note:** Version bump only for package github-actions

@@ -236,10 +236,6 @@ module.exports.kubeService = {
     );
 
     const [newPod] = items
-      .map((pod) => {
-        const creationTimestamp = new Date(pod.metadata.creationTimestamp).getTime();
-        return { ...pod, metadata: { ...pod.metadata, creationTimestamp } };
-      })
       .filter((pod) => pod.metadata.creationTimestamp > oldestTimestamp)
       .sort((a, b) => b.metadata.creationTimestamp.localeCompare(a.metadata.creationTimestamp));
 
