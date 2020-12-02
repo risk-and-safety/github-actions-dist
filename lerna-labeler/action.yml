@@ -9,7 +9,11 @@ inputs:
     required: false
     default: branch
   skip-labels:
-    description: Comma delimited list of labels to ignore
+    description: Comma/newline delimited list of labels to ignore
+    required: false
+    default: ''
+  globs-to-add-all:
+    description: Files globs that cause all deploy labels to be added. Only applies to diff-by branch
     required: false
     default: ''
   dry-run:
