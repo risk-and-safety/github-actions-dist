@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.2.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.11...github-actions@3.2.0) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bunyan middleware, copy body.user to req.user ([455e656](https://github.com/risk-and-safety/platform/commit/455e656ba0ad0234df1e22e1964deff7d10fca2a))
+
+
+### Features
+
+* **logging:** trim body.user, response length IN-563, response time PC-284 ([f0e745c](https://github.com/risk-and-safety/platform/commit/f0e745c953c8126106729c31501697a89f238c13))
+
+
+
+
+
 ## [3.1.11](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.10...github-actions@3.1.11) (2020-12-12)
 
 
