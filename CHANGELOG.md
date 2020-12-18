@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.2.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.0...github-actions@3.2.1) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bump @rss/common-nodejs for middleware fix ([7e808e2](https://github.com/risk-and-safety/platform/commit/7e808e28d0f2cb2d8af7bdcd8e9bfdfebd8df0ec))
+
+
+
+
+
 # [3.2.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.11...github-actions@3.2.0) (2020-12-18)
 
 
