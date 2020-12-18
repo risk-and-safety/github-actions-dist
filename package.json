@@ -23,7 +23,7 @@
     "@lerna/project": "3.21.0",
     "@lerna/publish": "3.22.1",
     "@lerna/version": "3.22.1",
-    "@rss/common-nodejs": "0.5.20-middleware-logging.4",
+    "@rss/common-nodejs": "0.5.21",
     "@slack/web-api": "5.9.0",
     "aws-sdk": "2.742.0",
     "axios": "0.20.0",
