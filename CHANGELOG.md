@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.2.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.1...github-actions@3.2.2) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** downgrade middleware to Node12 syntax for printable ([0b8c15a](https://github.com/risk-and-safety/platform/commit/0b8c15a90750add9890868e7296c9879498f577c))
+
+
+
+
+
 ## [3.2.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.0...github-actions@3.2.1) (2020-12-18)
 
 
