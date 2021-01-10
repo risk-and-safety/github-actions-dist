@@ -1623,7 +1623,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.2.2";
+const VERSION = "3.2.4";
 
 class Octokit {
   constructor(options = {}) {
@@ -2323,7 +2323,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.6.1";
+const VERSION = "2.6.2";
 
 /**
  * Some “list” response that can be paginated have a different response structure
@@ -3406,6 +3406,11 @@ const Endpoints = {
     }],
     users: ["GET /search/users"]
   },
+  secretScanning: {
+    getAlert: ["GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/secret-scanning/alerts"],
+    updateAlert: ["PATCH /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"]
+  },
   teams: {
     addOrUpdateMembershipForUserInOrg: ["PUT /orgs/{org}/teams/{team_slug}/memberships/{username}"],
     addOrUpdateProjectPermissionsInOrg: ["PUT /orgs/{org}/teams/{team_slug}/projects/{project_id}", {
@@ -3486,7 +3491,7 @@ const Endpoints = {
   }
 };
 
-const VERSION = "4.3.0";
+const VERSION = "4.4.1";
 
 function endpointsToMethods(octokit, endpointsMap) {
   const newMethods = {};
@@ -3607,7 +3612,7 @@ var isPlainObject = __webpack_require__(9062);
 var nodeFetch = _interopDefault(__webpack_require__(467));
 var requestError = __webpack_require__(13);
 
-const VERSION = "5.4.11";
+const VERSION = "5.4.12";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
