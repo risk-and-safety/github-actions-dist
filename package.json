@@ -1,6 +1,6 @@
 {
   "name": "github-actions",
-  "version": "3.2.2",
+  "version": "3.2.4",
   "description": "Common GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
@@ -45,7 +45,7 @@
     "eslint": "6.8.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-config-prettier": "6.9.0",
-    "eslint-plugin-import": "2.20.1",
+    "eslint-plugin-import": "2.22.1",
     "eslint-plugin-prettier": "3.1.2",
     "jest": "24.9.0",
     "prettier": "1.19.1"
