@@ -3,6 +3,74 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.2.4](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.3...github-actions@3.2.4) (2021-01-12)
+
+
+### Bug Fixes
+
+* **deploy:** catch npm publish errors, allow npm and GitHub ([18e9102](https://github.com/risk-and-safety/platform/commit/18e910278eb07e49e166fe3a460a46dcf23c9200))
+
+
+
+
+
+## [3.2.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.2...github-actions@3.2.3) (2021-01-11)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [3.2.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.1...github-actions@3.2.2) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** downgrade middleware to Node12 syntax for printable ([0b8c15a](https://github.com/risk-and-safety/platform/commit/0b8c15a90750add9890868e7296c9879498f577c))
+
+
+
+
+
+## [3.2.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.0...github-actions@3.2.1) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bump @rss/common-nodejs for middleware fix ([7e808e2](https://github.com/risk-and-safety/platform/commit/7e808e28d0f2cb2d8af7bdcd8e9bfdfebd8df0ec))
+
+
+
+
+
+# [3.2.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.11...github-actions@3.2.0) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bunyan middleware, copy body.user to req.user ([455e656](https://github.com/risk-and-safety/platform/commit/455e656ba0ad0234df1e22e1964deff7d10fca2a))
+
+
+### Features
+
+* **logging:** trim body.user, response length IN-563, response time PC-284 ([f0e745c](https://github.com/risk-and-safety/platform/commit/f0e745c953c8126106729c31501697a89f238c13))
+
+
+
+
+
+## [3.1.11](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.10...github-actions@3.1.11) (2020-12-12)
+
+
+### Bug Fixes
+
+* **node:** bump version to handle security concern ([514a1be](https://github.com/risk-and-safety/platform/commit/514a1be6fc9664585c6ecda200209dd05af0356b))
+
+
+
+
+
 ## [3.1.10](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.9...github-actions@3.1.10) (2020-11-18)
 
 **Note:** Version bump only for package github-actions
