@@ -2,222 +2,69 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9391:
+/***/ 5379:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { info, warning } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
+const Project = __webpack_require__(234);
 
-async function addLabelsToPr(gitHubClient, labels) {
+const { appNameEquals } = __webpack_require__(2381);
+
+async function findByLabels({ gitHubClient }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
     throw new Error('pull request missing from GitHub payload');
   }
 
-  if (!labels.length) {
-    warning('No labels to add');
-    return;
-  }
-
-  info(`----\nAdding labels: [${labels}]\n----`);
-  const params = {
+  const { data } = await gitHubClient.pulls.get({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
-    issue_number: pullRequest.number,
-    labels,
-  };
+    pull_number: github.context.payload.pull_request.number,
+  });
+  const labels = data.labels.map((label) => label.name);
 
-  try {
-    await gitHubClient.issues.addLabels(params);
-  } catch (err) {
-    warning(`retrying addLabels after failure: ${err.message}`);
-    await gitHubClient.issues.addLabels(params);
-  }
+  const project = new Project(process.cwd());
+  const rootDir = project.packageParentDirs[0].split('/').pop();
+  const pkgJsons = await project.getPackages();
+
+  return pkgJsons
+    .filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)))
+    .map((pkgJson) => ({
+      name: pkgJson.name,
+      location: pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`)),
+      publishConfig: pkgJson.get('publishConfig'),
+      rss: pkgJson.get('rss'),
+      scripts: pkgJson.scripts,
+      version: pkgJson.version,
+    }));
 }
 
-module.exports.addLabelsToPr = addLabelsToPr;
+module.exports.findByLabels = findByLabels;
 
 
 /***/ }),
 
-/***/ 709:
+/***/ 8841:
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 const core = __webpack_require__(2186);
 const gitHub = __webpack_require__(5438);
 
-const { inputList } = __webpack_require__(2381);
-const { labeler } = __webpack_require__(7497);
-const { labelerSinceTag } = __webpack_require__(7637);
+const { findByLabels } = __webpack_require__(5379);
 
 const params = {
   gitHubClient: gitHub.getOctokit(core.getInput('GITHUB_TOKEN')),
-  skipLabels: inputList(core.getInput('skip-labels')),
-  globsToAddAll: inputList(core.getInput('globs-to-add-all')),
-  dryRun: core.getInput('dry-run') === 'true',
-  prefix: core.getInput('prefix'),
 };
 
-const labelerFn = core.getInput('diff-by') === 'tag' ? labelerSinceTag : labeler;
-
-labelerFn(params)
-  .then((labels) => {
-    core.setOutput('labels', labels.join(','));
+findByLabels(params)
+  .then((pkgJsons) => {
+    core.setOutput('packages', JSON.stringify(pkgJsons));
   })
   .catch((err) => {
     console.error(err);
     core.setFailed(err.message);
   });
-
-
-/***/ }),
-
-/***/ 7637:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const github = __webpack_require__(5438);
-const Project = __webpack_require__(234);
-
-const { LABEL_PREFIX } = __webpack_require__(1404);
-const { trueUpGitHistory } = __webpack_require__(8762);
-const { exec } = __webpack_require__(6264);
-const { cleanAppName, appNameEquals } = __webpack_require__(2381);
-
-const { addLabelsToPr } = __webpack_require__(9391);
-
-async function changedSinceLatestTag(rootDir, packageName, path) {
-  const tagPrefix = `refs/tags/${packageName}@*`;
-  const refsTags = await exec(`git for-each-ref --sort=-taggerdate --format '%(refname)' ${tagPrefix}`);
-  const [latestTag] = refsTags
-    .split('\n')
-    .filter(Boolean)
-    .map((refTag) => refTag.replace('refs/tags/', ''));
-
-  if (!latestTag) {
-    return packageName;
-  }
-
-  const changedFiles = await exec(`git diff --name-only ${latestTag} -- ${rootDir}/${path}`);
-
-  return changedFiles.length > 0 ? packageName : null;
-}
-
-async function findChangedPackages(project) {
-  const pkgJsons = await project.getPackages();
-  const rootDir = project.packageParentDirs[0].split('/').pop();
-
-  const packages = await Promise.all(
-    pkgJsons.map((pkgJson) => changedSinceLatestTag(rootDir, pkgJson.name, pkgJson.location.split('/').pop())),
-  );
-
-  return packages.filter(Boolean);
-}
-
-async function labelerSinceTag({ gitHubClient, skipLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
-  const project = new Project(process.cwd());
-
-  if (github.context.actor) {
-    await trueUpGitHistory();
-  }
-
-  const packages = await findChangedPackages(project);
-  const labels = packages
-    .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
-    .map((name) => `${prefix}${cleanAppName(name, prefix)}`); // remove @scope/ and add deploy: prefix
-
-  if (!dryRun) {
-    await addLabelsToPr(gitHubClient, labels);
-  }
-
-  return labels;
-}
-
-module.exports.labelerSinceTag = labelerSinceTag;
-
-
-/***/ }),
-
-/***/ 7497:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info } = __webpack_require__(2186);
-const github = __webpack_require__(5438);
-const Project = __webpack_require__(234);
-const minimatch = __webpack_require__(3973);
-
-const { LABEL_PREFIX } = __webpack_require__(1404);
-const { getDestBranch, getSrcBranch, trueUpGitHistory } = __webpack_require__(8762);
-const { exec } = __webpack_require__(6264);
-const { cleanAppName, appNameEquals } = __webpack_require__(2381);
-
-const { addLabelsToPr } = __webpack_require__(9391);
-
-async function findChangedFiles(srcBranch, destBranch) {
-  if (github.context.actor) {
-    // Needed for finding the current branch
-    await trueUpGitHistory();
-  }
-
-  const remote = await exec('git remote');
-  const changes = await exec(`git diff --name-only ${remote ? `${remote}/` : ''}${destBranch} ${srcBranch}`);
-
-  return changes.split('\n').filter(Boolean);
-}
-
-async function findChangedPackages(project, changedFiles) {
-  const pkgJsons = await project.getPackages();
-  const rootDir = project.packageParentDirs[0].split('/').pop();
-
-  const changedPkgDirs = changedFiles
-    .filter((filename) => filename.startsWith(rootDir))
-    .map((filename) => filename.substring(0, filename.indexOf('/', rootDir.length + 1)));
-
-  const uniqChangedPkgDirs = [...new Set(changedPkgDirs)];
-
-  return uniqChangedPkgDirs.map((pkgDir) => {
-    const { name } = pkgJsons.find((pkgJson) => pkgJson.location.endsWith(pkgDir));
-    return name;
-  });
-}
-
-async function labeler({ gitHubClient, skipLabels = [], globsToAddAll = [], dryRun = false, prefix = LABEL_PREFIX }) {
-  const project = new Project(process.cwd());
-
-  const srcBranch = await getSrcBranch();
-  const destBranch = await getDestBranch();
-
-  let changedFiles;
-
-  try {
-    changedFiles = await findChangedFiles(srcBranch, destBranch);
-  } catch (err) {
-    // Retry once
-    changedFiles = await findChangedFiles(srcBranch, destBranch);
-  }
-
-  info(`Changed files`);
-  info(changedFiles.join('\n'));
-
-  const addAll = changedFiles.some((file) => globsToAddAll.some((glob) => minimatch(file, glob)));
-
-  const packages = addAll
-    ? (await project.getPackages()).map((pkgJson) => pkgJson.name)
-    : await findChangedPackages(project, changedFiles);
-
-  const labels = packages
-    .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
-    .map((name) => `${prefix}${cleanAppName(name, prefix)}`) // remove @scope/ and add deploy: prefix
-    .sort();
-
-  if (!dryRun) {
-    await addLabelsToPr(gitHubClient, labels);
-  }
-
-  return labels;
-}
-
-module.exports.labeler = labeler;
 
 
 /***/ }),
@@ -3321,7 +3168,7 @@ exports.getFileSystemAdapter = getFileSystemAdapter;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const optionsManager = __webpack_require__(8018);
-const statProvider = __webpack_require__(4171);
+const statProvider = __webpack_require__(709);
 /**
  * Asynchronous API.
  */
@@ -3373,7 +3220,7 @@ exports.prepare = prepare;
 
 /***/ }),
 
-/***/ 4171:
+/***/ 709:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -55053,6 +54900,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(709);
+/******/ 	return __webpack_require__(8841);
 /******/ })()
 ;

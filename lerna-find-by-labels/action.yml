@@ -1,0 +1,12 @@
+name: Find package.json by labels
+description: Returns a modified version of the Lerna package.json files using the PR labels
+inputs:
+  GITHUB_TOKEN:
+    description: The GitHub Action token
+    required: true
+outputs:
+  packages:
+    description: Serialized JSON array of modified package.json files.
+runs:
+  using: node14
+  main: index.js

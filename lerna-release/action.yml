@@ -31,7 +31,7 @@ inputs:
     required: false
     default: "America/Los_Angeles"
 runs:
-  using: node12
+  using: node14
   main: index.js
   post: post/index.js
   post-if: success()
