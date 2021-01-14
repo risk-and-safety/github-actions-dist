@@ -19,8 +19,8 @@ module.exports = /******/ (() => {
           repo: github.context.repo.repo,
           pull_number: github.context.payload.pull_request.number,
         });
-        console.log('🚀 ~ file: index.js ~ line 25 ~ findByLabels ~ data', data);
         const labels = data.labels.map((label) => label.name);
+        console.log('🚀 ~ file: index.js ~ line 22 ~ findByLabels ~ data', labels);
 
         const project = new Project(process.cwd());
         const rootDir = project.packageParentDirs[0].split('/').pop();
