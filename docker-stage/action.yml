@@ -31,5 +31,5 @@ outputs:
   image:
     description: The Docker image name or comma separated list if mulitple apps
 runs:
-  using: node14
+  using: node12
   main: index.js

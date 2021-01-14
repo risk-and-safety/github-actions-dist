@@ -8,5 +8,5 @@ outputs:
   packages:
     description: Serialized JSON array of modified package.json files.
 runs:
-  using: node14
+  using: node12
   main: index.js

@@ -28,5 +28,5 @@ outputs:
   labels:
     description: Comma separated list of app labels
 runs:
-  using: node14
+  using: node12
   main: index.js
