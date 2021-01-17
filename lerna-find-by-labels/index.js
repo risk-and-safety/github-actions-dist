@@ -11,7 +11,7 @@ const QueryGraph = __webpack_require__(246);
 
 const { appNameEquals } = __webpack_require__(2381);
 
-async function findByLabels({ gitHubClient }) {
+async function findByLabels({ gitHubClient, packageJsonKeys = ['name', 'location', 'version'] }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -27,16 +27,19 @@ async function findByLabels({ gitHubClient }) {
 
   const project = new Project(process.cwd());
   const rootDir = project.packageParentDirs[0].split('/').pop();
-  const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sorted by dependencies before dependents
+  const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sort dependencies before dependents
 
   return pkgJsons
     .filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)))
-    .map((pkgJson) => ({
-      name: pkgJson.name,
-      location: pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`)),
-      deployTypes: (pkgJson.get('rss') || {}).deployTypes,
-      version: pkgJson.version,
-    }));
+    .map((pkgJson) =>
+      packageJsonKeys.reduce((acc, key) => {
+        const value =
+          key === 'location' ? pkgJson[key].substring(pkgJson[key].indexOf(`${rootDir}/`)) : pkgJson.get(key);
+
+        // Flatten nested objects
+        return value && typeof value === 'object' ? { ...acc, ...value } : { ...acc, [key]: value };
+      }, {}),
+    );
 }
 
 module.exports.findByLabels = findByLabels;
@@ -48,12 +51,15 @@ module.exports.findByLabels = findByLabels;
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 const core = __webpack_require__(2186);
-const gitHub = __webpack_require__(5438);
+const github = __webpack_require__(5438);
+
+const { inputList } = __webpack_require__(2381);
 
 const { findByLabels } = __webpack_require__(5379);
 
 const params = {
-  gitHubClient: gitHub.getOctokit(core.getInput('GITHUB_TOKEN')),
+  gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN') || github.token),
+  packageJsonKeys: inputList(core.getInput('package-json-keys')),
 };
 
 findByLabels(params)
