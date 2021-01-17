@@ -144,7 +144,6 @@ module.exports.labelerSinceTag = labelerSinceTag;
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 const Project = __webpack_require__(234);
-const minimatch = __webpack_require__(3973);
 
 const { LABEL_PREFIX } = __webpack_require__(1404);
 const { getDestBranch, getSrcBranch, trueUpGitHistory } = __webpack_require__(8762);
@@ -181,7 +180,7 @@ async function findChangedPackages(project, changedFiles) {
   });
 }
 
-async function labeler({ gitHubClient, skipLabels = [], globsToAddAll = [], dryRun = false, prefix = LABEL_PREFIX }) {
+async function labeler({ gitHubClient, skipLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
   const project = new Project(process.cwd());
 
   const srcBranch = await getSrcBranch();
@@ -199,11 +198,7 @@ async function labeler({ gitHubClient, skipLabels = [], globsToAddAll = [], dryR
   info(`Changed files`);
   info(changedFiles.join('\n'));
 
-  const addAll = changedFiles.some((file) => globsToAddAll.some((glob) => minimatch(file, glob)));
-
-  const packages = addAll
-    ? (await project.getPackages()).map((pkgJson) => pkgJson.name)
-    : await findChangedPackages(project, changedFiles);
+  const packages = await findChangedPackages(project, changedFiles);
 
   const labels = packages
     .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
