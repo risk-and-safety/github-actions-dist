@@ -12,10 +12,6 @@ inputs:
     description: Comma/newline delimited list of labels to ignore
     required: false
     default: ''
-  globs-to-add-all:
-    description: Files globs that cause all deploy labels to be added. Only applies to diff-by branch
-    required: false
-    default: ''
   dry-run:
     description: Indicates that the labels should be calculated and output but not pushed to the pull request
     required: false
