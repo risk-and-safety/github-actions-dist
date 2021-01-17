@@ -54,7 +54,6 @@ const { labelerSinceTag } = __webpack_require__(7637);
 const params = {
   gitHubClient: gitHub.getOctokit(core.getInput('GITHUB_TOKEN')),
   skipLabels: inputList(core.getInput('skip-labels')),
-  globsToAddAll: inputList(core.getInput('globs-to-add-all')),
   dryRun: core.getInput('dry-run') === 'true',
   prefix: core.getInput('prefix'),
 };
