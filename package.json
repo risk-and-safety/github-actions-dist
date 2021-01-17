@@ -22,6 +22,7 @@
     "@actions/github": "4.0.0",
     "@lerna/project": "3.21.0",
     "@lerna/publish": "3.22.1",
+    "@lerna/query-graph": "3.18.5",
     "@lerna/version": "3.22.1",
     "@rss/common-nodejs": "0.5.23",
     "@slack/web-api": "5.9.0",
