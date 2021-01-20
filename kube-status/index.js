@@ -10268,9 +10268,9 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
-async function dockerBuild(dockerImage, tag, path, commit) {
+async function dockerBuild(dockerImage, tag, path, commit, fileHash) {
   const now = new Date().toISOString();
-  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit} --label fileHash=${fileHash}`;
   await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
 }
 
