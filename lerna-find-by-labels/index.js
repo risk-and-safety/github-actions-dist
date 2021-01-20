@@ -9,9 +9,10 @@ const github = __webpack_require__(5438);
 const Project = __webpack_require__(234);
 const QueryGraph = __webpack_require__(246);
 
+const { LABEL_PREFIX } = __webpack_require__(1404);
 const { appNameEquals } = __webpack_require__(2381);
 
-async function findByLabels({ gitHubClient, packageJsonKeys = ['name', 'location', 'version'] }) {
+async function findByLabels({ gitHubClient, packageJsonKeys = ['label', 'name', 'location', 'version'] }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -33,11 +34,19 @@ async function findByLabels({ gitHubClient, packageJsonKeys = ['name', 'location
     .filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)))
     .map((pkgJson) =>
       packageJsonKeys.reduce((acc, key) => {
-        const value =
-          key === 'location' ? pkgJson[key].substring(pkgJson[key].indexOf(`${rootDir}/`)) : pkgJson.get(key);
+        if (key === 'label') {
+          const label = labels
+            .find((item) => appNameEquals(item, pkgJson.name))
+            .replace(new RegExp(`^${LABEL_PREFIX}`), '');
+          return { ...acc, label };
+        }
 
-        // Flatten nested objects
-        return value && typeof value === 'object' ? { ...acc, ...value } : { ...acc, [key]: value };
+        if (key === 'location') {
+          const location = pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`));
+          return { ...acc, location };
+        }
+
+        return { ...acc, [key]: pkgJson.get(key) };
       }, {}),
     );
 }
