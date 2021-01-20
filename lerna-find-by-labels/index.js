@@ -5,6 +5,7 @@ module.exports =
 /***/ 5379:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 const Project = __webpack_require__(234);
 const QueryGraph = __webpack_require__(246);
@@ -30,25 +31,27 @@ async function findByLabels({ gitHubClient, packageJsonKeys = ['label', 'name', 
   const rootDir = project.packageParentDirs[0].split('/').pop();
   const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sort dependencies before dependents
 
-  return pkgJsons
-    .filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)))
-    .map((pkgJson) =>
-      packageJsonKeys.reduce((acc, key) => {
-        if (key === 'label') {
-          const label = labels
-            .find((item) => appNameEquals(item, pkgJson.name))
-            .replace(new RegExp(`^${LABEL_PREFIX}`), '');
-          return { ...acc, label };
-        }
+  const matches = pkgJsons.filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)));
 
-        if (key === 'location') {
-          const location = pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`));
-          return { ...acc, location };
-        }
+  info(`Found: ${matches.map(({ name }) => name)}`);
 
-        return { ...acc, [key]: pkgJson.get(key) };
-      }, {}),
-    );
+  return matches.map((pkgJson) =>
+    packageJsonKeys.reduce((acc, key) => {
+      if (key === 'label') {
+        const label = labels
+          .find((item) => appNameEquals(item, pkgJson.name))
+          .replace(new RegExp(`^${LABEL_PREFIX}`), '');
+        return { ...acc, label };
+      }
+
+      if (key === 'location') {
+        const location = pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`));
+        return { ...acc, location };
+      }
+
+      return { ...acc, [key]: pkgJson.get(key) };
+    }, {}),
+  );
 }
 
 module.exports.findByLabels = findByLabels;
