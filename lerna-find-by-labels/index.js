@@ -13,7 +13,7 @@ const QueryGraph = __webpack_require__(246);
 const { LABEL_PREFIX } = __webpack_require__(1404);
 const { appNameEquals } = __webpack_require__(2381);
 
-async function findByLabels({ gitHubClient, packageJsonKeys = ['label', 'name', 'location', 'version'] }) {
+async function findByLabels({ gitHubClient, include, packageJsonKeys = ['label', 'name', 'location', 'version'] }) {
   const pullRequest = github.context.payload.pull_request;
 
   if (!pullRequest) {
@@ -25,7 +25,7 @@ async function findByLabels({ gitHubClient, packageJsonKeys = ['label', 'name', 
     repo: github.context.repo.repo,
     pull_number: pullRequest.number,
   });
-  const labels = data.labels.map((label) => label.name);
+  const labels = include || data.labels.map((label) => label.name);
 
   const project = new Project(process.cwd());
   const rootDir = project.packageParentDirs[0].split('/').pop();
@@ -71,6 +71,7 @@ const { findByLabels } = __webpack_require__(5379);
 
 const params = {
   gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN') || github.token),
+  include: core.getInput('include') && inputList(core.getInput('include')),
   packageJsonKeys: inputList(core.getInput('package-json-keys')),
 };
 

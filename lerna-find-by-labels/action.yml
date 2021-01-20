@@ -4,8 +4,11 @@ inputs:
   GITHUB_TOKEN:
     description: The GitHub Action token
     required: false
+  include:
+    description: Labels to use instead of querying the current pull request
+    required: false
   package-json-keys:
-    description: package.json keys to included in the output
+    description: Package.json keys to include in the output
     required: false
     default: label,name,location,version
 outputs:
