@@ -50,12 +50,12 @@ async function dockerPull(params) {
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
 
     const fileHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${srcTag}`);
-    return { image: `${dockerImage}:${tag}`, found: true, cacheHit: params.fileHash === fileHash };
+    return { image: `${dockerImage}:${tag}`, found: true, cacheMiss: params.fileHash !== fileHash };
   }
 
   info(`No Docker image matching ${app}:${srcTagPattern} found`);
 
-  return { image: `${dockerImage}:${tag}`, found: false, cacheHit: false };
+  return { image: `${dockerImage}:${tag}`, found: false, cacheMiss: true };
 }
 
 module.exports.dockerPull = dockerPull;
