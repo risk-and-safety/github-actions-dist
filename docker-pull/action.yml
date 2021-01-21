@@ -25,8 +25,8 @@ outputs:
     description: The Docker image name
   found:
     description: Docker image exists
-  cache-miss:
-    description: Docker 'fileHash' label did not match the provided file-hash
+  cache-hit:
+    description: Docker 'fileHash' label matches the provided file-hash
 runs:
   using: node12
   main: index.js

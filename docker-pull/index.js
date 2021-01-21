@@ -49,12 +49,12 @@ async function dockerPull(params) {
     await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${stageTag}`);
 
     const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${srcTag}`);
-    return { image: `${dockerImage}:${stageTag}`, found: true, cacheMiss: fileHash !== dockerHash };
+    return { image: `${dockerImage}:${stageTag}`, found: true, cacheHit: fileHash === dockerHash };
   }
 
   info(`No Docker image matching ${app}:${srcTagPattern} found`);
 
-  return { image: `${dockerImage}:${stageTag}`, found: false, cacheMiss: true };
+  return { image: `${dockerImage}:${stageTag}`, found: false, cacheHit: false };
 }
 
 module.exports.dockerPull = dockerPull;
@@ -79,10 +79,10 @@ const params = {
 };
 
 dockerPull(params)
-  .then(({ image, found, cacheMiss }) => {
+  .then(({ image, found, cacheHit }) => {
     core.setOutput('image', image);
     core.setOutput('found', found);
-    core.setOutput('cache-miss', cacheMiss);
+    core.setOutput('cache-hit', cacheHit);
   })
   .catch((err) => {
     console.error(err);
