@@ -10247,10 +10247,11 @@ module.exports.gitMerge = gitMerge;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
+const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getSrcBranch } = __webpack_require__(8762);
+const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
 const { exec, sh } = __webpack_require__(6264);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -10268,9 +10269,17 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
-async function dockerBuild(dockerImage, tag, path, commit) {
+async function dockerBuild(dockerImage, tag, path, moreLabels = []) {
+  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+    throw new Error('Missing yarn.lock or package-lock.json file');
+  }
+
   const now = new Date().toISOString();
-  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  const labels = [`org.opencontainers.image.created=${now}`, `commit=${await getShortCommit()}`, ...moreLabels].reduce(
+    (acc, label) => `${acc} --label ${label}`,
+    '',
+  );
+
   await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
 }
 

@@ -1,0 +1,32 @@
+name: Docker Pull
+description: Pull previously built image and compare file hash for cache hit.
+inputs:
+  username:
+    description: Username for the repo
+    required: true
+  password:
+    description: Personal Access Token for the GitHub Container Registry ghcr.io
+    required: true
+  GITHUB_TOKEN:
+    description: GitHub token for finding the latest Docker image. Required since the password is a Personal Access Token for ghcr.io
+    required: true
+  app:
+    description: App name
+    required: true
+  file-hash:
+    description: File hash to compare to the Docker 'fileHash' label to determine a cache hit
+    required: false
+  registry:
+    description: Docker registry
+    required: false
+    default: ghcr.io
+outputs:
+  image:
+    description: The Docker image name
+  found:
+    description: Docker image exists
+  cache-miss:
+    description: Docker 'fileHash' label did not match the provided file-hash
+runs:
+  using: node12
+  main: index.js

@@ -1,14 +1,17 @@
 name: Docker Release
-description: Add docker tag for Flux to pickup the new image (eg prod-1234567, 1.0.1)
+description: Docker build and push. If tagged for deploy, Flux will pick up the new image (eg prod-1234567) after a few minutes.
 inputs:
   username:
     description: Username for the repo
     required: true
   password:
-    description: Password/token for the repo
+    description: GitHub Token or Personal Access Token for the GitHub Container Registry ghcr.io
     required: true
+  GITHUB_TOKEN:
+    description: GitHub token for finding the latest Docker image. Required if the password is a Personal Access Token for ghcr.io
+    required: false
   app:
-    description: App name or comma separated list of apps to tag for release
+    description: App name
     required: true
   docker-name:
     description: Docker image name if different from the app name
@@ -16,8 +19,15 @@ inputs:
   tag-prefix:
     description: Image tag prefix that Flux will look for (eg 'glob:dev-*'). Defaults to the env [dev,qa,prod,hc]
     required: false
+  deploy:
+    description: Indicates the Docker image should be tagged for deployment (eg 'prod-12345678')
+    required: false
+    default: 'true'
   path:
-    description: Docker build directory to build from instead of tagging an existing image. Only appies to a single app.
+    description: Docker build directory. If not provided, the staged Docker image will be tagged for deployment.
+    required: false
+  labels:
+    description: Additional labels to add to the Docker image. Already includes 'created' and 'commit'.
     required: false
   registry:
     description: Docker registry
@@ -25,7 +35,7 @@ inputs:
     default: docker.pkg.github.com
 outputs:
   image:
-    description: The Docker image name or comma separated list if mulitple apps
+    description: The Docker image name
 runs:
   using: node12
   main: index.js

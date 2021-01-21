@@ -2,48 +2,92 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 6524:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+/***/ 6934:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const core = __webpack_require__(2186);
+const { info } = __webpack_require__(2186);
+const github = __webpack_require__(5438);
 
-const { prune } = __webpack_require__(2655);
+const { ENV_BRANCHES, getEnv, getSrcBranch } = __webpack_require__(8762);
+const { dockerLogin, findImages, stagingTag } = __webpack_require__(91);
+const { exec, sh } = __webpack_require__(6264);
+const { cleanAppName } = __webpack_require__(2381);
 
-prune({
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN') || core.getInput('password', { required: true }),
-  app: core.getInput('app', { required: true }),
-}).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
+async function tagPattern(tag) {
+  const branch = await getSrcBranch();
+  if (ENV_BRANCHES.includes(branch)) {
+    const env = await getEnv({ branch });
+    return `(${env}-[0-9a-f]{7,8}|${tag})`;
+  }
+
+  return tag;
+}
+
+async function dockerPull(params) {
+  const { owner, repo } = github.context.repo;
+  const { fileHash, password, GITHUB_TOKEN, registry = 'ghcr.io', username } = params;
+  const app = cleanAppName(params.app);
+  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+  const stageTag = await stagingTag();
+
+  await dockerLogin({ username, password, registry });
+
+  const srcTagPattern = await tagPattern(stageTag);
+  const gitHubClient = github.getOctokit(GITHUB_TOKEN);
+  const [latestImage] = await findImages({
+    gitHubClient,
+    owner,
+    repo,
+    apps: [app],
+    tag: srcTagPattern,
+  });
+
+  const srcTag = latestImage && latestImage.version;
+
+  if (srcTag) {
+    await sh(`docker pull ${dockerImage}:${srcTag}`);
+    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${stageTag}`);
+
+    const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${srcTag}`);
+    return { image: `${dockerImage}:${stageTag}`, found: true, cacheMiss: fileHash !== dockerHash };
+  }
+
+  info(`No Docker image matching ${app}:${srcTagPattern} found`);
+
+  return { image: `${dockerImage}:${stageTag}`, found: false, cacheMiss: true };
+}
+
+module.exports.dockerPull = dockerPull;
 
 
 /***/ }),
 
-/***/ 2655:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+/***/ 725:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
-const github = __webpack_require__(5438);
-const { ENV_BRANCHES } = __webpack_require__(8762);
+const core = __webpack_require__(2186);
 
-const { deleteVersion, findImages, stagingTag } = __webpack_require__(91);
+const { dockerPull } = __webpack_require__(6934);
 
-async function prune({ app, password }) {
-  const { owner, repo } = github.context.repo;
-  const tag = await stagingTag();
-  const tagPrefix = tag.split('-')[0];
+const params = {
+  username: core.getInput('username', { required: true }),
+  password: core.getInput('password', { required: true }),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN', { required: true }),
+  app: core.getInput('app', { required: true }),
+  fileHash: core.getInput('file-hash'),
+  registry: core.getInput('registry'),
+};
 
-  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
-    throw new Error(`The Docker tag, ${tag}, looks like an env- tag we want to keep`);
-  } else {
-    const gitHubClient = github.getOctokit(password);
-    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
-
-    await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
-  }
-}
-
-module.exports.prune = prune;
+dockerPull(params)
+  .then(({ image, found, cacheMiss }) => {
+    core.setOutput('image', image);
+    core.setOutput('found', found);
+    core.setOutput('cache-miss', cacheMiss);
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
 
 
 /***/ }),
@@ -9423,6 +9467,27 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 1404:
+/***/ ((module) => {
+
+module.exports.DEPLOY_TYPES = {
+  NONE: 'NONE', // Placeholder so the deploy job ignores this package
+  DOCKER_BUILD: 'DOCKER_BUILD',
+  KUBE_JOB: 'KUBE_JOB',
+  KUBE_DAEMONSET: 'KUBE_DAEMONSET',
+  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
+  LAMBDA: 'LAMBDA',
+  MAVEN: 'MAVEN',
+  NPM: 'NPM',
+  S3: 'S3',
+  GIT: 'GIT',
+};
+
+module.exports.LABEL_PREFIX = 'deploy:';
+
+
+/***/ }),
+
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -9790,6 +9855,134 @@ module.exports.exec = exec;
 
 /***/ }),
 
+/***/ 2381:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { ENV_BRANCHES } = __webpack_require__(8762);
+const { LABEL_PREFIX } = __webpack_require__(1404);
+
+module.exports.inputList = function inputList(input) {
+  let list = input || [];
+
+  if (typeof input === 'string') {
+    try {
+      list = JSON.parse(input);
+    } catch (err) {
+      list = input.split(/[,\r\n]/g).map((item) => item.trim());
+    }
+  }
+
+  return list.filter(Boolean);
+};
+
+module.exports.validateRepo = function validateRepo(repoUrl) {
+  if (!repoUrl || !/^(https:\/\/|git@)[\w-.]+[/:][\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repoUrl)) {
+    throw new Error(`Invalid repo URL "${repoUrl}"`);
+  }
+
+  return repoUrl;
+};
+
+function cleanAppName(name, prefix = LABEL_PREFIX) {
+  const scopePrefix = /^@[\w-]+\//;
+  const labelPrefix = new RegExp(`^${prefix}`);
+  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
+  const cleanName = name
+    .replace(labelPrefix, '')
+    .replace(scopePrefix, '')
+    .replace(versionSuffix, '');
+
+  if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
+    throw new Error(`Invalid app name "${cleanName}"`);
+  }
+
+  return cleanName;
+}
+
+module.exports.cleanAppName = cleanAppName;
+
+module.exports.appNameEquals = function appNameEquals(app1, app2) {
+  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
+};
+
+module.exports.validateEnv = function validateEnv(env) {
+  if (env !== 'dev' && !ENV_BRANCHES.includes(env)) {
+    throw new Error(`Invalid env "${env}"`);
+  }
+
+  return env;
+};
+
+module.exports.validateNamespace = function validateNamespace(namespace) {
+  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+    throw new Error(`Invalid namespace name "${namespace}"`);
+  }
+
+  return namespace;
+};
+
+module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
+  const zipPath = uncleanZipPath || '.';
+
+  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
+    throw new Error(`Invalid zip path "${uncleanZipPath}"`);
+  }
+
+  return zipPath;
+};
+
+module.exports.cleanPath = function cleanPath(uncleanPath) {
+  const path = uncleanPath || '.';
+
+  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
+    throw new Error(`Invalid path "${uncleanPath}"`);
+  }
+
+  return path;
+};
+
+module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
+  let buildDir = uncleanBuildDir;
+
+  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
+    throw new Error(`Invalid build dir "${uncleanBuildDir}"`);
+  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
+    throw new Error('Build directory should not be empty or the root of the project');
+  }
+
+  // Append trailing slash
+  if (!buildDir.endsWith('/')) {
+    buildDir = `${buildDir}/`;
+  }
+
+  return buildDir;
+};
+
+module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
+  let context = uncleanContext === '/' ? '' : uncleanContext;
+
+  if (context !== '') {
+    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
+      throw new Error(`Invalid web context "${uncleanContext}". Only lowercase and dash`);
+    }
+
+    // Append trailing slash
+    if (!context.endsWith('/')) {
+      context = `${context}/`;
+    }
+
+    // Remove leading slash
+    if (context.startsWith('/')) {
+      context = context.substring(1);
+    }
+  }
+
+  return context;
+};
+
+
+/***/ }),
+
 /***/ 1254:
 /***/ ((module) => {
 
@@ -10020,6 +10213,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(6524);
+/******/ 	return __webpack_require__(725);
 /******/ })()
 ;

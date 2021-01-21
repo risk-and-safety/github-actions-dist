@@ -7,79 +7,38 @@ module.exports =
 
 const github = __webpack_require__(5438);
 
-const { getEnv, getShortCommit, trueUpGitHistory } = __webpack_require__(8762);
-const {
-  dockerBuild,
-  dockerLogin,
-  dockerPush,
-  findImages,
-  oldStagingTag,
-  stagingTag,
-} = __webpack_require__(91);
-const { sequentialDeploy } = __webpack_require__(552);
+const { getEnv, getShortCommit } = __webpack_require__(8762);
+const { dockerBuild, dockerLogin, dockerPush, stagingTag } = __webpack_require__(91);
 const { exec, sh } = __webpack_require__(6264);
 const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
 
-async function dockerReleaseOne(params) {
-  const app = cleanAppName(params.app);
-  const commit = await getShortCommit();
-  const env = await getEnv();
-  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
-  let tag = `${tagPrefix}-${commit}`;
-  const path = params.path && cleanPath(params.path);
+async function dockerRelease(params) {
   const { owner, repo } = github.context.repo;
-  const { password, registry = 'docker.pkg.github.com' } = params;
+  const { deploy = true, labels = [], password, registry = 'docker.pkg.github.com', username } = params;
+  const path = params.path && cleanPath(params.path);
+  const app = cleanAppName(params.app);
   const dockerName = cleanAppName(params.dockerName || app);
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
+  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
+  const commit = await getShortCommit();
+  const stageTag = await stagingTag();
+  let tag = deploy ? `${tagPrefix}-${commit}` : stageTag;
 
-  await dockerLogin(params);
-
-  const gitHubClient = github.getOctokit(password);
-  const [existingTag] = await findImages({ gitHubClient, owner, repo, apps: [dockerName], tag });
-
-  if (existingTag) {
-    return `${dockerImage}:${tag}`;
-  }
+  await dockerLogin({ username, password, registry });
 
   if (path) {
-    await dockerBuild(dockerImage, tag, path, commit);
+    await dockerBuild(dockerImage, tag, path, labels);
   } else {
-    let srcTag = await stagingTag();
+    await sh(`docker pull ${dockerImage}:${stageTag}`);
 
-    try {
-      await sh(`docker pull ${dockerImage}:${srcTag}`);
-    } catch (err) {
-      // TODO: remove retry when backward compatibility is no longer needed
-      if (err.message.includes('not found: manifest unknown:')) {
-        srcTag = await oldStagingTag();
-        await sh(`docker pull ${dockerImage}:${srcTag}`);
-      } else {
-        throw err;
-      }
-    }
-
-    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${srcTag}`);
+    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${stageTag}`);
     tag = origCommit && origCommit !== '<no value>' ? `${tagPrefix}-${origCommit}` : tag;
-    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${tag}`);
+    await sh(`docker tag ${dockerImage}:${stageTag} ${dockerImage}:${tag}`);
   }
 
   await dockerPush(dockerImage, tag);
 
   return `${dockerImage}:${tag}`;
-}
-
-async function dockerRelease(params) {
-  if (params.path && params.app.length !== 1) {
-    throw new Error(`The build path: "${params.path}" is only supported for a single app`);
-  }
-
-  if (github.context.actor) {
-    // Needed for finding the current app git tag
-    await trueUpGitHistory();
-  }
-
-  // Force deployments to be sequential so the logs are readable.
-  return sequentialDeploy(params.app, async (app) => dockerReleaseOne({ ...params, app }));
 }
 
 module.exports.dockerRelease = dockerRelease;
@@ -98,11 +57,13 @@ const { inputList } = __webpack_require__(2381);
 const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
   app: inputList(core.getInput('app', { required: true })),
   dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
+  deploy: core.getInput('deploy') === 'true',
   path: core.getInput('path'),
-  repo: core.getInput('repo'),
+  labels: inputList(core.getInput('labels')),
   registry: core.getInput('registry'),
 };
 
@@ -9698,10 +9659,11 @@ module.exports.gitMerge = gitMerge;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
+const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getSrcBranch } = __webpack_require__(8762);
+const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
 const { exec, sh } = __webpack_require__(6264);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -9719,9 +9681,17 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
-async function dockerBuild(dockerImage, tag, path, commit) {
+async function dockerBuild(dockerImage, tag, path, moreLabels = []) {
+  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+    throw new Error('Missing yarn.lock or package-lock.json file');
+  }
+
   const now = new Date().toISOString();
-  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  const labels = [`org.opencontainers.image.created=${now}`, `commit=${await getShortCommit()}`, ...moreLabels].reduce(
+    (acc, label) => `${acc} --label ${label}`,
+    '',
+  );
+
   await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
 }
 
@@ -9809,43 +9779,6 @@ module.exports.findImages = findImages;
 module.exports.oldStagingTag = oldStagingTag;
 module.exports.stagingTag = stagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
-
-
-/***/ }),
-
-/***/ 552:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info } = __webpack_require__(2186);
-const util = __webpack_require__(1669);
-
-module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
-  info(`Deploying: [${apps}]`);
-
-  const failed = [];
-  const results = [];
-
-  // Force deployments to be sequential so the logs are readable.
-  // eslint-disable-next-line no-restricted-syntax
-  for (const app of apps) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      results.push(await deploy(app));
-    } catch (err) {
-      // Catch errors so that we don't prevent deployments
-      failed.push({ app, err });
-    }
-  }
-
-  if (failed.length) {
-    const failedApps = failed.map(({ app }) => app).join(', ');
-    const errors = failed.map(({ err }) => util.inspect(err)).join('\n');
-
-    throw new Error(`Failed to deploy: ${failedApps}\n${errors}`);
-  }
-
-  return results;
-};
 
 
 /***/ }),
