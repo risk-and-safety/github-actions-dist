@@ -28,7 +28,7 @@ const { ENV_BRANCHES } = __webpack_require__(8762);
 
 const { deleteVersion, findImages, stagingTag } = __webpack_require__(91);
 
-async function prune({ app, password }) {
+async function prune({ app, GITHUB_TOKEN }) {
   const { owner, repo } = github.context.repo;
   const tag = await stagingTag();
   const tagPrefix = tag.split('-')[0];
@@ -36,7 +36,7 @@ async function prune({ app, password }) {
   if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
     throw new Error(`The Docker tag, ${tag}, looks like an env- tag we want to keep`);
   } else {
-    const gitHubClient = github.getOctokit(password);
+    const gitHubClient = github.getOctokit(GITHUB_TOKEN);
     const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
 
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
