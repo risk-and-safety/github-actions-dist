@@ -75,8 +75,8 @@ const params = {
 };
 
 dockerRelease(params)
-  .then((images) => {
-    core.setOutput('image', images.join(','));
+  .then((image) => {
+    core.setOutput('image', image);
   })
   .catch((err) => {
     console.error(err);
