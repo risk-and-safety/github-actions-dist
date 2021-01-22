@@ -65,7 +65,7 @@ const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
   GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
-  app: inputList(core.getInput('app', { required: true })),
+  app: core.getInput('app', { required: true }),
   dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
   deploy: core.getInput('deploy') === 'true',

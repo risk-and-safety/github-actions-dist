@@ -39,6 +39,7 @@ async function prune({ app, GITHUB_TOKEN }) {
     const gitHubClient = github.getOctokit(GITHUB_TOKEN);
     const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag: stagingTag });
 
+    // TODO: Use the GitHub Container Registry (ghcr.io) API when available
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
   }
 }
