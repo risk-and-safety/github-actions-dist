@@ -12,6 +12,8 @@ inputs:
     required: false
     default: rss-artifact
 outputs:
+  s3Key:
+    description: S3 key
   metadata:
     description: S3 metadata about the file (eg { ContentLength, ContentType, Metadata })
   cache-hit:

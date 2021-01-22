@@ -33,7 +33,11 @@ async function dockerPull(params) {
   }
 
   const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${stagingTag}`);
-  return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit: fileHash === dockerHash };
+  const cacheHit = fileHash === dockerHash;
+
+  info(`Cache ${cacheHit ? 'hit' : 'miss'}: for file hash ${fileHash}`);
+
+  return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit };
 }
 
 module.exports.dockerPull = dockerPull;
