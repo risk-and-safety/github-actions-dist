@@ -7,8 +7,8 @@ module.exports =
 
 const github = __webpack_require__(5438);
 
-const { getEnv, getShortCommit } = __webpack_require__(8762);
-const { dockerBuild, dockerLogin, dockerPush, stagingTag } = __webpack_require__(91);
+const { getEnv, getDestBranch, getShortCommit } = __webpack_require__(8762);
+const { dockerBuild, dockerLogin, dockerPush, getStagingTag } = __webpack_require__(91);
 const { exec, sh } = __webpack_require__(6264);
 const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
 
@@ -21,22 +21,29 @@ async function dockerRelease(params) {
   const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
   const commit = await getShortCommit();
-  const stageTag = await stagingTag();
-  let tag = deploy ? `${tagPrefix}-${commit}` : stageTag;
+  const stagingTag = await getStagingTag();
+  let tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
 
   await dockerLogin({ username, password, registry });
 
   if (path) {
     await dockerBuild(dockerImage, tag, path, labels);
   } else {
-    await sh(`docker pull ${dockerImage}:${stageTag}`);
+    await sh(`docker pull ${dockerImage}:${stagingTag}`);
 
-    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${stageTag}`);
+    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${stagingTag}`);
     tag = origCommit && origCommit !== '<no value>' ? `${tagPrefix}-${origCommit}` : tag;
-    await sh(`docker tag ${dockerImage}:${stageTag} ${dockerImage}:${tag}`);
+    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
   }
 
   await dockerPush(dockerImage, tag);
+
+  if (deploy) {
+    // Tag for staging to the next environment
+    const nextStagingTag = await getStagingTag(await getDestBranch());
+    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${nextStagingTag}`);
+    await dockerPush(dockerImage, nextStagingTag);
+  }
 
   return `${dockerImage}:${tag}`;
 }
@@ -9758,17 +9765,10 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagingTag(branch) {
+async function getStagingTag(branch) {
   const srcBranch = branch || (await getSrcBranch());
 
   return `RC_${kebabCase(srcBranch)}`;
-}
-
-// TODO: remove when backward compatibility is no longer needed
-async function oldStagingTag() {
-  const srcBranch = await getSrcBranch();
-
-  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
@@ -9776,8 +9776,7 @@ module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagingTag = oldStagingTag;
-module.exports.stagingTag = stagingTag;
+module.exports.getStagingTag = getStagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 

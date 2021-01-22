@@ -8,53 +8,32 @@ module.exports =
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { ENV_BRANCHES, getEnv, getSrcBranch } = __webpack_require__(8762);
-const { dockerLogin, findImages, stagingTag } = __webpack_require__(91);
+const { dockerLogin, getStagingTag } = __webpack_require__(91);
 const { exec, sh } = __webpack_require__(6264);
 const { cleanAppName } = __webpack_require__(2381);
 
-async function tagPattern(tag) {
-  const branch = await getSrcBranch();
-  if (ENV_BRANCHES.includes(branch)) {
-    const env = await getEnv({ branch });
-    return `(${env}-[0-9a-f]{7,8}|${tag})`;
-  }
-
-  return tag;
-}
-
 async function dockerPull(params) {
   const { owner, repo } = github.context.repo;
-  const { fileHash, password, GITHUB_TOKEN, registry = 'ghcr.io', username } = params;
+  const { fileHash, password, registry = 'ghcr.io', username } = params;
   const app = cleanAppName(params.app);
   const dockerImage = `${registry}/${owner}/${repo}/${app}`;
-  const stageTag = await stagingTag();
+  const stagingTag = await getStagingTag();
 
   await dockerLogin({ username, password, registry });
 
-  const srcTagPattern = await tagPattern(stageTag);
-  const gitHubClient = github.getOctokit(GITHUB_TOKEN);
-  const [latestImage] = await findImages({
-    gitHubClient,
-    owner,
-    repo,
-    apps: [app],
-    tag: srcTagPattern,
-  });
+  try {
+    await sh(`docker pull ${dockerImage}:${stagingTag}`);
+  } catch (err) {
+    if (err.message.includes('daemon: name unknown')) {
+      info(`No Docker image matching ${app}:${stagingTag} found`);
+      return { image: `${dockerImage}:${stagingTag}`, found: false, cacheHit: false };
+    }
 
-  const srcTag = latestImage && latestImage.version;
-
-  if (srcTag) {
-    await sh(`docker pull ${dockerImage}:${srcTag}`);
-    await sh(`docker tag ${dockerImage}:${srcTag} ${dockerImage}:${stageTag}`);
-
-    const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${srcTag}`);
-    return { image: `${dockerImage}:${stageTag}`, found: true, cacheHit: fileHash === dockerHash };
+    throw err;
   }
 
-  info(`No Docker image matching ${app}:${srcTagPattern} found`);
-
-  return { image: `${dockerImage}:${stageTag}`, found: false, cacheHit: false };
+  const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${stagingTag}`);
+  return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit: fileHash === dockerHash };
 }
 
 module.exports.dockerPull = dockerPull;
@@ -72,7 +51,6 @@ const { dockerPull } = __webpack_require__(6934);
 const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN', { required: true }),
   app: core.getInput('app', { required: true }),
   fileHash: core.getInput('file-hash'),
   registry: core.getInput('registry'),
@@ -9771,17 +9749,10 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagingTag(branch) {
+async function getStagingTag(branch) {
   const srcBranch = branch || (await getSrcBranch());
 
   return `RC_${kebabCase(srcBranch)}`;
-}
-
-// TODO: remove when backward compatibility is no longer needed
-async function oldStagingTag() {
-  const srcBranch = await getSrcBranch();
-
-  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
@@ -9789,8 +9760,7 @@ module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagingTag = oldStagingTag;
-module.exports.stagingTag = stagingTag;
+module.exports.getStagingTag = getStagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 

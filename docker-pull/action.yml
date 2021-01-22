@@ -7,9 +7,6 @@ inputs:
   password:
     description: Personal Access Token for the GitHub Container Registry ghcr.io
     required: true
-  GITHUB_TOKEN:
-    description: GitHub token for finding the latest Docker image. Required since the password is a Personal Access Token for ghcr.io
-    required: true
   app:
     description: App name
     required: true

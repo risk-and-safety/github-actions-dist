@@ -26,18 +26,18 @@ prune({
 const github = __webpack_require__(5438);
 const { ENV_BRANCHES } = __webpack_require__(8762);
 
-const { deleteVersion, findImages, stagingTag } = __webpack_require__(91);
+const { deleteVersion, findImages, getStagingTag } = __webpack_require__(91);
 
 async function prune({ app, GITHUB_TOKEN }) {
   const { owner, repo } = github.context.repo;
-  const tag = await stagingTag();
-  const tagPrefix = tag.split('-')[0];
+  const stagingTag = await getStagingTag();
+  const tagPrefix = stagingTag.split('-')[0];
 
   if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
-    throw new Error(`The Docker tag, ${tag}, looks like an env- tag we want to keep`);
+    throw new Error(`The Docker tag, ${stagingTag}, looks like an env- tag we want to keep`);
   } else {
     const gitHubClient = github.getOctokit(GITHUB_TOKEN);
-    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag });
+    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag: stagingTag });
 
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
   }
@@ -9706,17 +9706,10 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagingTag(branch) {
+async function getStagingTag(branch) {
   const srcBranch = branch || (await getSrcBranch());
 
   return `RC_${kebabCase(srcBranch)}`;
-}
-
-// TODO: remove when backward compatibility is no longer needed
-async function oldStagingTag() {
-  const srcBranch = await getSrcBranch();
-
-  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
@@ -9724,8 +9717,7 @@ module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagingTag = oldStagingTag;
-module.exports.stagingTag = stagingTag;
+module.exports.getStagingTag = getStagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 
