@@ -15,7 +15,7 @@ const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 const { DOCKER_BUILD, KUBE_DAEMONSET, KUBE_DEPLOYMENT, KUBE_JOB } = DEPLOY_TYPES;
 
 function findDeployTypes(pkgJson) {
-  const { deployTypes = [] } = (pkgJson && pkgJson.get('rss')) || {};
+  const { deployTypes = [] } = (pkgJson && pkgJson.get('config')) || {};
 
   if (
     !deployTypes.includes(DOCKER_BUILD) &&

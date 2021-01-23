@@ -12,6 +12,7 @@ const { prune } = __webpack_require__(2655);
 prune({
   GITHUB_TOKEN: core.getInput('GITHUB_TOKEN') || core.getInput('password', { required: true }),
   app: core.getInput('app', { required: true }),
+  deploy: core.getInput('deploy') === 'true',
 }).catch((err) => {
   console.error(err);
   core.setFailed(err.message);
@@ -28,7 +29,11 @@ const { ENV_BRANCHES } = __webpack_require__(8762);
 
 const { deleteVersion, findImages, getStagingTag } = __webpack_require__(91);
 
-async function prune({ app, GITHUB_TOKEN }) {
+async function prune({ app, GITHUB_TOKEN, deploy }) {
+  if (!deploy) {
+    return;
+  }
+
   const { owner, repo } = github.context.repo;
   const stagingTag = await getStagingTag();
   const tagPrefix = stagingTag.split('-')[0];
