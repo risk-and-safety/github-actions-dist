@@ -14,18 +14,24 @@ const { LABEL_PREFIX } = __webpack_require__(1404);
 const { appNameEquals } = __webpack_require__(2381);
 
 async function findByLabels({ gitHubClient, include, packageJsonKeys = ['label', 'name', 'location', 'version'] }) {
-  const pullRequest = github.context.payload.pull_request;
+  let labels = [];
 
-  if (!pullRequest) {
-    throw new Error('pull request missing from GitHub payload');
+  if (include) {
+    labels = include;
+  } else {
+    const pullRequest = github.context.payload.pull_request;
+
+    if (!pullRequest) {
+      throw new Error('pull request missing from GitHub payload');
+    }
+
+    const { data } = await gitHubClient.pulls.get({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      pull_number: pullRequest.number,
+    });
+    labels = data.labels.map((label) => label.name);
   }
-
-  const { data } = await gitHubClient.pulls.get({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    pull_number: pullRequest.number,
-  });
-  const labels = include || data.labels.map((label) => label.name);
 
   const project = new Project(process.cwd());
   const rootDir = project.packageParentDirs[0].split('/').pop();
