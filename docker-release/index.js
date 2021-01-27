@@ -36,14 +36,14 @@ async function dockerRelease(params) {
     await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
   }
 
-  await dockerPush(dockerImage, tag);
-
   if (deploy) {
     // Tag for staging to the next environment
     const nextStagingTag = await getStagingTag(await getDestBranch());
     await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${nextStagingTag}`);
     await dockerPush(dockerImage, nextStagingTag);
   }
+
+  await dockerPush(dockerImage, tag);
 
   return `${dockerImage}:${tag}`;
 }
