@@ -2,7 +2,7 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 4627:
+/***/ 9391:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
@@ -45,14 +45,14 @@ module.exports.addLabelsToPr = addLabelsToPr;
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 const core = __webpack_require__(2186);
-const gitHub = __webpack_require__(5438);
+const github = __webpack_require__(5438);
 
 const { inputList } = __webpack_require__(2381);
 const { labeler } = __webpack_require__(7497);
 const { labelerSinceTag } = __webpack_require__(7637);
 
 const params = {
-  gitHubClient: gitHub.getOctokit(core.getInput('GITHUB_TOKEN')),
+  gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN')),
   skipLabels: inputList(core.getInput('skip-labels')),
   dryRun: core.getInput('dry-run') === 'true',
   prefix: core.getInput('prefix'),
@@ -83,7 +83,7 @@ const { trueUpGitHistory } = __webpack_require__(8762);
 const { exec } = __webpack_require__(6264);
 const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
-const { addLabelsToPr } = __webpack_require__(4627);
+const { addLabelsToPr } = __webpack_require__(9391);
 
 async function changedSinceLatestTag(rootDir, packageName, path) {
   const tagPrefix = `refs/tags/${packageName}@*`;
@@ -141,17 +141,24 @@ module.exports.labelerSinceTag = labelerSinceTag;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
+const github = __webpack_require__(5438);
 const Project = __webpack_require__(234);
 
 const { LABEL_PREFIX } = __webpack_require__(1404);
-const { getDestBranch, getSrcBranch } = __webpack_require__(8762);
+const { getDestBranch, getSrcBranch, trueUpGitHistory } = __webpack_require__(8762);
 const { exec } = __webpack_require__(6264);
 const { cleanAppName, appNameEquals } = __webpack_require__(2381);
 
-const { addLabelsToPr } = __webpack_require__(4627);
+const { addLabelsToPr } = __webpack_require__(9391);
 
 async function findChangedFiles(srcBranch, destBranch) {
-  const changes = await exec(`git diff --name-only ${destBranch} ${srcBranch}`);
+  if (github.context.actor) {
+    // Needed for finding the current branch
+    await trueUpGitHistory();
+  }
+
+  const remote = await exec('git remote');
+  const changes = await exec(`git diff --name-only ${remote ? `${remote}/` : ''}${destBranch} ${srcBranch}`);
 
   return changes.split('\n').filter(Boolean);
 }
@@ -191,9 +198,11 @@ async function labeler({ gitHubClient, skipLabels = [], dryRun = false, prefix =
   info(changedFiles.join('\n'));
 
   const packages = await findChangedPackages(project, changedFiles);
+
   const labels = packages
     .filter((name) => !skipLabels.some((label) => appNameEquals(label, name)))
-    .map((name) => `${prefix}${cleanAppName(name, prefix)}`); // remove @scope/ and add deploy: prefix
+    .map((name) => `${prefix}${cleanAppName(name, prefix)}`) // remove @scope/ and add deploy: prefix
+    .sort();
 
   if (!dryRun) {
     await addLabelsToPr(gitHubClient, labels);

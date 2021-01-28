@@ -18,6 +18,10 @@ inputs:
     description: S3 website suffix excluding env prefix [dev,qa,prod,hc]. Ignored if website is defined.
     required: false
     default: riskandsafety.com
+  zip-file:
+    description: Path to the zip file. If not provided it will pull the staged zip from S3.
+    required: false
+    default: "false"
   dry-run:
     description: Preview the S3 delete and put commands
     required: false

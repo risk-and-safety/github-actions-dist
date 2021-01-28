@@ -5,10 +5,13 @@ inputs:
     description: App name or comma separated list of apps
     required: true
   GITHUB_TOKEN:
-    description: GitHub token for finding the latest Docker image
-    required: true
+    description: GitHub token for finding the latest Docker image. Not needed if docker-image is provided.
+    required: false
+  docker-image:
+    description: Docker image
+    required: false
   docker-name:
-    description: Docker image name if different from the app name
+    description: Docker name if different from the app name. Not needed if docker-image is provided.
     required: false
   namespace:
     description: Kubernetes namespace for the app
@@ -29,7 +32,7 @@ inputs:
     required: false
     default: rss
   registry:
-    description: Docker registry
+    description: Docker registry. Not needed if docker-image is provided.
     required: false
     default: docker.pkg.github.com
   kibana-host:
