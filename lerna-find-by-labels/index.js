@@ -34,7 +34,7 @@ async function findByLabels({ gitHubClient, include, packageJsonKeys = ['label',
   }
 
   const project = new Project(process.cwd());
-  const rootDir = project.packageParentDirs[0].split('/').pop();
+  const projectDir = project.packageParentDirs[0].split('/').pop();
   const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sort dependencies before dependents
 
   const matches = pkgJsons.filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)));
@@ -51,7 +51,7 @@ async function findByLabels({ gitHubClient, include, packageJsonKeys = ['label',
       }
 
       if (key === 'location') {
-        const location = pkgJson.location.substring(pkgJson.location.indexOf(`${rootDir}/`));
+        const location = pkgJson.location.substring(pkgJson.location.indexOf(`${projectDir}/`));
         return { ...acc, location };
       }
 
@@ -58520,7 +58520,7 @@ async function gitMerge(params = {}) {
     // eslint-disable-next-line no-await-in-loop
     await sh(
       `git checkout ${destBranch}
-      git merge ${srcBranch}
+      git merge ${srcBranch} -s ours
       git push "${gitUrl}" --follow-tags`,
     );
 

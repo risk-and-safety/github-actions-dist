@@ -104,10 +104,10 @@ async function changedSinceLatestTag(rootDir, packageName, path) {
 
 async function findChangedPackages(project) {
   const pkgJsons = await project.getPackages();
-  const rootDir = project.packageParentDirs[0].split('/').pop();
+  const projectDir = project.packageParentDirs[0].split('/').pop();
 
   const packages = await Promise.all(
-    pkgJsons.map((pkgJson) => changedSinceLatestTag(rootDir, pkgJson.name, pkgJson.location.split('/').pop())),
+    pkgJsons.map((pkgJson) => changedSinceLatestTag(projectDir, pkgJson.name, pkgJson.location.split('/').pop())),
   );
 
   return packages.filter(Boolean);
@@ -165,18 +165,20 @@ async function findChangedFiles(srcBranch, destBranch) {
 
 async function findChangedPackages(project, changedFiles) {
   const pkgJsons = await project.getPackages();
-  const rootDir = project.packageParentDirs[0].split('/').pop();
+  const projectDir = project.packageParentDirs[0].split('/').pop();
 
   const changedPkgDirs = changedFiles
-    .filter((filename) => filename.startsWith(rootDir))
-    .map((filename) => filename.substring(0, filename.indexOf('/', rootDir.length + 1)));
+    .filter((filename) => filename.startsWith(projectDir))
+    .map((filename) => filename.substring(0, filename.indexOf('/', projectDir.length + 1)));
 
   const uniqChangedPkgDirs = [...new Set(changedPkgDirs)];
 
-  return uniqChangedPkgDirs.map((pkgDir) => {
-    const { name } = pkgJsons.find((pkgJson) => pkgJson.location.endsWith(pkgDir));
-    return name;
-  });
+  return uniqChangedPkgDirs
+    .map((pkgDir) => {
+      const { name } = pkgJsons.find((pkgJson) => pkgJson.location.endsWith(pkgDir)) || {};
+      return name;
+    })
+    .filter(Boolean);
 }
 
 async function labeler({ gitHubClient, skipLabels = [], dryRun = false, prefix = LABEL_PREFIX }) {
@@ -54567,7 +54569,7 @@ async function gitMerge(params = {}) {
     // eslint-disable-next-line no-await-in-loop
     await sh(
       `git checkout ${destBranch}
-      git merge ${srcBranch}
+      git merge ${srcBranch} -s ours
       git push "${gitUrl}" --follow-tags`,
     );
 

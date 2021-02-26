@@ -9121,7 +9121,7 @@ async function gitMerge(params = {}) {
     // eslint-disable-next-line no-await-in-loop
     await sh(
       `git checkout ${destBranch}
-      git merge ${srcBranch}
+      git merge ${srcBranch} -s ours
       git push "${gitUrl}" --follow-tags`,
     );
 

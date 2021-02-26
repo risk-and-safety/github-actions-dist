@@ -4,13 +4,14 @@ inputs:
   GITHUB_TOKEN:
     description: The GitHub Action token
     required: false
+    default: ${{ github.token }}
   include:
     description: Labels to use instead of querying the current pull request
     required: false
   package-json-keys:
     description: Package.json keys to include in the output
     required: false
-    default: label,name,location,version
+    default: label,name,location,config,scripts
 outputs:
   packages:
     description: Serialized JSON array of modified package.json files.

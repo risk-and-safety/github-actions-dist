@@ -9,7 +9,7 @@ const github = __webpack_require__(5438);
 
 const { getEnv, getDestBranch, getShortCommit } = __webpack_require__(8762);
 const { dockerBuild, dockerLogin, dockerPush, getStagingTag } = __webpack_require__(91);
-const { exec, sh } = __webpack_require__(6264);
+const { sh } = __webpack_require__(6264);
 const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
 
 async function dockerRelease(params) {
@@ -22,7 +22,7 @@ async function dockerRelease(params) {
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
   const commit = await getShortCommit();
   const stagingTag = await getStagingTag();
-  let tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
+  const tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
 
   await dockerLogin({ username, password, registry });
 
@@ -30,9 +30,6 @@ async function dockerRelease(params) {
     await dockerBuild(dockerImage, tag, path, labels);
   } else {
     await sh(`docker pull ${dockerImage}:${stagingTag}`);
-
-    const origCommit = await exec(`docker inspect --format='{{ .Config.Labels.commit }}' ${dockerImage}:${stagingTag}`);
-    tag = origCommit && origCommit !== '<no value>' ? `${tagPrefix}-${origCommit}` : tag;
     await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
   }
 
@@ -64,7 +61,6 @@ const { inputList } = __webpack_require__(2381);
 const params = {
   username: core.getInput('username', { required: true }),
   password: core.getInput('password', { required: true }),
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
   app: core.getInput('app', { required: true }),
   dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
@@ -9639,7 +9635,7 @@ async function gitMerge(params = {}) {
     // eslint-disable-next-line no-await-in-loop
     await sh(
       `git checkout ${destBranch}
-      git merge ${srcBranch}
+      git merge ${srcBranch} -s ours
       git push "${gitUrl}" --follow-tags`,
     );
 
