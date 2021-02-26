@@ -10,7 +10,7 @@ const core = __webpack_require__(2186);
 const { prune } = __webpack_require__(2655);
 
 prune({
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN') || core.getInput('password', { required: true }),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
   app: core.getInput('app', { required: true }),
   deploy: core.getInput('deploy') === 'true',
 }).catch((err) => {
@@ -30,7 +30,7 @@ const { ENV_BRANCHES } = __webpack_require__(8762);
 const { deleteVersion, findImages, getStagingTag } = __webpack_require__(91);
 
 async function prune({ app, GITHUB_TOKEN, deploy }) {
-  if (!deploy) {
+  if (!deploy || !GITHUB_TOKEN) {
     return;
   }
 

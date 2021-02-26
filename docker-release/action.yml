@@ -7,6 +7,9 @@ inputs:
   password:
     description: GitHub Token or Personal Access Token for the GitHub Container Registry ghcr.io
     required: true
+  GITHUB_TOKEN:
+    description: GitHub Token for pruning old Docker images from GitHub Docker Package Registry. TODO remove once moved over to Container Registry
+    required: false
   app:
     description: App name
     required: true
