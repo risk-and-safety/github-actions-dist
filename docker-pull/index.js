@@ -35,7 +35,7 @@ async function dockerPull(params) {
   const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${stagingTag}`);
   const cacheHit = fileHash === dockerHash;
 
-  info(`Cache ${cacheHit ? 'hit' : 'miss'}: file hash ${fileHash}`);
+  info(`Cache ${cacheHit ? 'hit' : 'miss'}: file hash ${dockerHash}`);
 
   return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit };
 }

@@ -26,6 +26,9 @@ inputs:
     description: Preview the S3 delete and put commands
     required: false
     default: "false"
+outputs:
+  url:
+    description: URL to the deployed version.json file
 runs:
   using: node12
   main: index.js
