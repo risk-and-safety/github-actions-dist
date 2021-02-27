@@ -7,7 +7,7 @@ inputs:
   build-dir:
     description: Directory containing the compiled assets
     required: false
-    default: 'build/'
+    default: build/
   ssh-deploy-key:
     description: SSH key for writing to the git repository
     required: false
@@ -20,5 +20,5 @@ inputs:
     required: false
     default: 'false'
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: node12
+  main: index.js

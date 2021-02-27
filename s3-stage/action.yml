@@ -1,24 +1,26 @@
 name: S3 Stage
-description: Upload or promote zip to S3 artifact bucket for staging
+description: Upload website/Lambda zip to S3 artifact bucket for staging
 inputs:
-  command:
-    description: Commands are "upload" or "promote" to copy the zip to the next env.
-    required: false
-    default: upload
   app:
-    description: App name or Lambda name. Can be a comma deliminted list for the "promote" command.
+    description: App name or Lambda name
     required: true
   context:
-    description: Webapp context path (eg app-path/) to add to the zip, for "upload" command
+    description: Webapp context path (eg app-path/) to add to the zip
     required: false
     default: ""
   build-dir:
-    description: Path to the source code directory for "upload" command
+    description: Path to the source code directory
     required: true
+  file-hash:
+    description: File hash to store in the zip metadata for caching
+    required: false
   staging-bucket:
     description: S3 artifact bucket
     required: false
     default: rss-artifact
+outputs:
+  zip-file:
+    description: The path to the zip file
 runs:
   using: node12
   main: index.js

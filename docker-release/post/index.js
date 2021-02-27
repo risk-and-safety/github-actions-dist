@@ -6,15 +6,13 @@ module.exports =
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 const core = __webpack_require__(2186);
-const github = __webpack_require__(5438);
 
-const { inputList } = __webpack_require__(2381);
 const { prune } = __webpack_require__(2655);
 
 prune({
-  gitHubClient: github.getOctokit(core.getInput('password')),
-  apps: inputList(core.getInput('app')),
-  repo: core.getInput('repo'),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
+  app: core.getInput('app', { required: true }),
+  deploy: core.getInput('deploy') === 'true',
 }).catch((err) => {
   console.error(err);
   core.setFailed(err.message);
@@ -27,21 +25,26 @@ prune({
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const github = __webpack_require__(5438);
+const { ENV_BRANCHES } = __webpack_require__(8762);
 
-const { deleteVersion, findImages, stagingTag } = __webpack_require__(91);
+const { deleteVersion, findImages, getStagingTag } = __webpack_require__(91);
 
-async function prune(params) {
+async function prune({ app, GITHUB_TOKEN, deploy }) {
+  if (!deploy || !GITHUB_TOKEN) {
+    return;
+  }
+
   const { owner, repo } = github.context.repo;
-  const { gitHubClient, apps } = params;
-  const tag = await stagingTag();
+  const stagingTag = await getStagingTag();
+  const tagPrefix = stagingTag.split('-')[0];
 
-  if (/^(dev|qa|prod)-[a-f\d]+$/.test(tag)) {
-    throw new Error(`Branch looks like an env- Docker tag we want to keep ${tag}`);
+  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
+    throw new Error(`The Docker tag, ${stagingTag}, looks like an env- tag we want to keep`);
+  } else {
+    const gitHubClient = github.getOctokit(GITHUB_TOKEN);
+    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag: stagingTag });
 
-    // Leave master and qa so the deploy can be replayed
-  } else if (tag !== 'RC_master' && tag !== 'RC_qa') {
-    const versions = await findImages({ gitHubClient, owner, repo, apps, tag });
-
+    // TODO: Use the GitHub Container Registry (ghcr.io) API when available
     await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
   }
 }
@@ -9426,30 +9429,11 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
-/***/ ((module) => {
-
-module.exports.DEPLOY_TYPES = {
-  NONE: 'NONE', // Placeholder so the deploy job ignores this package
-  DOCKER_BUILD: 'DOCKER_BUILD',
-  KUBE_JOB: 'KUBE_JOB',
-  KUBE_DAEMONSET: 'KUBE_DAEMONSET',
-  KUBE_DEPLOYMENT: 'KUBE_DEPLOYMENT',
-  LAMBDA: 'LAMBDA',
-  MAVEN: 'MAVEN',
-  NPM: 'NPM',
-  S3: 'S3',
-  GIT: 'GIT',
-};
-
-module.exports.LABEL_PREFIX = 'deploy:';
-
-
-/***/ }),
-
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+/* eslint-disable camelcase */
+/* eslint-disable no-await-in-loop */
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
@@ -9459,32 +9443,26 @@ const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
 async function getShortCommit() {
   if (github.context.payload) {
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const sha = !pull_request || pull_request.merged ? github.context.sha : pull_request.head.sha;
     return sha.substring(0, 8);
-    /* eslint-enable camelcase */
   }
 
   return exec('git rev-parse --short=8 HEAD');
 }
 
 async function getDestBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
-  /* eslint-enable camelcase */
 
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
 async function getSrcBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   if (pull_request) {
     return pull_request.head.ref;
   }
-  /* eslint-enable camelcase */
 
   const branch = github.context.ref
     ? github.context.ref.split('/').pop()
@@ -9562,10 +9540,8 @@ async function trueUpGitHistory() {
   if (isShallowFetch) {
     const destBranch = await getDestBranch();
     const srcBranch = await getSrcBranch();
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const merged = pull_request && pull_request.merged;
-    /* eslint-enable camelcase */
 
     await sh(
       `git fetch --prune --unshallow --tags
@@ -9601,12 +9577,9 @@ async function gitMerge(params = {}) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const destBranch of destBranches) {
-    // eslint-disable-next-line no-await-in-loop
-    await sh(
-      `git checkout ${destBranch}
-      git merge ${srcBranch}
-      git push "${gitUrl}" --follow-tags`,
-    );
+    await exec(`git checkout ${destBranch}`, { echo: true });
+    await exec(`git merge ${srcBranch}`, { echo: true });
+    await exec(`git push "${gitUrl}" --follow-tags`, { echo: true });
 
     srcBranch = destBranch;
   }
@@ -9631,10 +9604,11 @@ module.exports.gitMerge = gitMerge;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
+const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getSrcBranch } = __webpack_require__(8762);
+const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
 const { exec, sh } = __webpack_require__(6264);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -9652,9 +9626,17 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
-async function dockerBuild(dockerImage, tag, path, commit) {
+async function dockerBuild(dockerImage, tag, path, moreLabels = []) {
+  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+    throw new Error('Missing yarn.lock or package-lock.json file');
+  }
+
   const now = new Date().toISOString();
-  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  const labels = [`org.opencontainers.image.created=${now}`, `commit=${await getShortCommit()}`, ...moreLabels].reduce(
+    (acc, label) => `${acc} --label ${label}`,
+    '',
+  );
+
   await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
 }
 
@@ -9721,17 +9703,10 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagingTag(branch) {
+async function getStagingTag(branch) {
   const srcBranch = branch || (await getSrcBranch());
 
   return `RC_${kebabCase(srcBranch)}`;
-}
-
-// TODO: remove when backward compatibility is no longer needed
-async function oldStagingTag() {
-  const srcBranch = await getSrcBranch();
-
-  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
@@ -9739,8 +9714,7 @@ module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagingTag = oldStagingTag;
-module.exports.stagingTag = stagingTag;
+module.exports.getStagingTag = getStagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 
@@ -9793,7 +9767,10 @@ async function sh(cmd) {
   });
 }
 
-async function exec(cmd) {
+async function exec(cmd, { echo } = { echo: false }) {
+  if (echo) {
+    info(cmd);
+  }
   const { stdout } = await execPromise(cmd);
 
   return stdout.trim();
@@ -9801,134 +9778,6 @@ async function exec(cmd) {
 
 module.exports.sh = sh;
 module.exports.exec = exec;
-
-
-/***/ }),
-
-/***/ 2381:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
-
-module.exports.inputList = function inputList(input) {
-  let list = input || [];
-
-  if (typeof input === 'string') {
-    try {
-      list = JSON.parse(input);
-    } catch (err) {
-      list = input.split(/[,\r\n]/g).map((item) => item.trim());
-    }
-  }
-
-  return list.filter(Boolean);
-};
-
-module.exports.validateRepo = function validateRepo(repoUrl) {
-  if (!repoUrl || !/^(https:\/\/|git@)[\w-.]+[/:][\w-]{2,50}\/[\w-]{2,50}(.git)?$/g.test(repoUrl)) {
-    throw new Error(`Invalid repo URL "${repoUrl}"`);
-  }
-
-  return repoUrl;
-};
-
-function cleanAppName(name, prefix = LABEL_PREFIX) {
-  const scopePrefix = /^@[\w-]+\//;
-  const labelPrefix = new RegExp(`^${prefix}`);
-  const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
-  const cleanName = name
-    .replace(labelPrefix, '')
-    .replace(scopePrefix, '')
-    .replace(versionSuffix, '');
-
-  if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
-    throw new Error(`Invalid app name "${cleanName}"`);
-  }
-
-  return cleanName;
-}
-
-module.exports.cleanAppName = cleanAppName;
-
-module.exports.appNameEquals = function appNameEquals(app1, app2) {
-  return cleanAppName(app1).toLowerCase() === cleanAppName(app2).toLowerCase();
-};
-
-module.exports.validateEnv = function validateEnv(env) {
-  if (env !== 'dev' && !ENV_BRANCHES.includes(env)) {
-    throw new Error(`Invalid env "${env}"`);
-  }
-
-  return env;
-};
-
-module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
-    throw new Error(`Invalid namespace name "${namespace}"`);
-  }
-
-  return namespace;
-};
-
-module.exports.cleanZipPath = function cleanPath(uncleanZipPath) {
-  const zipPath = uncleanZipPath || '.';
-
-  if (zipPath !== '.' && !/^[\w-]{2,50}\/[\w-]{2,50}\/[\w-.]{2,50}.zip$/g.test(zipPath)) {
-    throw new Error(`Invalid zip path "${uncleanZipPath}"`);
-  }
-
-  return zipPath;
-};
-
-module.exports.cleanPath = function cleanPath(uncleanPath) {
-  const path = uncleanPath || '.';
-
-  if (path !== '.' && !/^(\.\/)?([\w-]{2,50}\/?)+$/g.test(path)) {
-    throw new Error(`Invalid path "${uncleanPath}"`);
-  }
-
-  return path;
-};
-
-module.exports.cleanBuildDir = function cleanBuildDir(uncleanBuildDir) {
-  let buildDir = uncleanBuildDir;
-
-  if (!buildDir || !/^(..\/|\/|.\/)*([\w-_]{2,50}\/?)+\/?$/g.test(buildDir)) {
-    throw new Error(`Invalid build dir "${uncleanBuildDir}"`);
-  } else if (buildDir === '/' || buildDir === './' || buildDir === '.') {
-    throw new Error('Build directory should not be empty or the root of the project');
-  }
-
-  // Append trailing slash
-  if (!buildDir.endsWith('/')) {
-    buildDir = `${buildDir}/`;
-  }
-
-  return buildDir;
-};
-
-module.exports.cleanWebContext = function cleanWebContext(uncleanContext) {
-  let context = uncleanContext === '/' ? '' : uncleanContext;
-
-  if (context !== '') {
-    if (!/^\/?[\w-]{2,50}(\/[\w-]{2,50})?\/?$/g.test(context)) {
-      throw new Error(`Invalid web context "${uncleanContext}". Only lowercase and dash`);
-    }
-
-    // Append trailing slash
-    if (!context.endsWith('/')) {
-      context = `${context}/`;
-    }
-
-    // Remove leading slash
-    if (context.startsWith('/')) {
-      context = context.substring(1);
-    }
-  }
-
-  return context;
-};
 
 
 /***/ }),

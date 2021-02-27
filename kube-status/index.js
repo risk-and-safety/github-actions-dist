@@ -8,11 +8,11 @@ module.exports =
 const core = __webpack_require__(2186);
 
 const { kubeStatus } = __webpack_require__(6858);
-const { inputList } = __webpack_require__(2381);
 
 const params = {
-  app: inputList(core.getInput('app', { required: true })),
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN', { required: true }),
+  app: core.getInput('app', { required: true }),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
+  dockerImage: core.getInput('docker-image'),
   dockerName: core.getInput('docker-name'),
   namespace: core.getInput('namespace'),
   kind: core.getInput('kind'),
@@ -41,29 +41,19 @@ const pRetry = __webpack_require__(2548);
 
 const { getEnv } = __webpack_require__(8762);
 const { findImages } = __webpack_require__(91);
-const { sequentialDeploy } = __webpack_require__(552);
 const { exec } = __webpack_require__(6264);
 const { cleanAppName, validateEnv, validateNamespace } = __webpack_require__(2381);
 const { kubeService, STATUSES } = __webpack_require__(5429);
 
 const KIND_OPTIONS = ['deployment', 'daemonset'];
 
-async function kubeStatusOne(params) {
-  const app = cleanAppName(params.app);
-  const namespace = validateNamespace(params.namespace || 'apps');
-  const {
-    env,
-    kind = 'deployment',
-    kibanaHost = 'http://localhost',
-    GITHUB_TOKEN = process.env.GITHUB_TOKEN,
-    registry = 'docker.pkg.github.com',
-    retries = 3,
-  } = params;
+async function findImage(params) {
+  const { owner, repo } = github.context.repo;
+  const { app, env, GITHUB_TOKEN = process.env.GITHUB_TOKEN, registry = 'docker.pkg.github.com' } = params;
+
   const dockerName = cleanAppName(params.dockerName || app);
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
   const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}`;
-  const { owner, repo } = github.context.repo;
-
   const gitHubClient = github.getOctokit(GITHUB_TOKEN);
   const [latestImage] = await findImages({
     gitHubClient,
@@ -80,7 +70,20 @@ async function kubeStatusOne(params) {
     return STATUSES.UNCHANGED;
   }
 
-  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}:${tag}`;
+  return `${registry}/${owner}/${repo}/${dockerName}:${tag}`;
+}
+
+async function kubeStatus(params) {
+  try {
+    await exec('command -v fluxctl');
+  } catch (err) {
+    throw new Error('kube-status must be run on a self-hosted runner with Fluxctl');
+  }
+
+  const env = params.env ? validateEnv(params.env) : await getEnv();
+  const app = cleanAppName(params.app);
+  const namespace = validateNamespace(params.namespace || 'apps');
+  const { clusterName = 'rss', kind = 'deployment', kibanaHost = 'http://localhost', retries = 3 } = params;
 
   if (!KIND_OPTIONS.includes(kind)) {
     throw new Error(`Invalid kind value "${kind}". Must be ${KIND_OPTIONS}`);
@@ -89,6 +92,11 @@ async function kubeStatusOne(params) {
   if (!kibanaHost) {
     throw new Error('Missing Kibana host');
   }
+
+  // TODO refactor GitHub repo deploy.yaml files to pass docker-image to "Kube Watch"
+  const dockerImage = params.dockerImage || (await findImage({ ...params, app, env }));
+
+  await kubeService.init(clusterName, env);
 
   let status = STATUSES.UNCHANGED;
 
@@ -153,24 +161,6 @@ async function kubeStatusOne(params) {
   );
 
   return status;
-}
-
-async function kubeStatus(params) {
-  try {
-    await exec('command -v fluxctl');
-  } catch (err) {
-    throw new Error('kube-status must be run on a self-hosted runner with Fluxctl');
-  }
-
-  const { clusterName = 'rss' } = params;
-  const env = params.env ? validateEnv(params.env) : await getEnv();
-
-  await kubeService.init(clusterName, env);
-
-  // Force watching to be sequential so the logs are readable.
-  return sequentialDeploy(params.app, async (app) => {
-    return kubeStatusOne({ ...params, env, app });
-  });
 }
 
 module.exports.kubeStatus = kubeStatus;
@@ -10066,6 +10056,8 @@ module.exports.LABEL_PREFIX = 'deploy:';
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+/* eslint-disable camelcase */
+/* eslint-disable no-await-in-loop */
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
@@ -10075,32 +10067,26 @@ const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
 async function getShortCommit() {
   if (github.context.payload) {
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const sha = !pull_request || pull_request.merged ? github.context.sha : pull_request.head.sha;
     return sha.substring(0, 8);
-    /* eslint-enable camelcase */
   }
 
   return exec('git rev-parse --short=8 HEAD');
 }
 
 async function getDestBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
-  /* eslint-enable camelcase */
 
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
 async function getSrcBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   if (pull_request) {
     return pull_request.head.ref;
   }
-  /* eslint-enable camelcase */
 
   const branch = github.context.ref
     ? github.context.ref.split('/').pop()
@@ -10178,10 +10164,8 @@ async function trueUpGitHistory() {
   if (isShallowFetch) {
     const destBranch = await getDestBranch();
     const srcBranch = await getSrcBranch();
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const merged = pull_request && pull_request.merged;
-    /* eslint-enable camelcase */
 
     await sh(
       `git fetch --prune --unshallow --tags
@@ -10217,12 +10201,9 @@ async function gitMerge(params = {}) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const destBranch of destBranches) {
-    // eslint-disable-next-line no-await-in-loop
-    await sh(
-      `git checkout ${destBranch}
-      git merge ${srcBranch}
-      git push "${gitUrl}" --follow-tags`,
-    );
+    await exec(`git checkout ${destBranch}`, { echo: true });
+    await exec(`git merge ${srcBranch}`, { echo: true });
+    await exec(`git push "${gitUrl}" --follow-tags`, { echo: true });
 
     srcBranch = destBranch;
   }
@@ -10247,10 +10228,11 @@ module.exports.gitMerge = gitMerge;
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
+const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getSrcBranch } = __webpack_require__(8762);
+const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
 const { exec, sh } = __webpack_require__(6264);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
@@ -10268,9 +10250,17 @@ async function deleteVersion(gitHubClient, { id, name, version }) {
   info(`Deleted version ${name}:${version} ( ${id} ): ${util.inspect(deletePackageVersion)}`);
 }
 
-async function dockerBuild(dockerImage, tag, path, commit) {
+async function dockerBuild(dockerImage, tag, path, moreLabels = []) {
+  if (fs.existsSync('package.json') && !fs.existsSync('package-lock.json') && !fs.existsSync('yarn.lock')) {
+    throw new Error('Missing yarn.lock or package-lock.json file');
+  }
+
   const now = new Date().toISOString();
-  const labels = `--label org.opencontainers.image.created=${now} --label commit=${commit}`;
+  const labels = [`org.opencontainers.image.created=${now}`, `commit=${await getShortCommit()}`, ...moreLabels].reduce(
+    (acc, label) => `${acc} --label ${label}`,
+    '',
+  );
+
   await sh(`docker build -t ${dockerImage}:${tag} ${path} ${labels}`);
 }
 
@@ -10337,17 +10327,10 @@ async function findImages({ gitHubClient, owner, repo, apps, tag }) {
     .filter((version) => compareTag.test(version.version));
 }
 
-async function stagingTag(branch) {
+async function getStagingTag(branch) {
   const srcBranch = branch || (await getSrcBranch());
 
   return `RC_${kebabCase(srcBranch)}`;
-}
-
-// TODO: remove when backward compatibility is no longer needed
-async function oldStagingTag() {
-  const srcBranch = await getSrcBranch();
-
-  return kebabCase(srcBranch);
 }
 
 module.exports.deleteVersion = deleteVersion;
@@ -10355,46 +10338,8 @@ module.exports.dockerBuild = dockerBuild;
 module.exports.dockerLogin = dockerLogin;
 module.exports.dockerPush = dockerPush;
 module.exports.findImages = findImages;
-module.exports.oldStagingTag = oldStagingTag;
-module.exports.stagingTag = stagingTag;
+module.exports.getStagingTag = getStagingTag;
 module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
-
-
-/***/ }),
-
-/***/ 552:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info } = __webpack_require__(2186);
-const util = __webpack_require__(1669);
-
-module.exports.sequentialDeploy = async function sequentialDeploy(apps, deploy) {
-  info(`Deploying: [${apps}]`);
-
-  const failed = [];
-  const results = [];
-
-  // Force deployments to be sequential so the logs are readable.
-  // eslint-disable-next-line no-restricted-syntax
-  for (const app of apps) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      results.push(await deploy(app));
-    } catch (err) {
-      // Catch errors so that we don't prevent deployments
-      failed.push({ app, err });
-    }
-  }
-
-  if (failed.length) {
-    const failedApps = failed.map(({ app }) => app).join(', ');
-    const errors = failed.map(({ err }) => util.inspect(err)).join('\n');
-
-    throw new Error(`Failed to deploy: ${failedApps}\n${errors}`);
-  }
-
-  return results;
-};
 
 
 /***/ }),
@@ -10446,7 +10391,10 @@ async function sh(cmd) {
   });
 }
 
-async function exec(cmd) {
+async function exec(cmd, { echo } = { echo: false }) {
+  if (echo) {
+    info(cmd);
+  }
   const { stdout } = await execPromise(cmd);
 
   return stdout.trim();

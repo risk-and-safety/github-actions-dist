@@ -12558,6 +12558,8 @@ module.exports.LABEL_PREFIX = 'deploy:';
 /***/ 8762:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+/* eslint-disable camelcase */
+/* eslint-disable no-await-in-loop */
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
@@ -12567,32 +12569,26 @@ const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
 async function getShortCommit() {
   if (github.context.payload) {
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const sha = !pull_request || pull_request.merged ? github.context.sha : pull_request.head.sha;
     return sha.substring(0, 8);
-    /* eslint-enable camelcase */
   }
 
   return exec('git rev-parse --short=8 HEAD');
 }
 
 async function getDestBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
-  /* eslint-enable camelcase */
 
   return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
 async function getSrcBranch() {
-  /* eslint-disable camelcase */
   const { pull_request } = github.context.payload;
   if (pull_request) {
     return pull_request.head.ref;
   }
-  /* eslint-enable camelcase */
 
   const branch = github.context.ref
     ? github.context.ref.split('/').pop()
@@ -12670,10 +12666,8 @@ async function trueUpGitHistory() {
   if (isShallowFetch) {
     const destBranch = await getDestBranch();
     const srcBranch = await getSrcBranch();
-    /* eslint-disable camelcase */
     const { pull_request } = github.context.payload;
     const merged = pull_request && pull_request.merged;
-    /* eslint-enable camelcase */
 
     await sh(
       `git fetch --prune --unshallow --tags
@@ -12709,12 +12703,9 @@ async function gitMerge(params = {}) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const destBranch of destBranches) {
-    // eslint-disable-next-line no-await-in-loop
-    await sh(
-      `git checkout ${destBranch}
-      git merge ${srcBranch}
-      git push "${gitUrl}" --follow-tags`,
-    );
+    await exec(`git checkout ${destBranch}`, { echo: true });
+    await exec(`git merge ${srcBranch}`, { echo: true });
+    await exec(`git push "${gitUrl}" --follow-tags`, { echo: true });
 
     srcBranch = destBranch;
   }
@@ -12782,7 +12773,10 @@ async function sh(cmd) {
   });
 }
 
-async function exec(cmd) {
+async function exec(cmd, { echo } = { echo: false }) {
+  if (echo) {
+    info(cmd);
+  }
   const { stdout } = await execPromise(cmd);
 
   return stdout.trim();
