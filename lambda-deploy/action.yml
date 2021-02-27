@@ -2,7 +2,7 @@ name: Lambda Deploy
 description: Deploy the S3 zip files to AWS Lambda
 inputs:
   function:
-    description: Function name or comma separated list of functions
+    description: Function name
     required: true
   env:
     description: Override the target env [dev,qa,prod,hc]. Defaults to the branch name.
