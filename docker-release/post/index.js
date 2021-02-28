@@ -9545,7 +9545,7 @@ async function trueUpGitHistory() {
 
     await sh(
       `git fetch --prune --unshallow --tags
-      git checkout ${merged ? destBranch : srcBranch}`,
+      git checkout ${merged ? destBranch : srcBranch} --`,
     );
   } else {
     await sh('git fetch --tags');
@@ -9577,7 +9577,7 @@ async function gitMerge(params = {}) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const destBranch of destBranches) {
-    await exec(`git checkout ${destBranch}`, { echo: true });
+    await exec(`git checkout ${destBranch} --`, { echo: true });
     await exec(`git merge ${srcBranch}`, { echo: true });
     await exec(`git push "${gitUrl}" --follow-tags`, { echo: true });
 
