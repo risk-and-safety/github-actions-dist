@@ -146,10 +146,8 @@ module.exports = /******/ (() => {
         if (github.context.actor) {
           // Needed for finding the current branch
           await trueUpGitHistory();
-          await sh(`
-            git checkout ${destBranch} --
-            git checkout ${srcBranch} --
-          `);
+          await exec(`git checkout ${destBranch} --`);
+          await exec(`git checkout ${srcBranch} --`);
         }
 
         const forkPoint = await exec(`git merge-base --fork-point ${destBranch}`);
