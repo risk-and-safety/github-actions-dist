@@ -155,9 +155,12 @@ async function findChangedFiles(srcBranch, destBranch) {
   if (github.context.actor) {
     // Needed for finding the current branch
     await trueUpGitHistory();
+    await sh(`
+      git checkout ${destBranch} ---
+      git checkout ${srcBranch} ---
+    `)
   }
 
-  const remote = await exec('git remote');
   const forkPoint = await exec(`git merge-base --fork-point ${remote ? `${remote}/` : ''}${destBranch}`);
   const changes = await exec(`git diff --name-only ${forkPoint} ${srcBranch}`);
 
