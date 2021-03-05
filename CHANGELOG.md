@@ -3,6 +3,33 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.3.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.0...github-actions@3.3.1) (2021-03-03)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+# [3.3.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.4...github-actions@3.3.0) (2021-03-02)
+
+
+### Bug Fixes
+
+* **deploy:** invalid functionName param in lambda-deploy ([31268ae](https://github.com/risk-and-safety/platform/commit/31268aea1596636046c52d5ffe376c6c969aac38))
+
+
+### Features
+
+* **changelog:** allow skipping GitHub Release/Slack changelog ([1b8bb0f](https://github.com/risk-and-safety/platform/commit/1b8bb0f6cd7dfaf6f46718b05ad470d45a51b4a1))
+* **deploy:** check Docker image / S3 zip for file hash match ([133a167](https://github.com/risk-and-safety/platform/commit/133a167980e9a96f9520986509ecd7e34afbf6d9))
+* **deploy:** find pkg.json by PR labels ([edd2ba6](https://github.com/risk-and-safety/platform/commit/edd2ba691281b852a5ec9c05a84b89d920b1c2fa))
+* **deploy:** reduce Github Actions from 36 to 3 using matrix ([f99504a](https://github.com/risk-and-safety/platform/commit/f99504aea26025318b79ef3fd0e4dbbfa7d676b6))
+
+
+
+
+
 ## [3.2.4](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.3...github-actions@3.2.4) (2021-01-12)
 
 

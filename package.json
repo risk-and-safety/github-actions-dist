@@ -1,6 +1,6 @@
 {
   "name": "github-actions",
-  "version": "3.2.4",
+  "version": "3.3.1",
   "description": "Common GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
@@ -84,6 +84,17 @@
     }
   },
   "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/@fuse/",
+      "/node_modules/",
+      "serviceWorker.js"
+    ],
+    "coverageReporters": [
+      "lcov"
+    ],
     "testEnvironment": "node",
     "testMatch": [
       "**/*.(spec|integration).js"
