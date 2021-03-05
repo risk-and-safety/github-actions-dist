@@ -11,7 +11,7 @@ inputs:
   package-json-keys:
     description: Package.json keys to include in the output
     required: false
-    default: label,name,location,config,scripts
+    default: label,name,location
 outputs:
   packages:
     description: Serialized JSON array of modified package.json files.

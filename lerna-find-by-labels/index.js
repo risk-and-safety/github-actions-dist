@@ -13,24 +13,20 @@ const QueryGraph = __webpack_require__(246);
 const { LABEL_PREFIX } = __webpack_require__(1404);
 const { appNameEquals } = __webpack_require__(2381);
 
-async function findByLabels({ gitHubClient, include, packageJsonKeys = ['label', 'name', 'location', 'version'] }) {
-  let labels = [];
+async function findByLabels({ gitHubClient, include = [], packageJsonKeys = ['label', 'name', 'location'] }) {
+  const labels = [...include];
 
-  if (include) {
-    labels = include;
-  } else {
-    const pullRequest = github.context.payload.pull_request;
+  const pullRequest = github.context.payload.pull_request;
 
-    if (!pullRequest) {
-      throw new Error('pull request missing from GitHub payload');
-    }
-
+  if (pullRequest) {
     const { data } = await gitHubClient.pulls.get({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       pull_number: pullRequest.number,
     });
-    labels = data.labels.map((label) => label.name);
+    labels.push(...data.labels.map((label) => label.name));
+  } else if (!labels.length) {
+    throw new Error('Labels are missing from GitHub payload');
   }
 
   const project = new Project(process.cwd());
@@ -77,7 +73,7 @@ const { findByLabels } = __webpack_require__(5379);
 
 const params = {
   gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN')),
-  include: core.getInput('include') && inputList(core.getInput('include')),
+  include: inputList(core.getInput('include')),
   packageJsonKeys: inputList(core.getInput('package-json-keys')),
 };
 
