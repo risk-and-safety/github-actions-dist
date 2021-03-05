@@ -147,8 +147,8 @@ module.exports = /******/ (() => {
           // Needed for finding the current branch
           await trueUpGitHistory();
           await sh(`
-            git checkout ${destBranch} ---
-            git checkout ${srcBranch} ---
+            git checkout ${destBranch} --
+            git checkout ${srcBranch} --
           `);
         }
 
