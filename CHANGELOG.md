@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.3.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.2...github-actions@3.3.3) (2021-03-09)
+
+
+### Bug Fixes
+
+* **deploy:** adding label should not wipe out changelog ([0d9abf9](https://github.com/risk-and-safety/platform/commit/0d9abf95412946d4ae374e1e74bee038861e2dfb))
+
+
+
+
+
+## [3.3.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.1...github-actions@3.3.2) (2021-03-05)
+
+
+### Bug Fixes
+
+* **deploy:** labeler git diff should use fork point ([f223807](https://github.com/risk-and-safety/platform/commit/f223807ee1f8882a2678a508ded661fc3d7bf997))
+
+
+
+
+
 ## [3.3.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.0...github-actions@3.3.1) (2021-03-03)
 
 **Note:** Version bump only for package github-actions
