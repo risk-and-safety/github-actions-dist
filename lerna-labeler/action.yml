@@ -9,7 +9,7 @@ inputs:
     required: false
     default: branch
   skip-labels:
-    description: Comma delimited list of labels to ignore
+    description: Comma/newline delimited list of labels to ignore
     required: false
     default: ''
   dry-run:

@@ -3,6 +3,142 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.3.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.2...github-actions@3.3.3) (2021-03-09)
+
+
+### Bug Fixes
+
+* **deploy:** adding label should not wipe out changelog ([0d9abf9](https://github.com/risk-and-safety/platform/commit/0d9abf95412946d4ae374e1e74bee038861e2dfb))
+
+
+
+
+
+## [3.3.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.1...github-actions@3.3.2) (2021-03-05)
+
+
+### Bug Fixes
+
+* **deploy:** labeler git diff should use fork point ([f223807](https://github.com/risk-and-safety/platform/commit/f223807ee1f8882a2678a508ded661fc3d7bf997))
+
+
+
+
+
+## [3.3.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.0...github-actions@3.3.1) (2021-03-03)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+# [3.3.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.4...github-actions@3.3.0) (2021-03-02)
+
+
+### Bug Fixes
+
+* **deploy:** invalid functionName param in lambda-deploy ([31268ae](https://github.com/risk-and-safety/platform/commit/31268aea1596636046c52d5ffe376c6c969aac38))
+
+
+### Features
+
+* **changelog:** allow skipping GitHub Release/Slack changelog ([1b8bb0f](https://github.com/risk-and-safety/platform/commit/1b8bb0f6cd7dfaf6f46718b05ad470d45a51b4a1))
+* **deploy:** check Docker image / S3 zip for file hash match ([133a167](https://github.com/risk-and-safety/platform/commit/133a167980e9a96f9520986509ecd7e34afbf6d9))
+* **deploy:** find pkg.json by PR labels ([edd2ba6](https://github.com/risk-and-safety/platform/commit/edd2ba691281b852a5ec9c05a84b89d920b1c2fa))
+* **deploy:** reduce Github Actions from 36 to 3 using matrix ([f99504a](https://github.com/risk-and-safety/platform/commit/f99504aea26025318b79ef3fd0e4dbbfa7d676b6))
+
+
+
+
+
+## [3.2.4](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.3...github-actions@3.2.4) (2021-01-12)
+
+
+### Bug Fixes
+
+* **deploy:** catch npm publish errors, allow npm and GitHub ([18e9102](https://github.com/risk-and-safety/platform/commit/18e910278eb07e49e166fe3a460a46dcf23c9200))
+
+
+
+
+
+## [3.2.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.2...github-actions@3.2.3) (2021-01-11)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [3.2.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.1...github-actions@3.2.2) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** downgrade middleware to Node12 syntax for printable ([0b8c15a](https://github.com/risk-and-safety/platform/commit/0b8c15a90750add9890868e7296c9879498f577c))
+
+
+
+
+
+## [3.2.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.2.0...github-actions@3.2.1) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bump @rss/common-nodejs for middleware fix ([7e808e2](https://github.com/risk-and-safety/platform/commit/7e808e28d0f2cb2d8af7bdcd8e9bfdfebd8df0ec))
+
+
+
+
+
+# [3.2.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.11...github-actions@3.2.0) (2020-12-18)
+
+
+### Bug Fixes
+
+* **logging:** bunyan middleware, copy body.user to req.user ([455e656](https://github.com/risk-and-safety/platform/commit/455e656ba0ad0234df1e22e1964deff7d10fca2a))
+
+
+### Features
+
+* **logging:** trim body.user, response length IN-563, response time PC-284 ([f0e745c](https://github.com/risk-and-safety/platform/commit/f0e745c953c8126106729c31501697a89f238c13))
+
+
+
+
+
+## [3.1.11](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.10...github-actions@3.1.11) (2020-12-12)
+
+
+### Bug Fixes
+
+* **node:** bump version to handle security concern ([514a1be](https://github.com/risk-and-safety/platform/commit/514a1be6fc9664585c6ecda200209dd05af0356b))
+
+
+
+
+
+## [3.1.10](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.9...github-actions@3.1.10) (2020-11-18)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [3.1.9](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.8...github-actions@3.1.9) (2020-11-11)
+
+
+### Bug Fixes
+
+* **logging:** prevent logging entire req in node 14 ([640176a](https://github.com/risk-and-safety/platform/commit/640176a8a65173c4155086876d032ac6c21e0184))
+
+
+
+
+
 ## [3.1.8](https://github.com/risk-and-safety/platform/compare/github-actions@3.1.7...github-actions@3.1.8) (2020-10-30)
 
 **Note:** Version bump only for package github-actions

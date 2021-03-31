@@ -1,0 +1,23 @@
+name: S3 Metadata
+description: Pulls the metadata for the S3 file
+inputs:
+  app:
+    description: App name or Lambda name
+    required: true
+  file-hash:
+    description: File hash to compare to the metadata to determine a cache hit
+    required: false
+  staging-bucket:
+    description: S3 staging bucket
+    required: false
+    default: rss-artifact
+outputs:
+  s3Key:
+    description: S3 key
+  metadata:
+    description: S3 metadata about the file (eg { ContentLength, ContentType, Metadata })
+  cache-hit:
+    description: Zip file 'filehash' metadata matches the provided file-hash
+runs:
+  using: node12
+  main: index.js

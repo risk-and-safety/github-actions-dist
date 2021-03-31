@@ -1,13 +1,13 @@
 {
   "name": "github-actions",
-  "version": "3.1.8",
+  "version": "3.3.3",
   "description": "Common GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
   "homepage": "https://riskandsafety.com",
   "license": "UNLICENSED",
   "private": true,
-  "rss": {
+  "config": {
     "deployTypes": [
       "GIT"
     ]
@@ -21,11 +21,13 @@
     "@actions/core": "1.2.6",
     "@actions/github": "4.0.0",
     "@lerna/project": "3.21.0",
+    "@lerna/publish": "3.22.1",
+    "@lerna/query-graph": "3.18.5",
     "@lerna/version": "3.22.1",
-    "@rss/common-nodejs": "1.0.0-elastic.2",
+    "@rss/common-nodejs": "1.0.0-elastic.3",
     "@slack/web-api": "5.9.0",
     "aws-sdk": "2.742.0",
-    "axios": "0.20.0",
+    "axios": "0.21.1",
     "conventional-changelog-angular": "5.0.11",
     "date-fns": "2.16.1",
     "fs-extra": "9.0.1",
@@ -44,9 +46,10 @@
     "eslint": "6.8.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-config-prettier": "6.9.0",
-    "eslint-plugin-import": "2.20.1",
+    "eslint-plugin-import": "2.22.1",
     "eslint-plugin-prettier": "3.1.2",
     "jest": "24.9.0",
+    "jest-github-actions-reporter": "1.0.3",
     "prettier": "1.19.1"
   },
   "prettier": {
@@ -81,6 +84,17 @@
     }
   },
   "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/@fuse/",
+      "/node_modules/",
+      "serviceWorker.js"
+    ],
+    "coverageReporters": [
+      "lcov"
+    ],
     "testEnvironment": "node",
     "testMatch": [
       "**/*.(spec|integration).js"
