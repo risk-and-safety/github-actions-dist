@@ -2,35 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9082:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { ENV_BRANCHES, getDestBranch, gitMerge } = __webpack_require__(8762);
-
-async function gitMergeBack() {
-  const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN', { required: true });
-  const destBranch = await getDestBranch();
-
-  if (core.getInput('draft') !== 'false' || !ENV_BRANCHES.includes(destBranch)) {
-    return;
-  }
-
-  const prevBranches = ENV_BRANCHES.slice(0, ENV_BRANCHES.indexOf(destBranch)).reverse();
-
-  // Reverse the branches so changelog commits are pushed back to the source branches
-  await gitMerge({ srcBranch: destBranch, destBranches: prevBranches, GITHUB_TOKEN });
-}
-
-gitMergeBack().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9023,7 +8994,36 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 8762:
+/***/ 6995:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { ENV_BRANCHES, getDestBranch, gitMerge } = __webpack_require__(9329);
+
+async function gitMergeBack() {
+  const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN', { required: true });
+  const destBranch = await getDestBranch();
+
+  if (core.getInput('draft') !== 'false' || !ENV_BRANCHES.includes(destBranch)) {
+    return;
+  }
+
+  const prevBranches = ENV_BRANCHES.slice(0, ENV_BRANCHES.indexOf(destBranch)).reverse();
+
+  // Reverse the branches so changelog commits are pushed back to the source branches
+  await gitMerge({ srcBranch: destBranch, destBranches: prevBranches, GITHUB_TOKEN });
+}
+
+gitMergeBack().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+
+
+/***/ }),
+
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -9031,7 +9031,7 @@ function wrappy (fn, cb) {
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -9194,7 +9194,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -9486,6 +9486,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(9082);
+/******/ 	return __webpack_require__(6995);
 /******/ })()
 ;

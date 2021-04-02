@@ -2,32 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 4984:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { getEnv } = __webpack_require__(8762);
-const { inputList } = __webpack_require__(2381);
-
-async function calculateEnv() {
-  const envList = inputList(core.getInput('env-list'));
-  return getEnv({ envList });
-}
-
-calculateEnv()
-  .then((env) => {
-    const varName = core.getInput('var-name');
-    core.exportVariable(varName, env);
-  })
-  .catch((err) => {
-    console.error(err);
-    core.setFailed(err.message);
-  });
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9020,7 +8994,33 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 3724:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { getEnv } = __webpack_require__(9329);
+const { inputList } = __webpack_require__(2613);
+
+async function calculateEnv() {
+  const envList = inputList(core.getInput('env-list'));
+  return getEnv({ envList });
+}
+
+calculateEnv()
+  .then((env) => {
+    const varName = core.getInput('var-name');
+    core.exportVariable(varName, env);
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -9041,7 +9041,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -9049,7 +9049,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -9212,7 +9212,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -9274,11 +9274,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -9632,6 +9632,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(4984);
+/******/ 	return __webpack_require__(3724);
 /******/ })()
 ;
