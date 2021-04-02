@@ -5827,6 +5827,18 @@ exports.isPlainObject = isPlainObject;
 
 /***/ }),
 
+/***/ 5063:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = function () {
+	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
+};
+
+
+/***/ }),
+
 /***/ 3278:
 /***/ ((module) => {
 
@@ -14217,10 +14229,6 @@ function detectEncoding(bufs, defaultEncoding) {
     return defaultEncoding || 'utf-16le';
 }
 
-function detectEncoding(bufs, defaultEncoding) {
-    var b = [];
-    var charsProcessed = 0;
-    var asciiCharsLE = 0, asciiCharsBE = 0; // Number of ASCII chars when decoded as LE or BE.
 
 
 
@@ -14550,15 +14558,8 @@ function detectEncoding(bufs, defaultEncoding) {
     return defaultEncoding || 'utf-32le';
 }
 
-// -- Decoding
 
-function Utf32AutoDecoder(options, codec) {
-    this.decoder = null;
-    this.initialBufs = [];
-    this.initialBufsLen = 0;
-    this.options = options || {};
-    this.iconv = codec.iconv;
-}
+/***/ }),
 
 /***/ 6208:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
@@ -15101,26 +15102,14 @@ if (stream_module && stream_module.Transform) {
 
 if (false) {}
 
-    var decoder = iconv.getDecoder(encoding, options);
 
-    var res = decoder.write(buf);
-    var trail = decoder.end();
+/***/ }),
 
 /***/ 9868:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-iconv.encodingExists = function encodingExists(enc) {
-    try {
-        iconv.getCodec(enc);
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
+"use strict";
 
-// Legacy aliases to convert functions
-iconv.toEncoding = iconv.encode;
-iconv.fromEncoding = iconv.decode;
 
 var Buffer = __webpack_require__(5118).Buffer;
 
@@ -15175,7 +15164,6 @@ module.exports = function(stream_module) {
         });
         return this;
     }
-}
 
 
     // == Decoder stream =======================================================
@@ -15231,21 +15219,14 @@ module.exports = function(stream_module) {
     };
 };
 
-    if (codec.bomAware && !(options && options.stripBOM === false))
-        decoder = new bomHandling.StripBOM(decoder, options);
 
-    return decoder;
-}
+/***/ }),
 
 /***/ 3505:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-    // Dependency-inject stream module to create IconvLite stream classes.
-    var streams = __webpack_require__(9868)(stream_module);
+"use strict";
 
-    // Not public API yet, but expose the stream classes.
-    iconv.IconvLiteEncoderStream = streams.IconvLiteEncoderStream;
-    iconv.IconvLiteDecoderStream = streams.IconvLiteDecoderStream;
 
 var util = __webpack_require__(1669);
 var isArrayish = __webpack_require__(7604);
@@ -15606,24 +15587,14 @@ brackets.parsers = parsers;
 
 module.exports = brackets;
 
-    /**
-     * Escaped characters
-     */
 
-    .set('escape', function(node) {
-      return this.emit('\\' + node.val.replace(/^\\/, ''), node);
-    })
+/***/ }),
 
 /***/ 2647:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-    .set('text', function(node) {
-      return this.emit(node.val.replace(/([{}])/g, '\\$1'), node);
-    })
+"use strict";
 
-    /**
-     * POSIX character classes
-     */
 
 var posix = __webpack_require__(4504);
 
@@ -15711,27 +15682,14 @@ module.exports = function(brackets) {
     });
 };
 
-function parsers(brackets) {
-  brackets.state = brackets.state || {};
-  brackets.parser.sets.bracket = brackets.parser.sets.bracket || [];
-  brackets.parser
 
-    .capture('escape', function() {
-      if (this.isInside('bracket')) return;
-      var pos = this.position();
-      var m = this.match(/^\\(.)/);
-      if (!m) return;
+/***/ }),
 
 /***/ 8036:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
-    .capture('text', function() {
-      if (this.isInside('bracket')) return;
-      var pos = this.position();
-      var m = this.match(not);
-      if (!m || !m[0]) return;
 
 var utils = __webpack_require__(8753);
 var define = __webpack_require__(6967);
@@ -19335,17 +19293,8 @@ FragmentCache.prototype = {
 
 exports = module.exports = FragmentCache;
 
-      var open = pos({
-        type: 'bracket.open',
-        val: m[0]
-      });
 
-      if (last.type === 'bracket.open' || this.isInside('bracket')) {
-        open.val = '\\' + open.val;
-        open.type = 'bracket.inner';
-        open.escaped = true;
-        return open;
-      }
+/***/ }),
 
 /***/ 6863:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
@@ -19417,15 +19366,8 @@ function unmonkeypatch () {
   fs.realpathSync = origRealpathSync
 }
 
-    /**
-     * Bracket text
-     */
 
-    .capture('bracket.inner', function() {
-      if (!this.isInside('bracket')) return;
-      var pos = this.position();
-      var m = this.match(not);
-      if (!m || !m[0]) return;
+/***/ }),
 
 /***/ 1734:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
@@ -19734,12 +19676,8 @@ exports.realpath = function realpath(p, cache, cb) {
   }
 };
 
-      if (val === '\\\\') {
-        return node;
-      }
 
-      var first = val.charAt(0);
-      var last = val.slice(-1);
+/***/ }),
 
 /***/ 4369:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {

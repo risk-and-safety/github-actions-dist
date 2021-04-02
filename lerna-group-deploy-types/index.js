@@ -5661,6 +5661,18 @@ exports.isPlainObject = isPlainObject;
 
 /***/ }),
 
+/***/ 5063:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = function () {
+	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
+};
+
+
+/***/ }),
+
 /***/ 3278:
 /***/ ((module) => {
 
@@ -19815,18 +19827,6 @@ Gauge.prototype._doRedraw = function () {
 
 /***/ }),
 
-/***/ 5899:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = function () {
-	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
-};
-
-
-/***/ }),
-
 /***/ 3737:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -19931,7 +19931,7 @@ module.exports = function (str) {
 
 "use strict";
 
-var ansiRegex = __webpack_require__(5899)();
+var ansiRegex = __webpack_require__(5063)();
 
 module.exports = function (str) {
 	return typeof str === 'string' ? str.replace(ansiRegex, '') : str;
