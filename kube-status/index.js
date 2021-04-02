@@ -10067,7 +10067,9 @@ module.exports.kubeService = {
 
   async findErrorLogs(podName, namespace) {
     try {
-      return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception" || true`);
+      return await exec(
+        `${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception" || true`,
+      );
     } catch (err) {
       warning(err.message);
       return '';

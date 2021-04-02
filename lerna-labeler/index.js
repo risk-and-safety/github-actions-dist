@@ -55909,7 +55909,8 @@ async function findChangedFiles(srcBranch, destBranch) {
 
   const commit = await getShortCommit();
   const remote = await exec('git remote');
-  const forkPoint = await exec(`git merge-base ${remote ? `${remote}/` : ''}${destBranch} ${commit}`);
+  const origin = remote ? `${remote}/` : '';
+  const forkPoint = await exec(`git merge-base ${origin}${destBranch} ${commit}`);
   const changes = await exec(`git diff --name-only ${forkPoint} ${srcBranch}`);
 
   return changes.split('\n').filter(Boolean);
