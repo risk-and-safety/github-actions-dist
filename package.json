@@ -1,6 +1,6 @@
 {
   "name": "github-actions",
-  "version": "3.3.3",
+  "version": "3.4.0",
   "description": "Common GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
@@ -50,7 +50,27 @@
     "eslint-plugin-prettier": "3.1.2",
     "jest": "24.9.0",
     "jest-github-actions-reporter": "1.0.3",
+    "jest-sonar-reporter": "2.0.0",
     "prettier": "1.19.1"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "coverageReporters": [
+      "lcov"
+    ],
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.(spec|integration).js"
+    ]
+  },
+  "jestSonar": {
+    "reportPath": "coverage/",
+    "reportFile": "sonar-reporter.xml"
   },
   "prettier": {
     "arrowParens": "always",
@@ -82,22 +102,5 @@
         "error"
       ]
     }
-  },
-  "jest": {
-    "collectCoverageFrom": [
-      "src/**/*.js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/@fuse/",
-      "/node_modules/",
-      "serviceWorker.js"
-    ],
-    "coverageReporters": [
-      "lcov"
-    ],
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/*.(spec|integration).js"
-    ]
   }
 }

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.4.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.3...github-actions@3.4.0) (2021-04-01)
+
+
+### Features
+
+* **security:** add SonarCloud code scan to GitHub Actions ([3055134](https://github.com/risk-and-safety/platform/commit/30551343cc0ca5aaa27499511ecb07ec15479b18))
+
+
+
+
+
 ## [3.3.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.3.2...github-actions@3.3.3) (2021-03-09)
 
 
