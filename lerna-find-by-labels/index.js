@@ -2,93 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 5379:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info, warning } = __webpack_require__(2186);
-const github = __webpack_require__(5438);
-const Project = __webpack_require__(234);
-const QueryGraph = __webpack_require__(246);
-
-const { LABEL_PREFIX } = __webpack_require__(1404);
-const { appNameEquals } = __webpack_require__(2381);
-
-async function findByLabels({ gitHubClient, include = [], packageJsonKeys = ['label', 'name', 'location'] }) {
-  const labels = [...include];
-
-  const pullRequest = github.context.payload.pull_request;
-
-  if (pullRequest) {
-    const { data } = await gitHubClient.pulls.get({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      pull_number: pullRequest.number,
-    });
-    labels.push(...data.labels.map((label) => label.name));
-  } else if (!labels.length) {
-    warning('Labels are missing from GitHub payload');
-  }
-
-  const project = new Project(process.cwd());
-  const projectDir = project.packageParentDirs[0].split('/').pop();
-  const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sort dependencies before dependents
-
-  const matches = pkgJsons.filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)));
-
-  info(`Found: ${matches.map(({ name }) => name)}`);
-
-  return matches.map((pkgJson) =>
-    packageJsonKeys.reduce((acc, key) => {
-      if (key === 'label') {
-        const label = labels
-          .find((item) => appNameEquals(item, pkgJson.name))
-          .replace(new RegExp(`^${LABEL_PREFIX}`), '');
-        return { ...acc, label };
-      }
-
-      if (key === 'location') {
-        const location = pkgJson.location.substring(pkgJson.location.indexOf(`${projectDir}/`));
-        return { ...acc, location };
-      }
-
-      return { ...acc, [key]: pkgJson.get(key) };
-    }, {}),
-  );
-}
-
-module.exports.findByLabels = findByLabels;
-
-
-/***/ }),
-
-/***/ 8841:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-const github = __webpack_require__(5438);
-
-const { inputList } = __webpack_require__(2381);
-
-const { findByLabels } = __webpack_require__(5379);
-
-const params = {
-  gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN')),
-  include: inputList(core.getInput('include')),
-  packageJsonKeys: inputList(core.getInput('package-json-keys')),
-};
-
-findByLabels(params)
-  .then((pkgJsons) => {
-    core.setOutput('packages', JSON.stringify(pkgJsons));
-  })
-  .catch((err) => {
-    console.error(err);
-    core.setFailed(err.message);
-  });
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -58312,7 +58225,94 @@ module.exports.sync = (fp, data, opts) => {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 2865:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { info, warning } = __webpack_require__(2186);
+const github = __webpack_require__(5438);
+const Project = __webpack_require__(234);
+const QueryGraph = __webpack_require__(246);
+
+const { LABEL_PREFIX } = __webpack_require__(7300);
+const { appNameEquals } = __webpack_require__(2613);
+
+async function findByLabels({ gitHubClient, include = [], packageJsonKeys = ['label', 'name', 'location'] }) {
+  const labels = [...include];
+
+  const pullRequest = github.context.payload.pull_request;
+
+  if (pullRequest) {
+    const { data } = await gitHubClient.pulls.get({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      pull_number: pullRequest.number,
+    });
+    labels.push(...data.labels.map((label) => label.name));
+  } else if (!labels.length) {
+    warning('Labels are missing from GitHub payload');
+  }
+
+  const project = new Project(process.cwd());
+  const projectDir = project.packageParentDirs[0].split('/').pop();
+  const pkgJsons = QueryGraph.toposort(await project.getPackages()); // sort dependencies before dependents
+
+  const matches = pkgJsons.filter((pkgJson) => labels.some((label) => appNameEquals(label, pkgJson.name)));
+
+  info(`Found: ${matches.map(({ name }) => name)}`);
+
+  return matches.map((pkgJson) =>
+    packageJsonKeys.reduce((acc, key) => {
+      if (key === 'label') {
+        const label = labels
+          .find((item) => appNameEquals(item, pkgJson.name))
+          .replace(new RegExp(`^${LABEL_PREFIX}`), '');
+        return { ...acc, label };
+      }
+
+      if (key === 'location') {
+        const location = pkgJson.location.substring(pkgJson.location.indexOf(`${projectDir}/`));
+        return { ...acc, location };
+      }
+
+      return { ...acc, [key]: pkgJson.get(key) };
+    }, {}),
+  );
+}
+
+module.exports.findByLabels = findByLabels;
+
+
+/***/ }),
+
+/***/ 9437:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+const github = __webpack_require__(5438);
+
+const { inputList } = __webpack_require__(2613);
+
+const { findByLabels } = __webpack_require__(2865);
+
+const params = {
+  gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN')),
+  include: inputList(core.getInput('include')),
+  packageJsonKeys: inputList(core.getInput('package-json-keys')),
+};
+
+findByLabels(params)
+  .then((pkgJsons) => {
+    core.setOutput('packages', JSON.stringify(pkgJsons));
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -58333,7 +58333,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -58341,7 +58341,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -58506,7 +58506,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -58568,11 +58568,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -58966,6 +58966,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(8841);
+/******/ 	return __webpack_require__(9437);
 /******/ })()
 ;

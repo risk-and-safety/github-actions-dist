@@ -1,15 +1,15 @@
 name: Label Changed Packages
-description: Adds pull request labels for monorepo packages that have changed between branches or tags
+description: Adds pull request labels for monorepo packages that have changed between git branches or tags
 inputs:
   GITHUB_TOKEN:
     description: The GitHub Action token
     required: true
   diff-by:
-    description: Determine what has changed by either comparing against the next branch or the most recent release tag. Options are [branch,tag]
+    description: Determine what has changed by comparing against the next branch or the most recent git release tag. (branch or tag)
     required: false
     default: branch
   target-branch:
-    description: The other branch to compare the current branch against (only applies to diff-by branch)
+    description: Other branch to compare against. Only applies to diff-by=branch and non-pull requests events
     required: false
     default: ''
   skip-labels:
@@ -17,7 +17,7 @@ inputs:
     required: false
     default: ''
   dry-run:
-    description: Indicates that the labels should be calculated and output but not pushed to the pull request
+    description: Do NOT push to the pull request. Only output the labels
     required: false
     default: "false"
   prefix:
