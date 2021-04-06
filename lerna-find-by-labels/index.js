@@ -70,7 +70,7 @@ const github = __webpack_require__(5438);
 const { inputList } = __webpack_require__(2381);
 
 const { findByLabels } = __webpack_require__(5379);
-console.log('include', core.getInput('include'));
+
 const params = {
   gitHubClient: github.getOctokit(core.getInput('GITHUB_TOKEN')),
   include: inputList(core.getInput('include')),
