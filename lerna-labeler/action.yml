@@ -8,6 +8,10 @@ inputs:
     description: Determine what has changed by either comparing against the next branch or the most recent release tag. Options are [branch,tag]
     required: false
     default: branch
+  target-branch:
+    description: The other branch to compare the current branch against (only applies to diff-by branch)
+    required: false
+    default: ''
   skip-labels:
     description: Comma/newline delimited list of labels to ignore
     required: false

@@ -9065,9 +9065,11 @@ async function getShortCommit() {
 
 async function getDestBranch() {
   const { pull_request } = github.context.payload;
-  const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+  if (pull_request) {
+    return pull_request.base.ref;
+  }
 
-  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+  return github.context.ref ? github.context.ref.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
 async function getSrcBranch() {

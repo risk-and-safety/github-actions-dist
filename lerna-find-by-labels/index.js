@@ -6361,18 +6361,6 @@ exports.isPlainObject = isPlainObject;
 
 /***/ }),
 
-/***/ 5063:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = function () {
-	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
-};
-
-
-/***/ }),
-
 /***/ 3278:
 /***/ ((module) => {
 
@@ -20733,6 +20721,18 @@ Gauge.prototype._doRedraw = function () {
 
 /***/ }),
 
+/***/ 5899:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = function () {
+	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
+};
+
+
+/***/ }),
+
 /***/ 3737:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -20837,7 +20837,7 @@ module.exports = function (str) {
 
 "use strict";
 
-var ansiRegex = __webpack_require__(5063)();
+var ansiRegex = __webpack_require__(5899)();
 
 module.exports = function (str) {
 	return typeof str === 'string' ? str.replace(ansiRegex, '') : str;
@@ -58357,9 +58357,11 @@ async function getShortCommit() {
 
 async function getDestBranch() {
   const { pull_request } = github.context.payload;
-  const branch = (pull_request && pull_request.base && pull_request.base.ref) || github.context.ref;
+  if (pull_request) {
+    return pull_request.base.ref;
+  }
 
-  return branch ? branch.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
+  return github.context.ref ? github.context.ref.split('/').pop() : exec('git rev-parse --abbrev-ref HEAD');
 }
 
 async function getSrcBranch() {
