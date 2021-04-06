@@ -6,7 +6,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   include:
-    description: Labels to use instead of querying the current pull request
+    description: Additional labels to add or use if not a pull request
     required: false
   package-json-keys:
     description: Package.json keys to include in the output
