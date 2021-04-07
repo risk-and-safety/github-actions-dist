@@ -2,298 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9889:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { kubeStatus } = __webpack_require__(6858);
-
-const params = {
-  app: core.getInput('app', { required: true }),
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
-  dockerImage: core.getInput('docker-image'),
-  dockerName: core.getInput('docker-name'),
-  namespace: core.getInput('namespace'),
-  kind: core.getInput('kind'),
-  tagPrefix: core.getInput('tag-prefix'),
-  env: core.getInput('env'),
-  clusterName: core.getInput('cluster-name'),
-  registry: core.getInput('registry'),
-  kibanaHost: core.getInput('kibana-host'),
-  retries: parseInt(core.getInput('retries'), 10),
-};
-
-kubeStatus(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
-
-
-/***/ }),
-
-/***/ 6858:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info, warning } = __webpack_require__(2186);
-const github = __webpack_require__(5438);
-const pRetry = __webpack_require__(2548);
-
-const { getEnv } = __webpack_require__(8762);
-const { findImages } = __webpack_require__(91);
-const { exec } = __webpack_require__(6264);
-const { cleanAppName, validateEnv, validateNamespace } = __webpack_require__(2381);
-const { kubeService, STATUSES } = __webpack_require__(5429);
-
-const KIND_OPTIONS = ['deployment', 'daemonset'];
-
-async function findImage(params) {
-  const { owner, repo } = github.context.repo;
-  const { app, env, GITHUB_TOKEN = process.env.GITHUB_TOKEN, registry = 'docker.pkg.github.com' } = params;
-
-  const dockerName = cleanAppName(params.dockerName || app);
-  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
-  const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}`;
-  const gitHubClient = github.getOctokit(GITHUB_TOKEN);
-  const [latestImage] = await findImages({
-    gitHubClient,
-    owner,
-    repo,
-    apps: [dockerName],
-    tag: tagPattern,
-  });
-
-  const tag = latestImage && latestImage.version;
-
-  if (!tag) {
-    warning(`No Docker image found with pattern "${dockerName}:${tagPattern}"`);
-    return STATUSES.UNCHANGED;
-  }
-
-  return `${registry}/${owner}/${repo}/${dockerName}:${tag}`;
-}
-
-async function kubeStatus(params) {
-  try {
-    await exec('command -v fluxctl');
-  } catch (err) {
-    throw new Error('kube-status must be run on a self-hosted runner with Fluxctl');
-  }
-
-  const env = params.env ? validateEnv(params.env) : await getEnv();
-  const app = cleanAppName(params.app);
-  const namespace = validateNamespace(params.namespace || 'apps');
-  const { clusterName = 'rss', kind = 'deployment', kibanaHost = 'http://localhost', retries = 3 } = params;
-
-  if (!KIND_OPTIONS.includes(kind)) {
-    throw new Error(`Invalid kind value "${kind}". Must be ${KIND_OPTIONS}`);
-  }
-
-  if (!kibanaHost) {
-    throw new Error('Missing Kibana host');
-  }
-
-  // TODO refactor GitHub repo deploy.yaml files to pass docker-image to "Kube Watch"
-  const dockerImage = params.dockerImage || (await findImage({ ...params, app, env }));
-
-  await kubeService.init(clusterName, env);
-
-  let status = STATUSES.UNCHANGED;
-
-  try {
-    const oldestTimestamp = await kubeService.findOldestTimestamp(app, namespace);
-
-    if (!oldestTimestamp) {
-      warning(`${app}: no pods found in ${namespace} (${env})`);
-      return status;
-    }
-
-    info(`${app}: found running pod from ${oldestTimestamp} in ${namespace} (${env})`);
-
-    try {
-      await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
-        onFailedAttempt: (err) => info(`Retrying ${app}, ${err.message}`),
-        retries,
-        minTimeout: 3000,
-      });
-    } catch (err) {
-      if (err.message.includes(`Error: timeout`)) {
-        warning(`${app}: flux release timed out`);
-      } else {
-        throw err;
-      }
-    }
-
-    const newPodName = await kubeService.findNewPodName(app, namespace, oldestTimestamp);
-
-    if (newPodName) {
-      status = await kubeService.watchStatus(app, namespace, kind);
-
-      const warnings = await kubeService.findWarnings(newPodName, namespace);
-
-      if (warnings.length) {
-        warning(warnings.join('\n'));
-      }
-
-      const logs = await kubeService.findErrorLogs(newPodName, namespace);
-
-      if (logs.length) {
-        warning(logs);
-      }
-    }
-  } catch (err) {
-    if (err.response && err.response.body && err.response.body.message) {
-      const { code, message, reason } = err.response.body;
-
-      throw new Error(`API Error ${code}: ${reason || ''} ${message}`);
-    }
-
-    throw err;
-  }
-
-  if (status === STATUSES.FAILED) {
-    throw new Error(`${app}: failed in ${namespace} (${env})`);
-  }
-
-  info(`---- ${app} Kibana Logs ----`);
-  info(
-    `${kibanaHost}/_plugin/kibana/app/kibana#/discover?_a=%28index:${env},query:%28language:lucene,query:%27app:${app}%27%29%29`,
-  );
-
-  return status;
-}
-
-module.exports.kubeStatus = kubeStatus;
-
-
-/***/ }),
-
-/***/ 5429:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info, warning } = __webpack_require__(2186);
-const os = __webpack_require__(2087);
-
-const { exec, sh } = __webpack_require__(6264);
-
-const TIMEOUT = '60s';
-const STATUSES = {
-  FAILED: 'Failed',
-  RUNNING: 'Running',
-  WARNING: 'Warning',
-  UNCHANGED: 'unchanged',
-};
-
-module.exports.STATUSES = STATUSES;
-module.exports.kubeService = {
-  env: null,
-  KUBECONFIG: null,
-
-  async init(clusterName, env) {
-    this.env = env;
-
-    const configFile = `${os.homedir()}/.kube/config-${this.env}`;
-
-    await sh(`AWS_PROFILE=${this.env} aws eks update-kubeconfig --name ${clusterName} --kubeconfig ${configFile}`);
-
-    this.KUBECONFIG = `KUBECONFIG=${configFile}`;
-  },
-
-  async findOldestTimestamp(app, namespace) {
-    info(`${app}: find oldest pod in ${namespace} (${this.env})`);
-
-    const { RUNNING } = STATUSES;
-    const { items } = JSON.parse(
-      await exec(
-        `${this.KUBECONFIG} kubectl get pods -l app=${app} --field-selector status.phase=${RUNNING} -n ${namespace} -o json`,
-      ),
-    );
-
-    if (!items.length) {
-      return null;
-    }
-
-    const firstTimestamp = items[0].metadata.creationTimestamp;
-
-    return items
-      .map((pod) => pod.metadata.creationTimestamp)
-      .reduce((previous, next) => (next < previous ? next : previous), firstTimestamp);
-  },
-
-  async findNewPodName(app, namespace, oldestTimestamp) {
-    const { items } = JSON.parse(
-      await exec(`${this.KUBECONFIG} kubectl get pods -l app=${app} -n ${namespace} -o json`),
-    );
-
-    const [newPod] = items
-      .filter((pod) => pod.metadata.creationTimestamp > oldestTimestamp)
-      .sort((a, b) => b.metadata.creationTimestamp.localeCompare(a.metadata.creationTimestamp));
-
-    if (!newPod) {
-      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than ${oldestTimestamp}`);
-      return null;
-    }
-
-    const { name } = newPod.metadata;
-
-    info(`${app}: deployed new pod ${name} to ${namespace} (${this.env})`);
-
-    const { terminated } = newPod.status.containerStatuses[0].state;
-    if (terminated) {
-      throw new Error(
-        `${name}.${namespace} (${this.env}) terminated. ${terminated.reason || JSON.stringify(terminated)}`,
-      );
-    }
-
-    return name;
-  },
-
-  async watchStatus(app, namespace, kind) {
-    try {
-      await exec(`${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${TIMEOUT} -n ${namespace}`);
-      return STATUSES.RUNNING;
-    } catch (err) {
-      return STATUSES.FAILED;
-    }
-  },
-
-  async findWarnings(podName, namespace) {
-    const { WARNING } = STATUSES;
-    const { items } = JSON.parse(
-      await exec(
-        `${this.KUBECONFIG} kubectl get events --field-selector involvedObject.name=${podName},type=${WARNING} -n ${namespace} -o json`,
-      ),
-    );
-
-    return items.map((item) => item.message);
-  },
-
-  async findErrorLogs(podName, namespace) {
-    try {
-      return exec(`${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception" || true`);
-    } catch (err) {
-      warning(err.message);
-      return '';
-    }
-  },
-
-  async fluxRelease({ app, namespace, kind, dockerImage }) {
-    try {
-      const workload = `--workload=${namespace}:${kind}/${app} --update-image=${dockerImage}`;
-      await sh(`${this.KUBECONFIG} fluxctl release ${workload} --k8s-fwd-ns=ops --timeout=${TIMEOUT}`);
-    } catch (err) {
-      if (err.message.includes('no changes made in repo')) {
-        return;
-      }
-
-      throw err;
-    }
-  },
-};
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -10091,7 +9799,301 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 9771:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { kubeStatus } = __webpack_require__(7624);
+
+const params = {
+  app: core.getInput('app', { required: true }),
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
+  dockerImage: core.getInput('docker-image'),
+  dockerName: core.getInput('docker-name'),
+  namespace: core.getInput('namespace'),
+  kind: core.getInput('kind'),
+  tagPrefix: core.getInput('tag-prefix'),
+  env: core.getInput('env'),
+  clusterName: core.getInput('cluster-name'),
+  registry: core.getInput('registry'),
+  kibanaHost: core.getInput('kibana-host'),
+  retries: parseInt(core.getInput('retries'), 10),
+};
+
+kubeStatus(params).catch((err) => {
+  console.error(err);
+  core.setFailed(err.message);
+});
+
+
+/***/ }),
+
+/***/ 7624:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { info, warning } = __webpack_require__(2186);
+const github = __webpack_require__(5438);
+const pRetry = __webpack_require__(2548);
+
+const { getEnv } = __webpack_require__(9329);
+const { findImages } = __webpack_require__(8929);
+const { exec } = __webpack_require__(7845);
+const { cleanAppName, validateEnv, validateNamespace } = __webpack_require__(2613);
+const { kubeService, STATUSES } = __webpack_require__(9313);
+
+const KIND_OPTIONS = ['deployment', 'daemonset'];
+
+async function findImage(params) {
+  const { owner, repo } = github.context.repo;
+  const { app, env, GITHUB_TOKEN = process.env.GITHUB_TOKEN, registry = 'docker.pkg.github.com' } = params;
+
+  const dockerName = cleanAppName(params.dockerName || app);
+  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
+  const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}`;
+  const gitHubClient = github.getOctokit(GITHUB_TOKEN);
+  const [latestImage] = await findImages({
+    gitHubClient,
+    owner,
+    repo,
+    apps: [dockerName],
+    tag: tagPattern,
+  });
+
+  const tag = latestImage && latestImage.version;
+
+  if (!tag) {
+    warning(`No Docker image found with pattern "${dockerName}:${tagPattern}"`);
+    return STATUSES.UNCHANGED;
+  }
+
+  return `${registry}/${owner}/${repo}/${dockerName}:${tag}`;
+}
+
+async function kubeStatus(params) {
+  try {
+    await exec('command -v fluxctl');
+  } catch (err) {
+    throw new Error('kube-status must be run on a self-hosted runner with Fluxctl');
+  }
+
+  const env = params.env ? validateEnv(params.env) : await getEnv();
+  const app = cleanAppName(params.app);
+  const namespace = validateNamespace(params.namespace || 'apps');
+  const { clusterName = 'rss', kind = 'deployment', kibanaHost = 'http://localhost', retries = 3 } = params;
+
+  if (!KIND_OPTIONS.includes(kind)) {
+    throw new Error(`Invalid kind value "${kind}". Must be ${KIND_OPTIONS}`);
+  }
+
+  if (!kibanaHost) {
+    throw new Error('Missing Kibana host');
+  }
+
+  // TODO refactor GitHub repo deploy.yaml files to pass docker-image to "Kube Watch"
+  const dockerImage = params.dockerImage || (await findImage({ ...params, app, env }));
+
+  await kubeService.init(clusterName, env);
+
+  let status = STATUSES.UNCHANGED;
+
+  try {
+    const oldestTimestamp = await kubeService.findOldestTimestamp(app, namespace);
+
+    if (!oldestTimestamp) {
+      warning(`${app}: no pods found in ${namespace} (${env})`);
+      return status;
+    }
+
+    info(`${app}: found running pod from ${oldestTimestamp} in ${namespace} (${env})`);
+
+    try {
+      await pRetry(async () => kubeService.fluxRelease({ app, namespace, kind, dockerImage, retries }), {
+        onFailedAttempt: (err) => info(`Retrying ${app}, ${err.message}`),
+        retries,
+        minTimeout: 3000,
+      });
+    } catch (err) {
+      if (err.message.includes(`Error: timeout`)) {
+        warning(`${app}: flux release timed out`);
+      } else {
+        throw err;
+      }
+    }
+
+    const newPodName = await kubeService.findNewPodName(app, namespace, oldestTimestamp);
+
+    if (newPodName) {
+      status = await kubeService.watchStatus(app, namespace, kind);
+
+      const warnings = await kubeService.findWarnings(newPodName, namespace);
+
+      if (warnings.length) {
+        warning(warnings.join('\n'));
+      }
+
+      const logs = await kubeService.findErrorLogs(newPodName, namespace);
+
+      if (logs.length) {
+        warning(logs);
+      }
+    }
+  } catch (err) {
+    if (err.response && err.response.body && err.response.body.message) {
+      const { code, message, reason } = err.response.body;
+
+      throw new Error(`API Error ${code}: ${reason || ''} ${message}`);
+    }
+
+    throw err;
+  }
+
+  if (status === STATUSES.FAILED) {
+    throw new Error(`${app}: failed in ${namespace} (${env})`);
+  }
+
+  info(`---- ${app} Kibana Logs ----`);
+  info(
+    `${kibanaHost}/_plugin/kibana/app/kibana#/discover?_a=%28index:${env},query:%28language:lucene,query:%27app:${app}%27%29%29`,
+  );
+
+  return status;
+}
+
+module.exports.kubeStatus = kubeStatus;
+
+
+/***/ }),
+
+/***/ 9313:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { info, warning } = __webpack_require__(2186);
+const os = __webpack_require__(2087);
+
+const { exec, sh } = __webpack_require__(7845);
+
+const TIMEOUT = '60s';
+const STATUSES = {
+  FAILED: 'Failed',
+  RUNNING: 'Running',
+  WARNING: 'Warning',
+  UNCHANGED: 'unchanged',
+};
+
+module.exports.STATUSES = STATUSES;
+module.exports.kubeService = {
+  env: null,
+  KUBECONFIG: null,
+
+  async init(clusterName, env) {
+    this.env = env;
+
+    const configFile = `${os.homedir()}/.kube/config-${this.env}`;
+
+    await sh(`AWS_PROFILE=${this.env} aws eks update-kubeconfig --name ${clusterName} --kubeconfig ${configFile}`);
+
+    this.KUBECONFIG = `KUBECONFIG=${configFile}`;
+  },
+
+  async findOldestTimestamp(app, namespace) {
+    info(`${app}: find oldest pod in ${namespace} (${this.env})`);
+
+    const { RUNNING } = STATUSES;
+    const { items } = JSON.parse(
+      await exec(
+        `${this.KUBECONFIG} kubectl get pods -l app=${app} --field-selector status.phase=${RUNNING} -n ${namespace} -o json`,
+      ),
+    );
+
+    if (!items.length) {
+      return null;
+    }
+
+    const firstTimestamp = items[0].metadata.creationTimestamp;
+
+    return items
+      .map((pod) => pod.metadata.creationTimestamp)
+      .reduce((previous, next) => (next < previous ? next : previous), firstTimestamp);
+  },
+
+  async findNewPodName(app, namespace, oldestTimestamp) {
+    const { items } = JSON.parse(
+      await exec(`${this.KUBECONFIG} kubectl get pods -l app=${app} -n ${namespace} -o json`),
+    );
+
+    const [newPod] = items
+      .filter((pod) => pod.metadata.creationTimestamp > oldestTimestamp)
+      .sort((a, b) => b.metadata.creationTimestamp.localeCompare(a.metadata.creationTimestamp));
+
+    if (!newPod) {
+      info(`${app}: no new pods found in ${namespace} (${this.env}) newer than ${oldestTimestamp}`);
+      return null;
+    }
+
+    const { name } = newPod.metadata;
+
+    info(`${app}: deployed new pod ${name} to ${namespace} (${this.env})`);
+
+    const { terminated } = newPod.status.containerStatuses[0].state;
+    if (terminated) {
+      throw new Error(
+        `${name}.${namespace} (${this.env}) terminated. ${terminated.reason || JSON.stringify(terminated)}`,
+      );
+    }
+
+    return name;
+  },
+
+  async watchStatus(app, namespace, kind) {
+    try {
+      await exec(`${this.KUBECONFIG} kubectl rollout status ${kind} ${app} -w --timeout=${TIMEOUT} -n ${namespace}`);
+      return STATUSES.RUNNING;
+    } catch (err) {
+      return STATUSES.FAILED;
+    }
+  },
+
+  async findWarnings(podName, namespace) {
+    const { WARNING } = STATUSES;
+    const { items } = JSON.parse(
+      await exec(
+        `${this.KUBECONFIG} kubectl get events --field-selector involvedObject.name=${podName},type=${WARNING} -n ${namespace} -o json`,
+      ),
+    );
+
+    return items.map((item) => item.message);
+  },
+
+  async findErrorLogs(podName, namespace) {
+    try {
+      return await exec(
+        `${this.KUBECONFIG} kubectl logs ${podName} -n ${namespace} | grep -i "Error\\|Exception" || true`,
+      );
+    } catch (err) {
+      warning(err.message);
+      return '';
+    }
+  },
+
+  async fluxRelease({ app, namespace, kind, dockerImage }) {
+    try {
+      const workload = `--workload=${namespace}:${kind}/${app} --update-image=${dockerImage}`;
+      await sh(`${this.KUBECONFIG} fluxctl release ${workload} --k8s-fwd-ns=ops --timeout=${TIMEOUT}`);
+    } catch (err) {
+      if (err.message.includes('no changes made in repo')) {
+        return;
+      }
+
+      throw err;
+    }
+  },
+};
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -10112,7 +10114,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -10120,7 +10122,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -10285,7 +10287,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 91:
+/***/ 8929:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
@@ -10293,8 +10295,8 @@ const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
-const { exec, sh } = __webpack_require__(6264);
+const { getShortCommit, getSrcBranch } = __webpack_require__(9329);
+const { exec, sh } = __webpack_require__(7845);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
 
@@ -10405,7 +10407,7 @@ module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -10467,11 +10469,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -10825,6 +10827,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(9889);
+/******/ 	return __webpack_require__(9771);
 /******/ })()
 ;

@@ -2,148 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 2809:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info } = __webpack_require__(2186);
-const fs = __webpack_require__(5630);
-const os = __webpack_require__(2087);
-const path = __webpack_require__(5622);
-const { v4: uuid } = __webpack_require__(4552);
-
-const { exec, sh } = __webpack_require__(6264);
-const { cleanBuildDir, validateRepo } = __webpack_require__(2381);
-const { getGitUser, getSrcBranch, setGitUser } = __webpack_require__(8762);
-
-const HOME = os.homedir();
-
-const TEMP_GIT_DIR = `${os.tmpdir()}/actions-release-${uuid()}/`;
-const DEFAULT_BRANCH = 'master';
-
-async function copyFilesAndCommit(buildDir) {
-  await fs.copy(buildDir, '.');
-
-  await sh(`git add -N .`);
-
-  const changes = (await exec(`git diff --exit-code >/dev/null || echo true`)) === 'true';
-
-  if (!changes) {
-    info('no changes found');
-    return;
-  }
-
-  const { version } = await fs.readJson('./package.json');
-
-  await sh(
-    `git add .
-git commit -m "chore(release): push compiled code"
-git tag -a -m "v${version}" v${version} || true`,
-  );
-}
-
-async function actionsRelease(params) {
-  const repo = validateRepo(params.repo);
-  const buildDir = cleanBuildDir(params.buildDir);
-  const { sshDeployKey, preRelease = false, dryRun = false } = params;
-
-  const user = await getGitUser();
-  const repoName = repo.split('/').pop();
-  let originUrl = repo;
-
-  if (!dryRun) {
-    await fs.ensureDir(`${HOME}/.ssh/`);
-
-    if (sshDeployKey) {
-      const sshKeyFile = sshDeployKey.endsWith('\n') ? sshDeployKey : `${sshDeployKey}\n`;
-
-      await fs.outputFile(`${HOME}/.ssh/actions_repo_deploy_key`, sshKeyFile);
-      await sh(`chmod 600 ${HOME}/.ssh/actions_repo_deploy_key`);
-    }
-
-    await fs.outputFile(
-      `${HOME}/.ssh/config`,
-      `Host ${repoName}
-  HostName github.com
-  User "${user.username}"
-  IdentityFile ${HOME}/.ssh/actions_repo_deploy_key
-  IdentitiesOnly yes
-  StrictHostKeyChecking no`,
-    );
-
-    // https://stackoverflow.com/questions/7927750/specify-an-ssh-key-for-git-push-for-a-given-domain
-    originUrl = repo.replace('github.com', repoName);
-  }
-
-  const cwd = process.cwd();
-
-  try {
-    const dirExists = fs.existsSync(TEMP_GIT_DIR);
-
-    if (!dirExists) {
-      await fs.ensureDir(TEMP_GIT_DIR);
-    }
-
-    process.chdir(TEMP_GIT_DIR);
-
-    if (!dirExists) {
-      await sh(`git init && git remote add origin "${originUrl}"`);
-      await setGitUser(user);
-    }
-
-    await sh(`git fetch && git pull origin ${DEFAULT_BRANCH}`);
-
-    const branch = await getSrcBranch();
-    const remoteExists = await exec(`git ls-remote --heads origin refs/heads/${branch}`);
-
-    if (remoteExists) {
-      await sh(`git checkout ${branch} -- && git pull`);
-    } else {
-      await sh(`git checkout ${branch} -- || git checkout -b ${branch}`);
-    }
-
-    if (preRelease) {
-      await copyFilesAndCommit(path.join(cwd, buildDir));
-    } else if (branch !== DEFAULT_BRANCH) {
-      await sh(`git checkout ${DEFAULT_BRANCH} -- && git merge ${branch} -Xours`);
-    }
-
-    if (!dryRun) {
-      await sh(`git push origin ${preRelease ? branch : DEFAULT_BRANCH} --follow-tags`);
-    }
-  } finally {
-    process.chdir(cwd);
-  }
-}
-
-module.exports.actionsRelease = actionsRelease;
-module.exports.TEMP_GIT_DIR = TEMP_GIT_DIR;
-
-
-/***/ }),
-
-/***/ 3064:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { actionsRelease } = __webpack_require__(2809);
-
-const params = {
-  repo: core.getInput('repo'),
-  buildDir: core.getInput('build-dir') || 'build/',
-  sshDeployKey: core.getInput('ssh-deploy-key'),
-  preRelease: core.getInput('pre-release') === 'true',
-  dryRun: core.getInput('dry-run') === 'true',
-};
-
-actionsRelease(params).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -12620,7 +12478,149 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 3341:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { info } = __webpack_require__(2186);
+const fs = __webpack_require__(5630);
+const os = __webpack_require__(2087);
+const path = __webpack_require__(5622);
+const { v4: uuid } = __webpack_require__(4552);
+
+const { exec, sh } = __webpack_require__(7845);
+const { cleanBuildDir, validateRepo } = __webpack_require__(2613);
+const { getGitUser, getSrcBranch, setGitUser } = __webpack_require__(9329);
+
+const HOME = os.homedir();
+
+const TEMP_GIT_DIR = `${os.tmpdir()}/actions-release-${uuid()}/`;
+const DEFAULT_BRANCH = 'master';
+
+async function copyFilesAndCommit(buildDir) {
+  await fs.copy(buildDir, '.');
+
+  await sh(`git add -N .`);
+
+  const changes = (await exec(`git diff --exit-code >/dev/null || echo true`)) === 'true';
+
+  if (!changes) {
+    info('no changes found');
+    return;
+  }
+
+  const { version } = await fs.readJson('./package.json');
+
+  await sh(
+    `git add .
+git commit -m "chore(release): push compiled code"
+git tag -a -m "v${version}" v${version} || true`,
+  );
+}
+
+async function actionsRelease(params) {
+  const repo = validateRepo(params.repo);
+  const buildDir = cleanBuildDir(params.buildDir);
+  const { sshDeployKey, preRelease = false, dryRun = false } = params;
+
+  const user = await getGitUser();
+  const repoName = repo.split('/').pop();
+  let originUrl = repo;
+
+  if (!dryRun) {
+    await fs.ensureDir(`${HOME}/.ssh/`);
+
+    if (sshDeployKey) {
+      const sshKeyFile = sshDeployKey.endsWith('\n') ? sshDeployKey : `${sshDeployKey}\n`;
+
+      await fs.outputFile(`${HOME}/.ssh/actions_repo_deploy_key`, sshKeyFile);
+      await sh(`chmod 600 ${HOME}/.ssh/actions_repo_deploy_key`);
+    }
+
+    await fs.outputFile(
+      `${HOME}/.ssh/config`,
+      `Host ${repoName}
+  HostName github.com
+  User "${user.username}"
+  IdentityFile ${HOME}/.ssh/actions_repo_deploy_key
+  IdentitiesOnly yes
+  StrictHostKeyChecking no`,
+    );
+
+    // https://stackoverflow.com/questions/7927750/specify-an-ssh-key-for-git-push-for-a-given-domain
+    originUrl = repo.replace('github.com', repoName);
+  }
+
+  const cwd = process.cwd();
+
+  try {
+    const dirExists = fs.existsSync(TEMP_GIT_DIR);
+
+    if (!dirExists) {
+      await fs.ensureDir(TEMP_GIT_DIR);
+    }
+
+    process.chdir(TEMP_GIT_DIR);
+
+    if (!dirExists) {
+      await sh(`git init && git remote add origin "${originUrl}"`);
+      await setGitUser(user);
+    }
+
+    await sh(`git fetch && git pull origin ${DEFAULT_BRANCH}`);
+
+    const branch = await getSrcBranch();
+    const remoteExists = await exec(`git ls-remote --heads origin refs/heads/${branch}`);
+
+    if (remoteExists) {
+      await sh(`git checkout ${branch} -- && git pull`);
+    } else {
+      await sh(`git checkout ${branch} -- || git checkout -b ${branch}`);
+    }
+
+    if (preRelease) {
+      await copyFilesAndCommit(path.join(cwd, buildDir));
+    } else if (branch !== DEFAULT_BRANCH) {
+      await sh(`git checkout ${DEFAULT_BRANCH} -- && git merge ${branch} -Xours`);
+    }
+
+    if (!dryRun) {
+      await sh(`git push origin ${preRelease ? branch : DEFAULT_BRANCH} --follow-tags`);
+    }
+  } finally {
+    process.chdir(cwd);
+  }
+}
+
+module.exports.actionsRelease = actionsRelease;
+module.exports.TEMP_GIT_DIR = TEMP_GIT_DIR;
+
+
+/***/ }),
+
+/***/ 1158:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { actionsRelease } = __webpack_require__(3341);
+
+const params = {
+  repo: core.getInput('repo'),
+  buildDir: core.getInput('build-dir') || 'build/',
+  sshDeployKey: core.getInput('ssh-deploy-key'),
+  preRelease: core.getInput('pre-release') === 'true',
+  dryRun: core.getInput('dry-run') === 'true',
+};
+
+actionsRelease(params).catch((err) => {
+  console.error(err);
+  core.setFailed(err.message);
+});
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -12641,7 +12641,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -12649,7 +12649,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -12814,7 +12814,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -12876,11 +12876,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -13290,6 +13290,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(3064);
+/******/ 	return __webpack_require__(1158);
 /******/ })()
 ;

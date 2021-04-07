@@ -2,86 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 7582:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const github = __webpack_require__(5438);
-
-const { getEnv, getDestBranch, getShortCommit } = __webpack_require__(8762);
-const { dockerBuild, dockerLogin, dockerPush, getStagingTag } = __webpack_require__(91);
-const { sh } = __webpack_require__(6264);
-const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2381);
-
-async function dockerRelease(params) {
-  const { owner, repo } = github.context.repo;
-  const { deploy = true, labels = [], password, registry = 'docker.pkg.github.com', username } = params;
-  const path = params.path && cleanPath(params.path);
-  const app = cleanAppName(params.app);
-  const dockerName = cleanAppName(params.dockerName || app);
-  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
-  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
-  const commit = await getShortCommit();
-  const stagingTag = await getStagingTag();
-  const tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
-
-  await dockerLogin({ username, password, registry });
-
-  if (path) {
-    await dockerBuild(dockerImage, tag, path, labels);
-  } else {
-    await sh(`docker pull ${dockerImage}:${stagingTag}`);
-    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
-  }
-
-  if (deploy) {
-    // Tag for staging to the next environment
-    const nextStagingTag = await getStagingTag(await getDestBranch());
-    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${nextStagingTag}`);
-    await dockerPush(dockerImage, nextStagingTag);
-  }
-
-  await dockerPush(dockerImage, tag);
-
-  return `${dockerImage}:${tag}`;
-}
-
-module.exports.dockerRelease = dockerRelease;
-
-
-/***/ }),
-
-/***/ 9419:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { dockerRelease } = __webpack_require__(7582);
-const { inputList } = __webpack_require__(2381);
-
-const params = {
-  username: core.getInput('username', { required: true }),
-  password: core.getInput('password', { required: true }),
-  app: core.getInput('app', { required: true }),
-  dockerName: core.getInput('docker-name'),
-  tagPrefix: core.getInput('tag-prefix'),
-  deploy: core.getInput('deploy') === 'true',
-  path: core.getInput('path'),
-  labels: inputList(core.getInput('labels')),
-  registry: core.getInput('registry'),
-};
-
-dockerRelease(params)
-  .then((image) => {
-    core.setOutput('image', image);
-  })
-  .catch((err) => {
-    console.error(err);
-    core.setFailed(err.message);
-  });
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9516,7 +9436,87 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 9316:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const github = __webpack_require__(5438);
+
+const { getEnv, getDestBranch, getShortCommit } = __webpack_require__(9329);
+const { dockerBuild, dockerLogin, dockerPush, getStagingTag } = __webpack_require__(8929);
+const { sh } = __webpack_require__(7845);
+const { cleanPath, cleanAppName, validateNamespace } = __webpack_require__(2613);
+
+async function dockerRelease(params) {
+  const { owner, repo } = github.context.repo;
+  const { deploy = true, labels = [], password, registry = 'docker.pkg.github.com', username } = params;
+  const path = params.path && cleanPath(params.path);
+  const app = cleanAppName(params.app);
+  const dockerName = cleanAppName(params.dockerName || app);
+  const dockerImage = `${registry}/${owner}/${repo}/${dockerName}`;
+  const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
+  const commit = await getShortCommit();
+  const stagingTag = await getStagingTag();
+  const tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
+
+  await dockerLogin({ username, password, registry });
+
+  if (path) {
+    await dockerBuild(dockerImage, tag, path, labels);
+  } else {
+    await sh(`docker pull ${dockerImage}:${stagingTag}`);
+    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
+  }
+
+  if (deploy) {
+    // Tag for staging to the next environment
+    const nextStagingTag = await getStagingTag(await getDestBranch());
+    await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${nextStagingTag}`);
+    await dockerPush(dockerImage, nextStagingTag);
+  }
+
+  await dockerPush(dockerImage, tag);
+
+  return `${dockerImage}:${tag}`;
+}
+
+module.exports.dockerRelease = dockerRelease;
+
+
+/***/ }),
+
+/***/ 942:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { dockerRelease } = __webpack_require__(9316);
+const { inputList } = __webpack_require__(2613);
+
+const params = {
+  username: core.getInput('username', { required: true }),
+  password: core.getInput('password', { required: true }),
+  app: core.getInput('app', { required: true }),
+  dockerName: core.getInput('docker-name'),
+  tagPrefix: core.getInput('tag-prefix'),
+  deploy: core.getInput('deploy') === 'true',
+  path: core.getInput('path'),
+  labels: inputList(core.getInput('labels')),
+  registry: core.getInput('registry'),
+};
+
+dockerRelease(params)
+  .then((image) => {
+    core.setOutput('image', image);
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -9537,7 +9537,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -9545,7 +9545,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -9710,7 +9710,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 91:
+/***/ 8929:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
@@ -9718,8 +9718,8 @@ const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
-const { exec, sh } = __webpack_require__(6264);
+const { getShortCommit, getSrcBranch } = __webpack_require__(9329);
+const { exec, sh } = __webpack_require__(7845);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
 
@@ -9830,7 +9830,7 @@ module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -9892,11 +9892,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -10250,6 +10250,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(9419);
+/******/ 	return __webpack_require__(942);
 /******/ })()
 ;

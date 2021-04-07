@@ -2,78 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 6934:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { info } = __webpack_require__(2186);
-const github = __webpack_require__(5438);
-
-const { dockerLogin, getStagingTag } = __webpack_require__(91);
-const { exec, sh } = __webpack_require__(6264);
-const { cleanAppName } = __webpack_require__(2381);
-
-async function dockerPull(params) {
-  const { owner, repo } = github.context.repo;
-  const { fileHash, password, registry = 'ghcr.io', username } = params;
-  const app = cleanAppName(params.app);
-  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
-  const stagingTag = await getStagingTag();
-
-  await dockerLogin({ username, password, registry });
-
-  try {
-    await sh(`docker pull ${dockerImage}:${stagingTag}`);
-  } catch (err) {
-    if (err.message.includes('daemon: name unknown')) {
-      info(`No Docker image matching ${app}:${stagingTag} found`);
-      return { image: `${dockerImage}:${stagingTag}`, found: false, cacheHit: false };
-    }
-
-    throw err;
-  }
-
-  const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${stagingTag}`);
-  const cacheHit = fileHash === dockerHash;
-
-  info(`Cache ${cacheHit ? 'hit' : 'miss'}: file hash ${dockerHash}`);
-
-  return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit };
-}
-
-module.exports.dockerPull = dockerPull;
-
-
-/***/ }),
-
-/***/ 725:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { dockerPull } = __webpack_require__(6934);
-
-const params = {
-  username: core.getInput('username', { required: true }),
-  password: core.getInput('password', { required: true }),
-  app: core.getInput('app', { required: true }),
-  fileHash: core.getInput('file-hash'),
-  registry: core.getInput('registry'),
-};
-
-dockerPull(params)
-  .then(({ image, found, cacheHit }) => {
-    core.setOutput('image', image);
-    core.setOutput('found', found);
-    core.setOutput('cache-hit', cacheHit);
-  })
-  .catch((err) => {
-    console.error(err);
-    core.setFailed(err.message);
-  });
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9508,7 +9436,79 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1404:
+/***/ 5325:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const { info } = __webpack_require__(2186);
+const github = __webpack_require__(5438);
+
+const { dockerLogin, getStagingTag } = __webpack_require__(8929);
+const { exec, sh } = __webpack_require__(7845);
+const { cleanAppName } = __webpack_require__(2613);
+
+async function dockerPull(params) {
+  const { owner, repo } = github.context.repo;
+  const { fileHash, password, registry = 'ghcr.io', username } = params;
+  const app = cleanAppName(params.app);
+  const dockerImage = `${registry}/${owner}/${repo}/${app}`;
+  const stagingTag = await getStagingTag();
+
+  await dockerLogin({ username, password, registry });
+
+  try {
+    await sh(`docker pull ${dockerImage}:${stagingTag}`);
+  } catch (err) {
+    if (err.message.includes('daemon: name unknown')) {
+      info(`No Docker image matching ${app}:${stagingTag} found`);
+      return { image: `${dockerImage}:${stagingTag}`, found: false, cacheHit: false };
+    }
+
+    throw err;
+  }
+
+  const dockerHash = await exec(`docker inspect --format='{{ .Config.Labels.fileHash }}' ${dockerImage}:${stagingTag}`);
+  const cacheHit = fileHash === dockerHash;
+
+  info(`Cache ${cacheHit ? 'hit' : 'miss'}: file hash ${dockerHash}`);
+
+  return { image: `${dockerImage}:${stagingTag}`, found: true, cacheHit };
+}
+
+module.exports.dockerPull = dockerPull;
+
+
+/***/ }),
+
+/***/ 1890:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { dockerPull } = __webpack_require__(5325);
+
+const params = {
+  username: core.getInput('username', { required: true }),
+  password: core.getInput('password', { required: true }),
+  app: core.getInput('app', { required: true }),
+  fileHash: core.getInput('file-hash'),
+  registry: core.getInput('registry'),
+};
+
+dockerPull(params)
+  .then(({ image, found, cacheHit }) => {
+    core.setOutput('image', image);
+    core.setOutput('found', found);
+    core.setOutput('cache-hit', cacheHit);
+  })
+  .catch((err) => {
+    console.error(err);
+    core.setFailed(err.message);
+  });
+
+
+/***/ }),
+
+/***/ 7300:
 /***/ ((module) => {
 
 module.exports.DEPLOY_TYPES = {
@@ -9529,7 +9529,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 
 /***/ }),
 
-/***/ 8762:
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -9537,7 +9537,7 @@ module.exports.LABEL_PREFIX = 'deploy:';
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -9702,7 +9702,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 91:
+/***/ 8929:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
@@ -9710,8 +9710,8 @@ const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
-const { exec, sh } = __webpack_require__(6264);
+const { getShortCommit, getSrcBranch } = __webpack_require__(9329);
+const { exec, sh } = __webpack_require__(7845);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
 
@@ -9822,7 +9822,7 @@ module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -9884,11 +9884,11 @@ module.exports.exec = exec;
 
 /***/ }),
 
-/***/ 2381:
+/***/ 2613:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const { ENV_BRANCHES } = __webpack_require__(8762);
-const { LABEL_PREFIX } = __webpack_require__(1404);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+const { LABEL_PREFIX } = __webpack_require__(7300);
 
 module.exports.inputList = function inputList(input) {
   let list = input || [];
@@ -10242,6 +10242,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(725);
+/******/ 	return __webpack_require__(1890);
 /******/ })()
 ;

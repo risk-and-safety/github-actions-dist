@@ -2,58 +2,6 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 6524:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-const core = __webpack_require__(2186);
-
-const { prune } = __webpack_require__(2655);
-
-prune({
-  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
-  app: core.getInput('app', { required: true }),
-  deploy: core.getInput('deploy') === 'true',
-}).catch((err) => {
-  console.error(err);
-  core.setFailed(err.message);
-});
-
-
-/***/ }),
-
-/***/ 2655:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const github = __webpack_require__(5438);
-const { ENV_BRANCHES } = __webpack_require__(8762);
-
-const { deleteVersion, findImages, getStagingTag } = __webpack_require__(91);
-
-async function prune({ app, GITHUB_TOKEN, deploy }) {
-  if (!deploy || !GITHUB_TOKEN) {
-    return;
-  }
-
-  const { owner, repo } = github.context.repo;
-  const stagingTag = await getStagingTag();
-  const tagPrefix = stagingTag.split('-')[0];
-
-  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
-    throw new Error(`The Docker tag, ${stagingTag}, looks like an env- tag we want to keep`);
-  } else {
-    const gitHubClient = github.getOctokit(GITHUB_TOKEN);
-    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag: stagingTag });
-
-    // TODO: Use the GitHub Container Registry (ghcr.io) API when available
-    await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
-  }
-}
-
-module.exports.prune = prune;
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9488,7 +9436,59 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 8762:
+/***/ 5099:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(2186);
+
+const { prune } = __webpack_require__(8437);
+
+prune({
+  GITHUB_TOKEN: core.getInput('GITHUB_TOKEN'),
+  app: core.getInput('app', { required: true }),
+  deploy: core.getInput('deploy') === 'true',
+}).catch((err) => {
+  console.error(err);
+  core.setFailed(err.message);
+});
+
+
+/***/ }),
+
+/***/ 8437:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const github = __webpack_require__(5438);
+const { ENV_BRANCHES } = __webpack_require__(9329);
+
+const { deleteVersion, findImages, getStagingTag } = __webpack_require__(8929);
+
+async function prune({ app, GITHUB_TOKEN, deploy }) {
+  if (!deploy || !GITHUB_TOKEN) {
+    return;
+  }
+
+  const { owner, repo } = github.context.repo;
+  const stagingTag = await getStagingTag();
+  const tagPrefix = stagingTag.split('-')[0];
+
+  if (['dev', ...ENV_BRANCHES].includes(tagPrefix)) {
+    throw new Error(`The Docker tag, ${stagingTag}, looks like an env- tag we want to keep`);
+  } else {
+    const gitHubClient = github.getOctokit(GITHUB_TOKEN);
+    const versions = await findImages({ gitHubClient, owner, repo, apps: [app], tag: stagingTag });
+
+    // TODO: Use the GitHub Container Registry (ghcr.io) API when available
+    await Promise.all(versions.map((version) => deleteVersion(gitHubClient, version)));
+  }
+}
+
+module.exports.prune = prune;
+
+
+/***/ }),
+
+/***/ 9329:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* eslint-disable camelcase */
@@ -9496,7 +9496,7 @@ function wrappy (fn, cb) {
 const { info } = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 
-const { exec, sh } = __webpack_require__(6264);
+const { exec, sh } = __webpack_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 
@@ -9661,7 +9661,7 @@ module.exports.gitMerge = gitMerge;
 
 /***/ }),
 
-/***/ 91:
+/***/ 8929:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info, warning } = __webpack_require__(2186);
@@ -9669,8 +9669,8 @@ const fs = __webpack_require__(5747);
 const kebabCase = __webpack_require__(9449);
 const util = __webpack_require__(1669);
 
-const { getShortCommit, getSrcBranch } = __webpack_require__(8762);
-const { exec, sh } = __webpack_require__(6264);
+const { getShortCommit, getSrcBranch } = __webpack_require__(9329);
+const { exec, sh } = __webpack_require__(7845);
 
 const HTTP_HEADERS_PACKAGES = { Accept: 'application/vnd.github.packages-preview+json' };
 
@@ -9781,7 +9781,7 @@ module.exports.HTTP_HEADERS_PACKAGES = HTTP_HEADERS_PACKAGES;
 
 /***/ }),
 
-/***/ 6264:
+/***/ 7845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const { info } = __webpack_require__(2186);
@@ -10073,6 +10073,6 @@ module.exports = require("zlib");
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(6524);
+/******/ 	return __webpack_require__(5099);
 /******/ })()
 ;
