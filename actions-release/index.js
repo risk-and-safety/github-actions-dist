@@ -1039,7 +1039,9 @@ class HttpClient {
                 maxSockets: maxSockets,
                 keepAlive: this._keepAlive,
                 proxy: {
-                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`,
+                    ...((proxyUrl.username || proxyUrl.password) && {
+                        proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`
+                    }),
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
                 }
@@ -1321,7 +1323,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.3.1";
+const VERSION = "3.4.0";
 
 class Octokit {
   constructor(options = {}) {
@@ -2182,6 +2184,55 @@ exports.paginatingEndpoints = paginatingEndpoints;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function ownKeys(object, enumerableOnly) {
+  var keys = Object.keys(object);
+
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+    });
+    keys.push.apply(keys, symbols);
+  }
+
+  return keys;
+}
+
+function _objectSpread2(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+
+    if (i % 2) {
+      ownKeys(Object(source), true).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      });
+    } else if (Object.getOwnPropertyDescriptors) {
+      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    } else {
+      ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+  }
+
+  return target;
+}
+
 const Endpoints = {
   actions: {
     addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
@@ -2639,8 +2690,14 @@ const Endpoints = {
     deletePackageForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}"],
     deletePackageVersionForAuthenticatedUser: ["DELETE /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     deletePackageVersionForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
-    getAllPackageVersionsForAPackageOwnedByAnOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions"],
-    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForAPackageOwnedByAnOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByOrg"]
+    }],
+    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByAuthenticatedUser"]
+    }],
+    getAllPackageVersionsForPackageOwnedByAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForPackageOwnedByOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions"],
     getAllPackageVersionsForPackageOwnedByUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions"],
     getPackageForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}"],
     getPackageForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}"],
@@ -2648,8 +2705,8 @@ const Endpoints = {
     getPackageVersionForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     getPackageVersionForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     getPackageVersionForUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
-    restorePackageForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/restore"],
-    restorePackageForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/restore"],
+    restorePackageForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/restore{?token}"],
+    restorePackageForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/restore{?token}"],
     restorePackageVersionForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"],
     restorePackageVersionForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"]
   },
@@ -2949,7 +3006,7 @@ const Endpoints = {
     createDeploymentStatus: ["POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"],
     createDispatchEvent: ["POST /repos/{owner}/{repo}/dispatches"],
     createForAuthenticatedUser: ["POST /user/repos"],
-    createFork: ["POST /repos/{owner}/{repo}/forks"],
+    createFork: ["POST /repos/{owner}/{repo}/forks{?org,organization}"],
     createInOrg: ["POST /orgs/{org}/repos"],
     createOrUpdateEnvironment: ["PUT /repos/{owner}/{repo}/environments/{environment_name}"],
     createOrUpdateFileContents: ["PUT /repos/{owner}/{repo}/contents/{path}"],
@@ -3055,6 +3112,7 @@ const Endpoints = {
     getPullRequestReviewProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"],
     getPunchCardStats: ["GET /repos/{owner}/{repo}/stats/punch_card"],
     getReadme: ["GET /repos/{owner}/{repo}/readme"],
+    getReadmeInDirectory: ["GET /repos/{owner}/{repo}/readme/{dir}"],
     getRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}"],
     getReleaseAsset: ["GET /repos/{owner}/{repo}/releases/assets/{asset_id}"],
     getReleaseByTag: ["GET /repos/{owner}/{repo}/releases/tags/{tag}"],
@@ -3258,7 +3316,7 @@ const Endpoints = {
   }
 };
 
-const VERSION = "4.13.5";
+const VERSION = "4.15.0";
 
 function endpointsToMethods(octokit, endpointsMap) {
   const newMethods = {};
@@ -3342,7 +3400,10 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
 }
 
 function restEndpointMethods(octokit) {
-  return endpointsToMethods(octokit, Endpoints);
+  const api = endpointsToMethods(octokit, Endpoints);
+  return _objectSpread2(_objectSpread2({}, api), {}, {
+    rest: api
+  });
 }
 restEndpointMethods.VERSION = VERSION;
 
@@ -3431,7 +3492,7 @@ var isPlainObject = __webpack_require__(9062);
 var nodeFetch = _interopDefault(__webpack_require__(467));
 var requestError = __webpack_require__(537);
 
-const VERSION = "5.4.14";
+const VERSION = "5.4.15";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
@@ -3451,7 +3512,9 @@ function fetchWrapper(requestOptions) {
     body: requestOptions.body,
     headers: requestOptions.headers,
     redirect: requestOptions.redirect
-  }, requestOptions.request)).then(response => {
+  }, // `requestOptions.request.agent` type is incompatible
+  // see https://github.com/octokit/types.ts/pull/264
+  requestOptions.request)).then(response => {
     url = response.url;
     status = response.status;
 
@@ -7302,7 +7365,7 @@ module.exports = copy
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 module.exports = {
   copy: u(__webpack_require__(8834))
 }
@@ -7316,7 +7379,7 @@ module.exports = {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const fs = __webpack_require__(7758)
 const path = __webpack_require__(5622)
 const mkdir = __webpack_require__(8605)
@@ -7372,7 +7435,7 @@ module.exports = {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const path = __webpack_require__(5622)
 const fs = __webpack_require__(7758)
 const mkdir = __webpack_require__(8605)
@@ -7480,7 +7543,7 @@ module.exports = {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const path = __webpack_require__(5622)
 const fs = __webpack_require__(7758)
 const mkdir = __webpack_require__(8605)
@@ -7695,7 +7758,7 @@ module.exports = {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const path = __webpack_require__(5622)
 const fs = __webpack_require__(7758)
 const _mkdirs = __webpack_require__(8605)
@@ -7767,7 +7830,7 @@ module.exports = {
 
 // This is adapted from https://github.com/normalize/mz
 // Copyright (c) 2014-2016 Jonathan Ong me@jongleberry.com and Contributors
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const fs = __webpack_require__(7758)
 
 const api = [
@@ -7937,7 +8000,7 @@ if (Object.getOwnPropertyDescriptor(fs, 'promises')) {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromPromise */ .p
+const u = __webpack_require__(746)/* .fromPromise */ .p
 const jsonFile = __webpack_require__(8970)
 
 jsonFile.outputJson = u(__webpack_require__(531))
@@ -8019,7 +8082,7 @@ module.exports = outputJson
 
 "use strict";
 
-const u = __webpack_require__(9046)/* .fromPromise */ .p
+const u = __webpack_require__(746)/* .fromPromise */ .p
 const { makeDir: _makeDir, makeDirSync } = __webpack_require__(2751)
 const makeDir = u(_makeDir)
 
@@ -8259,7 +8322,7 @@ module.exports = moveSync
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 module.exports = {
   move: u(__webpack_require__(2231))
 }
@@ -8346,7 +8409,7 @@ module.exports = move
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const fs = __webpack_require__(7758)
 const path = __webpack_require__(5622)
 const mkdir = __webpack_require__(8605)
@@ -8393,7 +8456,7 @@ module.exports = {
 
 "use strict";
 
-const u = __webpack_require__(9046)/* .fromPromise */ .p
+const u = __webpack_require__(746)/* .fromPromise */ .p
 const fs = __webpack_require__(1176)
 
 function pathExists (path) {
@@ -8414,7 +8477,7 @@ module.exports = {
 "use strict";
 
 
-const u = __webpack_require__(9046)/* .fromCallback */ .E
+const u = __webpack_require__(746)/* .fromCallback */ .E
 const rimraf = __webpack_require__(8761)
 
 module.exports = {
@@ -8911,6 +8974,37 @@ function utimesMillisSync (path, atime, mtime) {
 module.exports = {
   utimesMillis,
   utimesMillisSync
+}
+
+
+/***/ }),
+
+/***/ 746:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+exports.E = function (fn) {
+  return Object.defineProperty(function (...args) {
+    if (typeof args[args.length - 1] === 'function') fn.apply(this, args)
+    else {
+      return new Promise((resolve, reject) => {
+        fn.apply(
+          this,
+          args.concat([(err, res) => err ? reject(err) : resolve(res)])
+        )
+      })
+    }
+  }, 'name', { value: fn.name })
+}
+
+exports.p = function (fn) {
+  return Object.defineProperty(function (...args) {
+    const cb = args[args.length - 1]
+    if (typeof cb !== 'function') return fn.apply(this, args)
+    else fn.apply(this, args.slice(0, -1)).then(r => cb(null, r), cb)
+  }, 'name', { value: fn.name })
 }
 
 
@@ -12050,37 +12144,6 @@ exports.getUserAgent = getUserAgent;
 
 /***/ }),
 
-/***/ 9046:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-exports.E = function (fn) {
-  return Object.defineProperty(function (...args) {
-    if (typeof args[args.length - 1] === 'function') fn.apply(this, args)
-    else {
-      return new Promise((resolve, reject) => {
-        fn.apply(
-          this,
-          args.concat([(err, res) => err ? reject(err) : resolve(res)])
-        )
-      })
-    }
-  }, 'name', { value: fn.name })
-}
-
-exports.p = function (fn) {
-  return Object.defineProperty(function (...args) {
-    const cb = args[args.length - 1]
-    if (typeof cb !== 'function') return fn.apply(this, args)
-    else fn.apply(this, args.slice(0, -1)).then(r => cb(null, r), cb)
-  }, 'name', { value: fn.name })
-}
-
-
-/***/ }),
-
 /***/ 4552:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
@@ -12908,10 +12971,7 @@ function cleanAppName(name, prefix = LABEL_PREFIX) {
   const scopePrefix = /^@[\w-]+\//;
   const labelPrefix = new RegExp(`^${prefix}`);
   const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
-  const cleanName = name
-    .replace(labelPrefix, '')
-    .replace(scopePrefix, '')
-    .replace(versionSuffix, '');
+  const cleanName = name.replace(labelPrefix, '').replace(scopePrefix, '').replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);
