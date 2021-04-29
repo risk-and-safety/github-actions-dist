@@ -26,7 +26,7 @@
     "@lerna/version": "3.22.1",
     "@rss/common-nodejs": "1.1.4",
     "@slack/web-api": "5.9.0",
-    "aws-sdk": "2.894.0",
+    "aws-sdk": "2.895.0",
     "axios": "0.21.1",
     "conventional-changelog-angular": "5.0.11",
     "date-fns": "2.16.1",
