@@ -1,6 +1,6 @@
 {
   "name": "github-actions",
-  "version": "3.5.0",
+  "version": "3.7.0",
   "description": "Common GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
@@ -24,9 +24,9 @@
     "@lerna/publish": "3.22.1",
     "@lerna/query-graph": "3.18.5",
     "@lerna/version": "3.22.1",
-    "@rss/common-nodejs": "1.1.0",
+    "@rss/common-nodejs": "1.1.4",
     "@slack/web-api": "5.9.0",
-    "aws-sdk": "2.742.0",
+    "aws-sdk": "2.894.0",
     "axios": "0.21.1",
     "conventional-changelog-angular": "5.0.11",
     "date-fns": "2.16.1",
@@ -43,15 +43,15 @@
   "devDependencies": {
     "@vercel/ncc": "0.24.0",
     "cross-env": "7.0.2",
-    "eslint": "6.8.0",
+    "eslint": "7.23.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-config-prettier": "6.9.0",
     "eslint-plugin-import": "2.22.1",
     "eslint-plugin-prettier": "3.1.2",
-    "jest": "24.9.0",
+    "jest": "26.6.0",
     "jest-github-actions-reporter": "1.0.3",
     "jest-sonar-reporter": "2.0.0",
-    "prettier": "1.19.1"
+    "prettier": "2.2.1"
   },
   "jest": {
     "collectCoverageFrom": [
