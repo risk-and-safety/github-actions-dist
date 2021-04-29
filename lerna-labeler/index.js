@@ -198,6 +198,7 @@ exports.getInput = getInput;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setOutput(name, value) {
+    process.stdout.write(os.EOL);
     command_1.issueCommand('set-output', { name }, value);
 }
 exports.setOutput = setOutput;
@@ -1039,7 +1040,9 @@ class HttpClient {
                 maxSockets: maxSockets,
                 keepAlive: this._keepAlive,
                 proxy: {
-                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`,
+                    ...((proxyUrl.username || proxyUrl.password) && {
+                        proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`
+                    }),
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
                 }
@@ -3313,7 +3316,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.3.1";
+const VERSION = "3.4.0";
 
 class Octokit {
   constructor(options = {}) {
@@ -4174,6 +4177,55 @@ exports.paginatingEndpoints = paginatingEndpoints;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function ownKeys(object, enumerableOnly) {
+  var keys = Object.keys(object);
+
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+    });
+    keys.push.apply(keys, symbols);
+  }
+
+  return keys;
+}
+
+function _objectSpread2(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+
+    if (i % 2) {
+      ownKeys(Object(source), true).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      });
+    } else if (Object.getOwnPropertyDescriptors) {
+      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    } else {
+      ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+  }
+
+  return target;
+}
+
 const Endpoints = {
   actions: {
     addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
@@ -4631,8 +4683,14 @@ const Endpoints = {
     deletePackageForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}"],
     deletePackageVersionForAuthenticatedUser: ["DELETE /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     deletePackageVersionForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
-    getAllPackageVersionsForAPackageOwnedByAnOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions"],
-    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForAPackageOwnedByAnOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByOrg"]
+    }],
+    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByAuthenticatedUser"]
+    }],
+    getAllPackageVersionsForPackageOwnedByAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForPackageOwnedByOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions"],
     getAllPackageVersionsForPackageOwnedByUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions"],
     getPackageForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}"],
     getPackageForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}"],
@@ -4640,8 +4698,8 @@ const Endpoints = {
     getPackageVersionForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     getPackageVersionForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
     getPackageVersionForUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
-    restorePackageForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/restore"],
-    restorePackageForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/restore"],
+    restorePackageForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/restore{?token}"],
+    restorePackageForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/restore{?token}"],
     restorePackageVersionForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"],
     restorePackageVersionForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"]
   },
@@ -4874,7 +4932,7 @@ const Endpoints = {
         previews: ["squirrel-girl"]
       }
     }, {
-      deprecated: "octokit.reactions.deleteLegacy() is deprecated, see https://docs.github.com/rest/reference/reactions/#delete-a-reaction-legacy"
+      deprecated: "octokit.rest.reactions.deleteLegacy() is deprecated, see https://docs.github.com/rest/reference/reactions/#delete-a-reaction-legacy"
     }],
     listForCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}/reactions", {
       mediaType: {
@@ -5047,6 +5105,7 @@ const Endpoints = {
     getPullRequestReviewProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"],
     getPunchCardStats: ["GET /repos/{owner}/{repo}/stats/punch_card"],
     getReadme: ["GET /repos/{owner}/{repo}/readme"],
+    getReadmeInDirectory: ["GET /repos/{owner}/{repo}/readme/{dir}"],
     getRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}"],
     getReleaseAsset: ["GET /repos/{owner}/{repo}/releases/assets/{asset_id}"],
     getReleaseByTag: ["GET /repos/{owner}/{repo}/releases/tags/{tag}"],
@@ -5250,7 +5309,7 @@ const Endpoints = {
   }
 };
 
-const VERSION = "4.13.5";
+const VERSION = "4.15.1";
 
 function endpointsToMethods(octokit, endpointsMap) {
   const newMethods = {};
@@ -5334,7 +5393,10 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
 }
 
 function restEndpointMethods(octokit) {
-  return endpointsToMethods(octokit, Endpoints);
+  const api = endpointsToMethods(octokit, Endpoints);
+  return _objectSpread2(_objectSpread2({}, api), {}, {
+    rest: api
+  });
 }
 restEndpointMethods.VERSION = VERSION;
 
@@ -5423,7 +5485,7 @@ var isPlainObject = __webpack_require__(9062);
 var nodeFetch = _interopDefault(__webpack_require__(467));
 var requestError = __webpack_require__(537);
 
-const VERSION = "5.4.14";
+const VERSION = "5.4.15";
 
 function getBufferResponse(response) {
   return response.arrayBuffer();
@@ -5443,7 +5505,9 @@ function fetchWrapper(requestOptions) {
     body: requestOptions.body,
     headers: requestOptions.headers,
     redirect: requestOptions.redirect
-  }, requestOptions.request)).then(response => {
+  }, // `requestOptions.request.agent` type is incompatible
+  // see https://github.com/octokit/types.ts/pull/264
+  requestOptions.request)).then(response => {
     url = response.url;
     status = response.status;
 
@@ -6304,6 +6368,9 @@ function range(a, b, str) {
   var i = ai;
 
   if (ai >= 0 && bi > 0) {
+    if(a===b) {
+      return [ai, bi];
+    }
     begs = [];
     left = str.length;
 
@@ -7200,1453 +7267,6 @@ function expand(str, isTop) {
   return expansions;
 }
 
-
-
-/***/ }),
-
-/***/ 610:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-/**
- * Module dependencies
- */
-
-var toRegex = __webpack_require__(6855);
-var unique = __webpack_require__(340);
-var extend = __webpack_require__(7512);
-
-/**
- * Local dependencies
- */
-
-var compilers = __webpack_require__(7076);
-var parsers = __webpack_require__(2829);
-var Braces = __webpack_require__(7075);
-var utils = __webpack_require__(5207);
-var MAX_LENGTH = 1024 * 64;
-var cache = {};
-
-/**
- * Convert the given `braces` pattern into a regex-compatible string. By default, only one string is generated for every input string. Set `options.expand` to true to return an array of patterns (similar to Bash or minimatch. Before using `options.expand`, it's recommended that you read the [performance notes](#performance)).
- *
- * ```js
- * var braces = require('braces');
- * console.log(braces('{a,b,c}'));
- * //=> ['(a|b|c)']
- *
- * console.log(braces('{a,b,c}', {expand: true}));
- * //=> ['a', 'b', 'c']
- * ```
- * @param {String} `str`
- * @param {Object} `options`
- * @return {String}
- * @api public
- */
-
-function braces(pattern, options) {
-  var key = utils.createKey(String(pattern), options);
-  var arr = [];
-
-  var disabled = options && options.cache === false;
-  if (!disabled && cache.hasOwnProperty(key)) {
-    return cache[key];
-  }
-
-  if (Array.isArray(pattern)) {
-    for (var i = 0; i < pattern.length; i++) {
-      arr.push.apply(arr, braces.create(pattern[i], options));
-    }
-  } else {
-    arr = braces.create(pattern, options);
-  }
-
-  if (options && options.nodupes === true) {
-    arr = unique(arr);
-  }
-
-  if (!disabled) {
-    cache[key] = arr;
-  }
-  return arr;
-}
-
-/**
- * Expands a brace pattern into an array. This method is called by the main [braces](#braces) function when `options.expand` is true. Before using this method it's recommended that you read the [performance notes](#performance)) and advantages of using [.optimize](#optimize) instead.
- *
- * ```js
- * var braces = require('braces');
- * console.log(braces.expand('a/{b,c}/d'));
- * //=> ['a/b/d', 'a/c/d'];
- * ```
- * @param {String} `pattern` Brace pattern
- * @param {Object} `options`
- * @return {Array} Returns an array of expanded values.
- * @api public
- */
-
-braces.expand = function(pattern, options) {
-  return braces.create(pattern, extend({}, options, {expand: true}));
-};
-
-/**
- * Expands a brace pattern into a regex-compatible, optimized string. This method is called by the main [braces](#braces) function by default.
- *
- * ```js
- * var braces = require('braces');
- * console.log(braces.expand('a/{b,c}/d'));
- * //=> ['a/(b|c)/d']
- * ```
- * @param {String} `pattern` Brace pattern
- * @param {Object} `options`
- * @return {Array} Returns an array of expanded values.
- * @api public
- */
-
-braces.optimize = function(pattern, options) {
-  return braces.create(pattern, options);
-};
-
-/**
- * Processes a brace pattern and returns either an expanded array (if `options.expand` is true), a highly optimized regex-compatible string. This method is called by the main [braces](#braces) function.
- *
- * ```js
- * var braces = require('braces');
- * console.log(braces.create('user-{200..300}/project-{a,b,c}-{1..10}'))
- * //=> 'user-(20[0-9]|2[1-9][0-9]|300)/project-(a|b|c)-([1-9]|10)'
- * ```
- * @param {String} `pattern` Brace pattern
- * @param {Object} `options`
- * @return {Array} Returns an array of expanded values.
- * @api public
- */
-
-braces.create = function(pattern, options) {
-  if (typeof pattern !== 'string') {
-    throw new TypeError('expected a string');
-  }
-
-  var maxLength = (options && options.maxLength) || MAX_LENGTH;
-  if (pattern.length >= maxLength) {
-    throw new Error('expected pattern to be less than ' + maxLength + ' characters');
-  }
-
-  function create() {
-    if (pattern === '' || pattern.length < 3) {
-      return [pattern];
-    }
-
-    if (utils.isEmptySets(pattern)) {
-      return [];
-    }
-
-    if (utils.isQuotedString(pattern)) {
-      return [pattern.slice(1, -1)];
-    }
-
-    var proto = new Braces(options);
-    var result = !options || options.expand !== true
-      ? proto.optimize(pattern, options)
-      : proto.expand(pattern, options);
-
-    // get the generated pattern(s)
-    var arr = result.output;
-
-    // filter out empty strings if specified
-    if (options && options.noempty === true) {
-      arr = arr.filter(Boolean);
-    }
-
-    // filter out duplicates if specified
-    if (options && options.nodupes === true) {
-      arr = unique(arr);
-    }
-
-    Object.defineProperty(arr, 'result', {
-      enumerable: false,
-      value: result
-    });
-
-    return arr;
-  }
-
-  return memoize('create', pattern, options, create);
-};
-
-/**
- * Create a regular expression from the given string `pattern`.
- *
- * ```js
- * var braces = require('braces');
- *
- * console.log(braces.makeRe('id-{200..300}'));
- * //=> /^(?:id-(20[0-9]|2[1-9][0-9]|300))$/
- * ```
- * @param {String} `pattern` The pattern to convert to regex.
- * @param {Object} `options`
- * @return {RegExp}
- * @api public
- */
-
-braces.makeRe = function(pattern, options) {
-  if (typeof pattern !== 'string') {
-    throw new TypeError('expected a string');
-  }
-
-  var maxLength = (options && options.maxLength) || MAX_LENGTH;
-  if (pattern.length >= maxLength) {
-    throw new Error('expected pattern to be less than ' + maxLength + ' characters');
-  }
-
-  function makeRe() {
-    var arr = braces(pattern, options);
-    var opts = extend({strictErrors: false}, options);
-    return toRegex(arr, opts);
-  }
-
-  return memoize('makeRe', pattern, options, makeRe);
-};
-
-/**
- * Parse the given `str` with the given `options`.
- *
- * ```js
- * var braces = require('braces');
- * var ast = braces.parse('a/{b,c}/d');
- * console.log(ast);
- * // { type: 'root',
- * //   errors: [],
- * //   input: 'a/{b,c}/d',
- * //   nodes:
- * //    [ { type: 'bos', val: '' },
- * //      { type: 'text', val: 'a/' },
- * //      { type: 'brace',
- * //        nodes:
- * //         [ { type: 'brace.open', val: '{' },
- * //           { type: 'text', val: 'b,c' },
- * //           { type: 'brace.close', val: '}' } ] },
- * //      { type: 'text', val: '/d' },
- * //      { type: 'eos', val: '' } ] }
- * ```
- * @param {String} `pattern` Brace pattern to parse
- * @param {Object} `options`
- * @return {Object} Returns an AST
- * @api public
- */
-
-braces.parse = function(pattern, options) {
-  var proto = new Braces(options);
-  return proto.parse(pattern, options);
-};
-
-/**
- * Compile the given `ast` or string with the given `options`.
- *
- * ```js
- * var braces = require('braces');
- * var ast = braces.parse('a/{b,c}/d');
- * console.log(braces.compile(ast));
- * // { options: { source: 'string' },
- * //   state: {},
- * //   compilers:
- * //    { eos: [Function],
- * //      noop: [Function],
- * //      bos: [Function],
- * //      brace: [Function],
- * //      'brace.open': [Function],
- * //      text: [Function],
- * //      'brace.close': [Function] },
- * //   output: [ 'a/(b|c)/d' ],
- * //   ast:
- * //    { ... },
- * //   parsingErrors: [] }
- * ```
- * @param {Object|String} `ast` AST from [.parse](#parse). If a string is passed it will be parsed first.
- * @param {Object} `options`
- * @return {Object} Returns an object that has an `output` property with the compiled string.
- * @api public
- */
-
-braces.compile = function(ast, options) {
-  var proto = new Braces(options);
-  return proto.compile(ast, options);
-};
-
-/**
- * Clear the regex cache.
- *
- * ```js
- * braces.clearCache();
- * ```
- * @api public
- */
-
-braces.clearCache = function() {
-  cache = braces.cache = {};
-};
-
-/**
- * Memoize a generated regex or function. A unique key is generated
- * from the method name, pattern, and user-defined options. Set
- * options.memoize to false to disable.
- */
-
-function memoize(type, pattern, options, fn) {
-  var key = utils.createKey(type + ':' + pattern, options);
-  var disabled = options && options.cache === false;
-  if (disabled) {
-    braces.clearCache();
-    return fn(pattern, options);
-  }
-
-  if (cache.hasOwnProperty(key)) {
-    return cache[key];
-  }
-
-  var res = fn(pattern, options);
-  cache[key] = res;
-  return res;
-}
-
-/**
- * Expose `Braces` constructor and methods
- * @type {Function}
- */
-
-braces.Braces = Braces;
-braces.compilers = compilers;
-braces.parsers = parsers;
-braces.cache = cache;
-
-/**
- * Expose `braces`
- * @type {Function}
- */
-
-module.exports = braces;
-
-
-/***/ }),
-
-/***/ 7075:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var extend = __webpack_require__(7512);
-var Snapdragon = __webpack_require__(2403);
-var compilers = __webpack_require__(7076);
-var parsers = __webpack_require__(2829);
-var utils = __webpack_require__(5207);
-
-/**
- * Customize Snapdragon parser and renderer
- */
-
-function Braces(options) {
-  this.options = extend({}, options);
-}
-
-/**
- * Initialize braces
- */
-
-Braces.prototype.init = function(options) {
-  if (this.isInitialized) return;
-  this.isInitialized = true;
-  var opts = utils.createOptions({}, this.options, options);
-  this.snapdragon = this.options.snapdragon || new Snapdragon(opts);
-  this.compiler = this.snapdragon.compiler;
-  this.parser = this.snapdragon.parser;
-
-  compilers(this.snapdragon, opts);
-  parsers(this.snapdragon, opts);
-
-  /**
-   * Call Snapdragon `.parse` method. When AST is returned, we check to
-   * see if any unclosed braces are left on the stack and, if so, we iterate
-   * over the stack and correct the AST so that compilers are called in the correct
-   * order and unbalance braces are properly escaped.
-   */
-
-  utils.define(this.snapdragon, 'parse', function(pattern, options) {
-    var parsed = Snapdragon.prototype.parse.apply(this, arguments);
-    this.parser.ast.input = pattern;
-
-    var stack = this.parser.stack;
-    while (stack.length) {
-      addParent({type: 'brace.close', val: ''}, stack.pop());
-    }
-
-    function addParent(node, parent) {
-      utils.define(node, 'parent', parent);
-      parent.nodes.push(node);
-    }
-
-    // add non-enumerable parser reference
-    utils.define(parsed, 'parser', this.parser);
-    return parsed;
-  });
-};
-
-/**
- * Decorate `.parse` method
- */
-
-Braces.prototype.parse = function(ast, options) {
-  if (ast && typeof ast === 'object' && ast.nodes) return ast;
-  this.init(options);
-  return this.snapdragon.parse(ast, options);
-};
-
-/**
- * Decorate `.compile` method
- */
-
-Braces.prototype.compile = function(ast, options) {
-  if (typeof ast === 'string') {
-    ast = this.parse(ast, options);
-  } else {
-    this.init(options);
-  }
-  return this.snapdragon.compile(ast, options);
-};
-
-/**
- * Expand
- */
-
-Braces.prototype.expand = function(pattern) {
-  var ast = this.parse(pattern, {expand: true});
-  return this.compile(ast, {expand: true});
-};
-
-/**
- * Optimize
- */
-
-Braces.prototype.optimize = function(pattern) {
-  var ast = this.parse(pattern, {optimize: true});
-  return this.compile(ast, {optimize: true});
-};
-
-/**
- * Expose `Braces`
- */
-
-module.exports = Braces;
-
-
-/***/ }),
-
-/***/ 7076:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var utils = __webpack_require__(5207);
-
-module.exports = function(braces, options) {
-  braces.compiler
-
-    /**
-     * bos
-     */
-
-    .set('bos', function() {
-      if (this.output) return;
-      this.ast.queue = isEscaped(this.ast) ? [this.ast.val] : [];
-      this.ast.count = 1;
-    })
-
-    /**
-     * Square brackets
-     */
-
-    .set('bracket', function(node) {
-      var close = node.close;
-      var open = !node.escaped ? '[' : '\\[';
-      var negated = node.negated;
-      var inner = node.inner;
-
-      inner = inner.replace(/\\(?=[\\\w]|$)/g, '\\\\');
-      if (inner === ']-') {
-        inner = '\\]\\-';
-      }
-
-      if (negated && inner.indexOf('.') === -1) {
-        inner += '.';
-      }
-      if (negated && inner.indexOf('/') === -1) {
-        inner += '/';
-      }
-
-      var val = open + negated + inner + close;
-      var queue = node.parent.queue;
-      var last = utils.arrayify(queue.pop());
-
-      queue.push(utils.join(last, val));
-      queue.push.apply(queue, []);
-    })
-
-    /**
-     * Brace
-     */
-
-    .set('brace', function(node) {
-      node.queue = isEscaped(node) ? [node.val] : [];
-      node.count = 1;
-      return this.mapVisit(node.nodes);
-    })
-
-    /**
-     * Open
-     */
-
-    .set('brace.open', function(node) {
-      node.parent.open = node.val;
-    })
-
-    /**
-     * Inner
-     */
-
-    .set('text', function(node) {
-      var queue = node.parent.queue;
-      var escaped = node.escaped;
-      var segs = [node.val];
-
-      if (node.optimize === false) {
-        options = utils.extend({}, options, {optimize: false});
-      }
-
-      if (node.multiplier > 1) {
-        node.parent.count *= node.multiplier;
-      }
-
-      if (options.quantifiers === true && utils.isQuantifier(node.val)) {
-        escaped = true;
-
-      } else if (node.val.length > 1) {
-        if (isType(node.parent, 'brace') && !isEscaped(node)) {
-          var expanded = utils.expand(node.val, options);
-          segs = expanded.segs;
-
-          if (expanded.isOptimized) {
-            node.parent.isOptimized = true;
-          }
-
-          // if nothing was expanded, we probably have a literal brace
-          if (!segs.length) {
-            var val = (expanded.val || node.val);
-            if (options.unescape !== false) {
-              // unescape unexpanded brace sequence/set separators
-              val = val.replace(/\\([,.])/g, '$1');
-              // strip quotes
-              val = val.replace(/["'`]/g, '');
-            }
-
-            segs = [val];
-            escaped = true;
-          }
-        }
-
-      } else if (node.val === ',') {
-        if (options.expand) {
-          node.parent.queue.push(['']);
-          segs = [''];
-        } else {
-          segs = ['|'];
-        }
-      } else {
-        escaped = true;
-      }
-
-      if (escaped && isType(node.parent, 'brace')) {
-        if (node.parent.nodes.length <= 4 && node.parent.count === 1) {
-          node.parent.escaped = true;
-        } else if (node.parent.length <= 3) {
-          node.parent.escaped = true;
-        }
-      }
-
-      if (!hasQueue(node.parent)) {
-        node.parent.queue = segs;
-        return;
-      }
-
-      var last = utils.arrayify(queue.pop());
-      if (node.parent.count > 1 && options.expand) {
-        last = multiply(last, node.parent.count);
-        node.parent.count = 1;
-      }
-
-      queue.push(utils.join(utils.flatten(last), segs.shift()));
-      queue.push.apply(queue, segs);
-    })
-
-    /**
-     * Close
-     */
-
-    .set('brace.close', function(node) {
-      var queue = node.parent.queue;
-      var prev = node.parent.parent;
-      var last = prev.queue.pop();
-      var open = node.parent.open;
-      var close = node.val;
-
-      if (open && close && isOptimized(node, options)) {
-        open = '(';
-        close = ')';
-      }
-
-      // if a close brace exists, and the previous segment is one character
-      // don't wrap the result in braces or parens
-      var ele = utils.last(queue);
-      if (node.parent.count > 1 && options.expand) {
-        ele = multiply(queue.pop(), node.parent.count);
-        node.parent.count = 1;
-        queue.push(ele);
-      }
-
-      if (close && typeof ele === 'string' && ele.length === 1) {
-        open = '';
-        close = '';
-      }
-
-      if ((isLiteralBrace(node, options) || noInner(node)) && !node.parent.hasEmpty) {
-        queue.push(utils.join(open, queue.pop() || ''));
-        queue = utils.flatten(utils.join(queue, close));
-      }
-
-      if (typeof last === 'undefined') {
-        prev.queue = [queue];
-      } else {
-        prev.queue.push(utils.flatten(utils.join(last, queue)));
-      }
-    })
-
-    /**
-     * eos
-     */
-
-    .set('eos', function(node) {
-      if (this.input) return;
-
-      if (options.optimize !== false) {
-        this.output = utils.last(utils.flatten(this.ast.queue));
-      } else if (Array.isArray(utils.last(this.ast.queue))) {
-        this.output = utils.flatten(this.ast.queue.pop());
-      } else {
-        this.output = utils.flatten(this.ast.queue);
-      }
-
-      if (node.parent.count > 1 && options.expand) {
-        this.output = multiply(this.output, node.parent.count);
-      }
-
-      this.output = utils.arrayify(this.output);
-      this.ast.queue = [];
-    });
-
-};
-
-/**
- * Multiply the segments in the current brace level
- */
-
-function multiply(queue, n, options) {
-  return utils.flatten(utils.repeat(utils.arrayify(queue), n));
-}
-
-/**
- * Return true if `node` is escaped
- */
-
-function isEscaped(node) {
-  return node.escaped === true;
-}
-
-/**
- * Returns true if regex parens should be used for sets. If the parent `type`
- * is not `brace`, then we're on a root node, which means we should never
- * expand segments and open/close braces should be `{}` (since this indicates
- * a brace is missing from the set)
- */
-
-function isOptimized(node, options) {
-  if (node.parent.isOptimized) return true;
-  return isType(node.parent, 'brace')
-    && !isEscaped(node.parent)
-    && options.expand !== true;
-}
-
-/**
- * Returns true if the value in `node` should be wrapped in a literal brace.
- * @return {Boolean}
- */
-
-function isLiteralBrace(node, options) {
-  return isEscaped(node.parent) || options.optimize !== false;
-}
-
-/**
- * Returns true if the given `node` does not have an inner value.
- * @return {Boolean}
- */
-
-function noInner(node, type) {
-  if (node.parent.queue.length === 1) {
-    return true;
-  }
-  var nodes = node.parent.nodes;
-  return nodes.length === 3
-    && isType(nodes[0], 'brace.open')
-    && !isType(nodes[1], 'text')
-    && isType(nodes[2], 'brace.close');
-}
-
-/**
- * Returns true if the given `node` is the given `type`
- * @return {Boolean}
- */
-
-function isType(node, type) {
-  return typeof node !== 'undefined' && node.type === type;
-}
-
-/**
- * Returns true if the given `node` has a non-empty queue.
- * @return {Boolean}
- */
-
-function hasQueue(node) {
-  return Array.isArray(node.queue) && node.queue.length;
-}
-
-
-/***/ }),
-
-/***/ 2829:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var Node = __webpack_require__(5244);
-var utils = __webpack_require__(5207);
-
-/**
- * Braces parsers
- */
-
-module.exports = function(braces, options) {
-  braces.parser
-    .set('bos', function() {
-      if (!this.parsed) {
-        this.ast = this.nodes[0] = new Node(this.ast);
-      }
-    })
-
-    /**
-     * Character parsers
-     */
-
-    .set('escape', function() {
-      var pos = this.position();
-      var m = this.match(/^(?:\\(.)|\$\{)/);
-      if (!m) return;
-
-      var prev = this.prev();
-      var last = utils.last(prev.nodes);
-
-      var node = pos(new Node({
-        type: 'text',
-        multiplier: 1,
-        val: m[0]
-      }));
-
-      if (node.val === '\\\\') {
-        return node;
-      }
-
-      if (node.val === '${') {
-        var str = this.input;
-        var idx = -1;
-        var ch;
-
-        while ((ch = str[++idx])) {
-          this.consume(1);
-          node.val += ch;
-          if (ch === '\\') {
-            node.val += str[++idx];
-            continue;
-          }
-          if (ch === '}') {
-            break;
-          }
-        }
-      }
-
-      if (this.options.unescape !== false) {
-        node.val = node.val.replace(/\\([{}])/g, '$1');
-      }
-
-      if (last.val === '"' && this.input.charAt(0) === '"') {
-        last.val = node.val;
-        this.consume(1);
-        return;
-      }
-
-      return concatNodes.call(this, pos, node, prev, options);
-    })
-
-    /**
-     * Brackets: "[...]" (basic, this is overridden by
-     * other parsers in more advanced implementations)
-     */
-
-    .set('bracket', function() {
-      var isInside = this.isInside('brace');
-      var pos = this.position();
-      var m = this.match(/^(?:\[([!^]?)([^\]]{2,}|\]-)(\]|[^*+?]+)|\[)/);
-      if (!m) return;
-
-      var prev = this.prev();
-      var val = m[0];
-      var negated = m[1] ? '^' : '';
-      var inner = m[2] || '';
-      var close = m[3] || '';
-
-      if (isInside && prev.type === 'brace') {
-        prev.text = prev.text || '';
-        prev.text += val;
-      }
-
-      var esc = this.input.slice(0, 2);
-      if (inner === '' && esc === '\\]') {
-        inner += esc;
-        this.consume(2);
-
-        var str = this.input;
-        var idx = -1;
-        var ch;
-
-        while ((ch = str[++idx])) {
-          this.consume(1);
-          if (ch === ']') {
-            close = ch;
-            break;
-          }
-          inner += ch;
-        }
-      }
-
-      return pos(new Node({
-        type: 'bracket',
-        val: val,
-        escaped: close !== ']',
-        negated: negated,
-        inner: inner,
-        close: close
-      }));
-    })
-
-    /**
-     * Empty braces (we capture these early to
-     * speed up processing in the compiler)
-     */
-
-    .set('multiplier', function() {
-      var isInside = this.isInside('brace');
-      var pos = this.position();
-      var m = this.match(/^\{((?:,|\{,+\})+)\}/);
-      if (!m) return;
-
-      this.multiplier = true;
-      var prev = this.prev();
-      var val = m[0];
-
-      if (isInside && prev.type === 'brace') {
-        prev.text = prev.text || '';
-        prev.text += val;
-      }
-
-      var node = pos(new Node({
-        type: 'text',
-        multiplier: 1,
-        match: m,
-        val: val
-      }));
-
-      return concatNodes.call(this, pos, node, prev, options);
-    })
-
-    /**
-     * Open
-     */
-
-    .set('brace.open', function() {
-      var pos = this.position();
-      var m = this.match(/^\{(?!(?:[^\\}]?|,+)\})/);
-      if (!m) return;
-
-      var prev = this.prev();
-      var last = utils.last(prev.nodes);
-
-      // if the last parsed character was an extglob character
-      // we need to _not optimize_ the brace pattern because
-      // it might be mistaken for an extglob by a downstream parser
-      if (last && last.val && isExtglobChar(last.val.slice(-1))) {
-        last.optimize = false;
-      }
-
-      var open = pos(new Node({
-        type: 'brace.open',
-        val: m[0]
-      }));
-
-      var node = pos(new Node({
-        type: 'brace',
-        nodes: []
-      }));
-
-      node.push(open);
-      prev.push(node);
-      this.push('brace', node);
-    })
-
-    /**
-     * Close
-     */
-
-    .set('brace.close', function() {
-      var pos = this.position();
-      var m = this.match(/^\}/);
-      if (!m || !m[0]) return;
-
-      var brace = this.pop('brace');
-      var node = pos(new Node({
-        type: 'brace.close',
-        val: m[0]
-      }));
-
-      if (!this.isType(brace, 'brace')) {
-        if (this.options.strict) {
-          throw new Error('missing opening "{"');
-        }
-        node.type = 'text';
-        node.multiplier = 0;
-        node.escaped = true;
-        return node;
-      }
-
-      var prev = this.prev();
-      var last = utils.last(prev.nodes);
-      if (last.text) {
-        var lastNode = utils.last(last.nodes);
-        if (lastNode.val === ')' && /[!@*?+]\(/.test(last.text)) {
-          var open = last.nodes[0];
-          var text = last.nodes[1];
-          if (open.type === 'brace.open' && text && text.type === 'text') {
-            text.optimize = false;
-          }
-        }
-      }
-
-      if (brace.nodes.length > 2) {
-        var first = brace.nodes[1];
-        if (first.type === 'text' && first.val === ',') {
-          brace.nodes.splice(1, 1);
-          brace.nodes.push(first);
-        }
-      }
-
-      brace.push(node);
-    })
-
-    /**
-     * Capture boundary characters
-     */
-
-    .set('boundary', function() {
-      var pos = this.position();
-      var m = this.match(/^[$^](?!\{)/);
-      if (!m) return;
-      return pos(new Node({
-        type: 'text',
-        val: m[0]
-      }));
-    })
-
-    /**
-     * One or zero, non-comma characters wrapped in braces
-     */
-
-    .set('nobrace', function() {
-      var isInside = this.isInside('brace');
-      var pos = this.position();
-      var m = this.match(/^\{[^,]?\}/);
-      if (!m) return;
-
-      var prev = this.prev();
-      var val = m[0];
-
-      if (isInside && prev.type === 'brace') {
-        prev.text = prev.text || '';
-        prev.text += val;
-      }
-
-      return pos(new Node({
-        type: 'text',
-        multiplier: 0,
-        val: val
-      }));
-    })
-
-    /**
-     * Text
-     */
-
-    .set('text', function() {
-      var isInside = this.isInside('brace');
-      var pos = this.position();
-      var m = this.match(/^((?!\\)[^${}[\]])+/);
-      if (!m) return;
-
-      var prev = this.prev();
-      var val = m[0];
-
-      if (isInside && prev.type === 'brace') {
-        prev.text = prev.text || '';
-        prev.text += val;
-      }
-
-      var node = pos(new Node({
-        type: 'text',
-        multiplier: 1,
-        val: val
-      }));
-
-      return concatNodes.call(this, pos, node, prev, options);
-    });
-};
-
-/**
- * Returns true if the character is an extglob character.
- */
-
-function isExtglobChar(ch) {
-  return ch === '!' || ch === '@' || ch === '*' || ch === '?' || ch === '+';
-}
-
-/**
- * Combine text nodes, and calculate empty sets (`{,,}`)
- * @param {Function} `pos` Function to calculate node position
- * @param {Object} `node` AST node
- * @return {Object}
- */
-
-function concatNodes(pos, node, parent, options) {
-  node.orig = node.val;
-  var prev = this.prev();
-  var last = utils.last(prev.nodes);
-  var isEscaped = false;
-
-  if (node.val.length > 1) {
-    var a = node.val.charAt(0);
-    var b = node.val.slice(-1);
-
-    isEscaped = (a === '"' && b === '"')
-      || (a === "'" && b === "'")
-      || (a === '`' && b === '`');
-  }
-
-  if (isEscaped && options.unescape !== false) {
-    node.val = node.val.slice(1, node.val.length - 1);
-    node.escaped = true;
-  }
-
-  if (node.match) {
-    var match = node.match[1];
-    if (!match || match.indexOf('}') === -1) {
-      match = node.match[0];
-    }
-
-    // replace each set with a single ","
-    var val = match.replace(/\{/g, ',').replace(/\}/g, '');
-    node.multiplier *= val.length;
-    node.val = '';
-  }
-
-  var simpleText = last.type === 'text'
-    && last.multiplier === 1
-    && node.multiplier === 1
-    && node.val;
-
-  if (simpleText) {
-    last.val += node.val;
-    return;
-  }
-
-  prev.push(node);
-}
-
-
-/***/ }),
-
-/***/ 5207:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var splitString = __webpack_require__(4960);
-var utils = module.exports;
-
-/**
- * Module dependencies
- */
-
-utils.extend = __webpack_require__(7512);
-utils.flatten = __webpack_require__(7493);
-utils.isObject = __webpack_require__(5509);
-utils.fillRange = __webpack_require__(6330);
-utils.repeat = __webpack_require__(3301);
-utils.unique = __webpack_require__(340);
-
-utils.define = function(obj, key, val) {
-  Object.defineProperty(obj, key, {
-    writable: true,
-    configurable: true,
-    enumerable: false,
-    value: val
-  });
-};
-
-/**
- * Returns true if the given string contains only empty brace sets.
- */
-
-utils.isEmptySets = function(str) {
-  return /^(?:\{,\})+$/.test(str);
-};
-
-/**
- * Returns true if the given string contains only empty brace sets.
- */
-
-utils.isQuotedString = function(str) {
-  var open = str.charAt(0);
-  if (open === '\'' || open === '"' || open === '`') {
-    return str.slice(-1) === open;
-  }
-  return false;
-};
-
-/**
- * Create the key to use for memoization. The unique key is generated
- * by iterating over the options and concatenating key-value pairs
- * to the pattern string.
- */
-
-utils.createKey = function(pattern, options) {
-  var id = pattern;
-  if (typeof options === 'undefined') {
-    return id;
-  }
-  var keys = Object.keys(options);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    id += ';' + key + '=' + String(options[key]);
-  }
-  return id;
-};
-
-/**
- * Normalize options
- */
-
-utils.createOptions = function(options) {
-  var opts = utils.extend.apply(null, arguments);
-  if (typeof opts.expand === 'boolean') {
-    opts.optimize = !opts.expand;
-  }
-  if (typeof opts.optimize === 'boolean') {
-    opts.expand = !opts.optimize;
-  }
-  if (opts.optimize === true) {
-    opts.makeRe = true;
-  }
-  return opts;
-};
-
-/**
- * Join patterns in `a` to patterns in `b`
- */
-
-utils.join = function(a, b, options) {
-  options = options || {};
-  a = utils.arrayify(a);
-  b = utils.arrayify(b);
-
-  if (!a.length) return b;
-  if (!b.length) return a;
-
-  var len = a.length;
-  var idx = -1;
-  var arr = [];
-
-  while (++idx < len) {
-    var val = a[idx];
-    if (Array.isArray(val)) {
-      for (var i = 0; i < val.length; i++) {
-        val[i] = utils.join(val[i], b, options);
-      }
-      arr.push(val);
-      continue;
-    }
-
-    for (var j = 0; j < b.length; j++) {
-      var bval = b[j];
-
-      if (Array.isArray(bval)) {
-        arr.push(utils.join(val, bval, options));
-      } else {
-        arr.push(val + bval);
-      }
-    }
-  }
-  return arr;
-};
-
-/**
- * Split the given string on `,` if not escaped.
- */
-
-utils.split = function(str, options) {
-  var opts = utils.extend({sep: ','}, options);
-  if (typeof opts.keepQuotes !== 'boolean') {
-    opts.keepQuotes = true;
-  }
-  if (opts.unescape === false) {
-    opts.keepEscaping = true;
-  }
-  return splitString(str, opts, utils.escapeBrackets(opts));
-};
-
-/**
- * Expand ranges or sets in the given `pattern`.
- *
- * @param {String} `str`
- * @param {Object} `options`
- * @return {Object}
- */
-
-utils.expand = function(str, options) {
-  var opts = utils.extend({rangeLimit: 10000}, options);
-  var segs = utils.split(str, opts);
-  var tok = { segs: segs };
-
-  if (utils.isQuotedString(str)) {
-    return tok;
-  }
-
-  if (opts.rangeLimit === true) {
-    opts.rangeLimit = 10000;
-  }
-
-  if (segs.length > 1) {
-    if (opts.optimize === false) {
-      tok.val = segs[0];
-      return tok;
-    }
-
-    tok.segs = utils.stringifyArray(tok.segs);
-  } else if (segs.length === 1) {
-    var arr = str.split('..');
-
-    if (arr.length === 1) {
-      tok.val = tok.segs[tok.segs.length - 1] || tok.val || str;
-      tok.segs = [];
-      return tok;
-    }
-
-    if (arr.length === 2 && arr[0] === arr[1]) {
-      tok.escaped = true;
-      tok.val = arr[0];
-      tok.segs = [];
-      return tok;
-    }
-
-    if (arr.length > 1) {
-      if (opts.optimize !== false) {
-        opts.optimize = true;
-        delete opts.expand;
-      }
-
-      if (opts.optimize !== true) {
-        var min = Math.min(arr[0], arr[1]);
-        var max = Math.max(arr[0], arr[1]);
-        var step = arr[2] || 1;
-
-        if (opts.rangeLimit !== false && ((max - min) / step >= opts.rangeLimit)) {
-          throw new RangeError('expanded array length exceeds range limit. Use options.rangeLimit to increase or disable the limit.');
-        }
-      }
-
-      arr.push(opts);
-      tok.segs = utils.fillRange.apply(null, arr);
-
-      if (!tok.segs.length) {
-        tok.escaped = true;
-        tok.val = str;
-        return tok;
-      }
-
-      if (opts.optimize === true) {
-        tok.segs = utils.stringifyArray(tok.segs);
-      }
-
-      if (tok.segs === '') {
-        tok.val = str;
-      } else {
-        tok.val = tok.segs[0];
-      }
-      return tok;
-    }
-  } else {
-    tok.val = str;
-  }
-  return tok;
-};
-
-/**
- * Ensure commas inside brackets and parens are not split.
- * @param {Object} `tok` Token from the `split-string` module
- * @return {undefined}
- */
-
-utils.escapeBrackets = function(options) {
-  return function(tok) {
-    if (tok.escaped && tok.val === 'b') {
-      tok.val = '\\b';
-      return;
-    }
-
-    if (tok.val !== '(' && tok.val !== '[') return;
-    var opts = utils.extend({}, options);
-    var brackets = [];
-    var parens = [];
-    var stack = [];
-    var val = tok.val;
-    var str = tok.str;
-    var i = tok.idx - 1;
-
-    while (++i < str.length) {
-      var ch = str[i];
-
-      if (ch === '\\') {
-        val += (opts.keepEscaping === false ? '' : ch) + str[++i];
-        continue;
-      }
-
-      if (ch === '(') {
-        parens.push(ch);
-        stack.push(ch);
-      }
-
-      if (ch === '[') {
-        brackets.push(ch);
-        stack.push(ch);
-      }
-
-      if (ch === ')') {
-        parens.pop();
-        stack.pop();
-        if (!stack.length) {
-          val += ch;
-          break;
-        }
-      }
-
-      if (ch === ']') {
-        brackets.pop();
-        stack.pop();
-        if (!stack.length) {
-          val += ch;
-          break;
-        }
-      }
-      val += ch;
-    }
-
-    tok.split = false;
-    tok.val = val.slice(1);
-    tok.idx = i;
-  };
-};
-
-/**
- * Returns true if the given string looks like a regex quantifier
- * @return {Boolean}
- */
-
-utils.isQuantifier = function(str) {
-  return /^(?:[0-9]?,[0-9]|[0-9],)$/.test(str);
-};
-
-/**
- * Cast `val` to an array.
- * @param {*} `val`
- */
-
-utils.stringifyArray = function(arr) {
-  return [utils.arrayify(arr).join('|')];
-};
-
-/**
- * Cast `val` to an array.
- * @param {*} `val`
- */
-
-utils.arrayify = function(arr) {
-  if (typeof arr === 'undefined') {
-    return [];
-  }
-  if (typeof arr === 'string') {
-    return [arr];
-  }
-  return arr;
-};
-
-/**
- * Returns true if the given `str` is a non-empty string
- * @return {Boolean}
- */
-
-utils.isString = function(str) {
-  return str != null && typeof str === 'string';
-};
-
-/**
- * Get the last element from `array`
- * @param {Array} `array`
- * @return {*}
- */
-
-utils.last = function(arr, n) {
-  return arr[arr.length - (n || 1)];
-};
-
-utils.escapeRegex = function(str) {
-  return str.replace(/\\?([!^*?()[\]{}+?/])/g, '\\$1');
-};
 
 
 /***/ }),
@@ -17496,6 +16116,1907 @@ module.exports.generateTasks = pkg.generateTasks;
 
 /***/ }),
 
+/***/ 5582:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+/**
+ * Module dependencies
+ */
+
+var toRegex = __webpack_require__(6855);
+var unique = __webpack_require__(340);
+var extend = __webpack_require__(670);
+
+/**
+ * Local dependencies
+ */
+
+var compilers = __webpack_require__(3058);
+var parsers = __webpack_require__(3855);
+var Braces = __webpack_require__(3315);
+var utils = __webpack_require__(7691);
+var MAX_LENGTH = 1024 * 64;
+var cache = {};
+
+/**
+ * Convert the given `braces` pattern into a regex-compatible string. By default, only one string is generated for every input string. Set `options.expand` to true to return an array of patterns (similar to Bash or minimatch. Before using `options.expand`, it's recommended that you read the [performance notes](#performance)).
+ *
+ * ```js
+ * var braces = require('braces');
+ * console.log(braces('{a,b,c}'));
+ * //=> ['(a|b|c)']
+ *
+ * console.log(braces('{a,b,c}', {expand: true}));
+ * //=> ['a', 'b', 'c']
+ * ```
+ * @param {String} `str`
+ * @param {Object} `options`
+ * @return {String}
+ * @api public
+ */
+
+function braces(pattern, options) {
+  var key = utils.createKey(String(pattern), options);
+  var arr = [];
+
+  var disabled = options && options.cache === false;
+  if (!disabled && cache.hasOwnProperty(key)) {
+    return cache[key];
+  }
+
+  if (Array.isArray(pattern)) {
+    for (var i = 0; i < pattern.length; i++) {
+      arr.push.apply(arr, braces.create(pattern[i], options));
+    }
+  } else {
+    arr = braces.create(pattern, options);
+  }
+
+  if (options && options.nodupes === true) {
+    arr = unique(arr);
+  }
+
+  if (!disabled) {
+    cache[key] = arr;
+  }
+  return arr;
+}
+
+/**
+ * Expands a brace pattern into an array. This method is called by the main [braces](#braces) function when `options.expand` is true. Before using this method it's recommended that you read the [performance notes](#performance)) and advantages of using [.optimize](#optimize) instead.
+ *
+ * ```js
+ * var braces = require('braces');
+ * console.log(braces.expand('a/{b,c}/d'));
+ * //=> ['a/b/d', 'a/c/d'];
+ * ```
+ * @param {String} `pattern` Brace pattern
+ * @param {Object} `options`
+ * @return {Array} Returns an array of expanded values.
+ * @api public
+ */
+
+braces.expand = function(pattern, options) {
+  return braces.create(pattern, extend({}, options, {expand: true}));
+};
+
+/**
+ * Expands a brace pattern into a regex-compatible, optimized string. This method is called by the main [braces](#braces) function by default.
+ *
+ * ```js
+ * var braces = require('braces');
+ * console.log(braces.expand('a/{b,c}/d'));
+ * //=> ['a/(b|c)/d']
+ * ```
+ * @param {String} `pattern` Brace pattern
+ * @param {Object} `options`
+ * @return {Array} Returns an array of expanded values.
+ * @api public
+ */
+
+braces.optimize = function(pattern, options) {
+  return braces.create(pattern, options);
+};
+
+/**
+ * Processes a brace pattern and returns either an expanded array (if `options.expand` is true), a highly optimized regex-compatible string. This method is called by the main [braces](#braces) function.
+ *
+ * ```js
+ * var braces = require('braces');
+ * console.log(braces.create('user-{200..300}/project-{a,b,c}-{1..10}'))
+ * //=> 'user-(20[0-9]|2[1-9][0-9]|300)/project-(a|b|c)-([1-9]|10)'
+ * ```
+ * @param {String} `pattern` Brace pattern
+ * @param {Object} `options`
+ * @return {Array} Returns an array of expanded values.
+ * @api public
+ */
+
+braces.create = function(pattern, options) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  var maxLength = (options && options.maxLength) || MAX_LENGTH;
+  if (pattern.length >= maxLength) {
+    throw new Error('expected pattern to be less than ' + maxLength + ' characters');
+  }
+
+  function create() {
+    if (pattern === '' || pattern.length < 3) {
+      return [pattern];
+    }
+
+    if (utils.isEmptySets(pattern)) {
+      return [];
+    }
+
+    if (utils.isQuotedString(pattern)) {
+      return [pattern.slice(1, -1)];
+    }
+
+    var proto = new Braces(options);
+    var result = !options || options.expand !== true
+      ? proto.optimize(pattern, options)
+      : proto.expand(pattern, options);
+
+    // get the generated pattern(s)
+    var arr = result.output;
+
+    // filter out empty strings if specified
+    if (options && options.noempty === true) {
+      arr = arr.filter(Boolean);
+    }
+
+    // filter out duplicates if specified
+    if (options && options.nodupes === true) {
+      arr = unique(arr);
+    }
+
+    Object.defineProperty(arr, 'result', {
+      enumerable: false,
+      value: result
+    });
+
+    return arr;
+  }
+
+  return memoize('create', pattern, options, create);
+};
+
+/**
+ * Create a regular expression from the given string `pattern`.
+ *
+ * ```js
+ * var braces = require('braces');
+ *
+ * console.log(braces.makeRe('id-{200..300}'));
+ * //=> /^(?:id-(20[0-9]|2[1-9][0-9]|300))$/
+ * ```
+ * @param {String} `pattern` The pattern to convert to regex.
+ * @param {Object} `options`
+ * @return {RegExp}
+ * @api public
+ */
+
+braces.makeRe = function(pattern, options) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  var maxLength = (options && options.maxLength) || MAX_LENGTH;
+  if (pattern.length >= maxLength) {
+    throw new Error('expected pattern to be less than ' + maxLength + ' characters');
+  }
+
+  function makeRe() {
+    var arr = braces(pattern, options);
+    var opts = extend({strictErrors: false}, options);
+    return toRegex(arr, opts);
+  }
+
+  return memoize('makeRe', pattern, options, makeRe);
+};
+
+/**
+ * Parse the given `str` with the given `options`.
+ *
+ * ```js
+ * var braces = require('braces');
+ * var ast = braces.parse('a/{b,c}/d');
+ * console.log(ast);
+ * // { type: 'root',
+ * //   errors: [],
+ * //   input: 'a/{b,c}/d',
+ * //   nodes:
+ * //    [ { type: 'bos', val: '' },
+ * //      { type: 'text', val: 'a/' },
+ * //      { type: 'brace',
+ * //        nodes:
+ * //         [ { type: 'brace.open', val: '{' },
+ * //           { type: 'text', val: 'b,c' },
+ * //           { type: 'brace.close', val: '}' } ] },
+ * //      { type: 'text', val: '/d' },
+ * //      { type: 'eos', val: '' } ] }
+ * ```
+ * @param {String} `pattern` Brace pattern to parse
+ * @param {Object} `options`
+ * @return {Object} Returns an AST
+ * @api public
+ */
+
+braces.parse = function(pattern, options) {
+  var proto = new Braces(options);
+  return proto.parse(pattern, options);
+};
+
+/**
+ * Compile the given `ast` or string with the given `options`.
+ *
+ * ```js
+ * var braces = require('braces');
+ * var ast = braces.parse('a/{b,c}/d');
+ * console.log(braces.compile(ast));
+ * // { options: { source: 'string' },
+ * //   state: {},
+ * //   compilers:
+ * //    { eos: [Function],
+ * //      noop: [Function],
+ * //      bos: [Function],
+ * //      brace: [Function],
+ * //      'brace.open': [Function],
+ * //      text: [Function],
+ * //      'brace.close': [Function] },
+ * //   output: [ 'a/(b|c)/d' ],
+ * //   ast:
+ * //    { ... },
+ * //   parsingErrors: [] }
+ * ```
+ * @param {Object|String} `ast` AST from [.parse](#parse). If a string is passed it will be parsed first.
+ * @param {Object} `options`
+ * @return {Object} Returns an object that has an `output` property with the compiled string.
+ * @api public
+ */
+
+braces.compile = function(ast, options) {
+  var proto = new Braces(options);
+  return proto.compile(ast, options);
+};
+
+/**
+ * Clear the regex cache.
+ *
+ * ```js
+ * braces.clearCache();
+ * ```
+ * @api public
+ */
+
+braces.clearCache = function() {
+  cache = braces.cache = {};
+};
+
+/**
+ * Memoize a generated regex or function. A unique key is generated
+ * from the method name, pattern, and user-defined options. Set
+ * options.memoize to false to disable.
+ */
+
+function memoize(type, pattern, options, fn) {
+  var key = utils.createKey(type + ':' + pattern, options);
+  var disabled = options && options.cache === false;
+  if (disabled) {
+    braces.clearCache();
+    return fn(pattern, options);
+  }
+
+  if (cache.hasOwnProperty(key)) {
+    return cache[key];
+  }
+
+  var res = fn(pattern, options);
+  cache[key] = res;
+  return res;
+}
+
+/**
+ * Expose `Braces` constructor and methods
+ * @type {Function}
+ */
+
+braces.Braces = Braces;
+braces.compilers = compilers;
+braces.parsers = parsers;
+braces.cache = cache;
+
+/**
+ * Expose `braces`
+ * @type {Function}
+ */
+
+module.exports = braces;
+
+
+/***/ }),
+
+/***/ 3315:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var extend = __webpack_require__(670);
+var Snapdragon = __webpack_require__(2403);
+var compilers = __webpack_require__(3058);
+var parsers = __webpack_require__(3855);
+var utils = __webpack_require__(7691);
+
+/**
+ * Customize Snapdragon parser and renderer
+ */
+
+function Braces(options) {
+  this.options = extend({}, options);
+}
+
+/**
+ * Initialize braces
+ */
+
+Braces.prototype.init = function(options) {
+  if (this.isInitialized) return;
+  this.isInitialized = true;
+  var opts = utils.createOptions({}, this.options, options);
+  this.snapdragon = this.options.snapdragon || new Snapdragon(opts);
+  this.compiler = this.snapdragon.compiler;
+  this.parser = this.snapdragon.parser;
+
+  compilers(this.snapdragon, opts);
+  parsers(this.snapdragon, opts);
+
+  /**
+   * Call Snapdragon `.parse` method. When AST is returned, we check to
+   * see if any unclosed braces are left on the stack and, if so, we iterate
+   * over the stack and correct the AST so that compilers are called in the correct
+   * order and unbalance braces are properly escaped.
+   */
+
+  utils.define(this.snapdragon, 'parse', function(pattern, options) {
+    var parsed = Snapdragon.prototype.parse.apply(this, arguments);
+    this.parser.ast.input = pattern;
+
+    var stack = this.parser.stack;
+    while (stack.length) {
+      addParent({type: 'brace.close', val: ''}, stack.pop());
+    }
+
+    function addParent(node, parent) {
+      utils.define(node, 'parent', parent);
+      parent.nodes.push(node);
+    }
+
+    // add non-enumerable parser reference
+    utils.define(parsed, 'parser', this.parser);
+    return parsed;
+  });
+};
+
+/**
+ * Decorate `.parse` method
+ */
+
+Braces.prototype.parse = function(ast, options) {
+  if (ast && typeof ast === 'object' && ast.nodes) return ast;
+  this.init(options);
+  return this.snapdragon.parse(ast, options);
+};
+
+/**
+ * Decorate `.compile` method
+ */
+
+Braces.prototype.compile = function(ast, options) {
+  if (typeof ast === 'string') {
+    ast = this.parse(ast, options);
+  } else {
+    this.init(options);
+  }
+  return this.snapdragon.compile(ast, options);
+};
+
+/**
+ * Expand
+ */
+
+Braces.prototype.expand = function(pattern) {
+  var ast = this.parse(pattern, {expand: true});
+  return this.compile(ast, {expand: true});
+};
+
+/**
+ * Optimize
+ */
+
+Braces.prototype.optimize = function(pattern) {
+  var ast = this.parse(pattern, {optimize: true});
+  return this.compile(ast, {optimize: true});
+};
+
+/**
+ * Expose `Braces`
+ */
+
+module.exports = Braces;
+
+
+/***/ }),
+
+/***/ 3058:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var utils = __webpack_require__(7691);
+
+module.exports = function(braces, options) {
+  braces.compiler
+
+    /**
+     * bos
+     */
+
+    .set('bos', function() {
+      if (this.output) return;
+      this.ast.queue = isEscaped(this.ast) ? [this.ast.val] : [];
+      this.ast.count = 1;
+    })
+
+    /**
+     * Square brackets
+     */
+
+    .set('bracket', function(node) {
+      var close = node.close;
+      var open = !node.escaped ? '[' : '\\[';
+      var negated = node.negated;
+      var inner = node.inner;
+
+      inner = inner.replace(/\\(?=[\\\w]|$)/g, '\\\\');
+      if (inner === ']-') {
+        inner = '\\]\\-';
+      }
+
+      if (negated && inner.indexOf('.') === -1) {
+        inner += '.';
+      }
+      if (negated && inner.indexOf('/') === -1) {
+        inner += '/';
+      }
+
+      var val = open + negated + inner + close;
+      var queue = node.parent.queue;
+      var last = utils.arrayify(queue.pop());
+
+      queue.push(utils.join(last, val));
+      queue.push.apply(queue, []);
+    })
+
+    /**
+     * Brace
+     */
+
+    .set('brace', function(node) {
+      node.queue = isEscaped(node) ? [node.val] : [];
+      node.count = 1;
+      return this.mapVisit(node.nodes);
+    })
+
+    /**
+     * Open
+     */
+
+    .set('brace.open', function(node) {
+      node.parent.open = node.val;
+    })
+
+    /**
+     * Inner
+     */
+
+    .set('text', function(node) {
+      var queue = node.parent.queue;
+      var escaped = node.escaped;
+      var segs = [node.val];
+
+      if (node.optimize === false) {
+        options = utils.extend({}, options, {optimize: false});
+      }
+
+      if (node.multiplier > 1) {
+        node.parent.count *= node.multiplier;
+      }
+
+      if (options.quantifiers === true && utils.isQuantifier(node.val)) {
+        escaped = true;
+
+      } else if (node.val.length > 1) {
+        if (isType(node.parent, 'brace') && !isEscaped(node)) {
+          var expanded = utils.expand(node.val, options);
+          segs = expanded.segs;
+
+          if (expanded.isOptimized) {
+            node.parent.isOptimized = true;
+          }
+
+          // if nothing was expanded, we probably have a literal brace
+          if (!segs.length) {
+            var val = (expanded.val || node.val);
+            if (options.unescape !== false) {
+              // unescape unexpanded brace sequence/set separators
+              val = val.replace(/\\([,.])/g, '$1');
+              // strip quotes
+              val = val.replace(/["'`]/g, '');
+            }
+
+            segs = [val];
+            escaped = true;
+          }
+        }
+
+      } else if (node.val === ',') {
+        if (options.expand) {
+          node.parent.queue.push(['']);
+          segs = [''];
+        } else {
+          segs = ['|'];
+        }
+      } else {
+        escaped = true;
+      }
+
+      if (escaped && isType(node.parent, 'brace')) {
+        if (node.parent.nodes.length <= 4 && node.parent.count === 1) {
+          node.parent.escaped = true;
+        } else if (node.parent.length <= 3) {
+          node.parent.escaped = true;
+        }
+      }
+
+      if (!hasQueue(node.parent)) {
+        node.parent.queue = segs;
+        return;
+      }
+
+      var last = utils.arrayify(queue.pop());
+      if (node.parent.count > 1 && options.expand) {
+        last = multiply(last, node.parent.count);
+        node.parent.count = 1;
+      }
+
+      queue.push(utils.join(utils.flatten(last), segs.shift()));
+      queue.push.apply(queue, segs);
+    })
+
+    /**
+     * Close
+     */
+
+    .set('brace.close', function(node) {
+      var queue = node.parent.queue;
+      var prev = node.parent.parent;
+      var last = prev.queue.pop();
+      var open = node.parent.open;
+      var close = node.val;
+
+      if (open && close && isOptimized(node, options)) {
+        open = '(';
+        close = ')';
+      }
+
+      // if a close brace exists, and the previous segment is one character
+      // don't wrap the result in braces or parens
+      var ele = utils.last(queue);
+      if (node.parent.count > 1 && options.expand) {
+        ele = multiply(queue.pop(), node.parent.count);
+        node.parent.count = 1;
+        queue.push(ele);
+      }
+
+      if (close && typeof ele === 'string' && ele.length === 1) {
+        open = '';
+        close = '';
+      }
+
+      if ((isLiteralBrace(node, options) || noInner(node)) && !node.parent.hasEmpty) {
+        queue.push(utils.join(open, queue.pop() || ''));
+        queue = utils.flatten(utils.join(queue, close));
+      }
+
+      if (typeof last === 'undefined') {
+        prev.queue = [queue];
+      } else {
+        prev.queue.push(utils.flatten(utils.join(last, queue)));
+      }
+    })
+
+    /**
+     * eos
+     */
+
+    .set('eos', function(node) {
+      if (this.input) return;
+
+      if (options.optimize !== false) {
+        this.output = utils.last(utils.flatten(this.ast.queue));
+      } else if (Array.isArray(utils.last(this.ast.queue))) {
+        this.output = utils.flatten(this.ast.queue.pop());
+      } else {
+        this.output = utils.flatten(this.ast.queue);
+      }
+
+      if (node.parent.count > 1 && options.expand) {
+        this.output = multiply(this.output, node.parent.count);
+      }
+
+      this.output = utils.arrayify(this.output);
+      this.ast.queue = [];
+    });
+
+};
+
+/**
+ * Multiply the segments in the current brace level
+ */
+
+function multiply(queue, n, options) {
+  return utils.flatten(utils.repeat(utils.arrayify(queue), n));
+}
+
+/**
+ * Return true if `node` is escaped
+ */
+
+function isEscaped(node) {
+  return node.escaped === true;
+}
+
+/**
+ * Returns true if regex parens should be used for sets. If the parent `type`
+ * is not `brace`, then we're on a root node, which means we should never
+ * expand segments and open/close braces should be `{}` (since this indicates
+ * a brace is missing from the set)
+ */
+
+function isOptimized(node, options) {
+  if (node.parent.isOptimized) return true;
+  return isType(node.parent, 'brace')
+    && !isEscaped(node.parent)
+    && options.expand !== true;
+}
+
+/**
+ * Returns true if the value in `node` should be wrapped in a literal brace.
+ * @return {Boolean}
+ */
+
+function isLiteralBrace(node, options) {
+  return isEscaped(node.parent) || options.optimize !== false;
+}
+
+/**
+ * Returns true if the given `node` does not have an inner value.
+ * @return {Boolean}
+ */
+
+function noInner(node, type) {
+  if (node.parent.queue.length === 1) {
+    return true;
+  }
+  var nodes = node.parent.nodes;
+  return nodes.length === 3
+    && isType(nodes[0], 'brace.open')
+    && !isType(nodes[1], 'text')
+    && isType(nodes[2], 'brace.close');
+}
+
+/**
+ * Returns true if the given `node` is the given `type`
+ * @return {Boolean}
+ */
+
+function isType(node, type) {
+  return typeof node !== 'undefined' && node.type === type;
+}
+
+/**
+ * Returns true if the given `node` has a non-empty queue.
+ * @return {Boolean}
+ */
+
+function hasQueue(node) {
+  return Array.isArray(node.queue) && node.queue.length;
+}
+
+
+/***/ }),
+
+/***/ 3855:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var Node = __webpack_require__(5244);
+var utils = __webpack_require__(7691);
+
+/**
+ * Braces parsers
+ */
+
+module.exports = function(braces, options) {
+  braces.parser
+    .set('bos', function() {
+      if (!this.parsed) {
+        this.ast = this.nodes[0] = new Node(this.ast);
+      }
+    })
+
+    /**
+     * Character parsers
+     */
+
+    .set('escape', function() {
+      var pos = this.position();
+      var m = this.match(/^(?:\\(.)|\$\{)/);
+      if (!m) return;
+
+      var prev = this.prev();
+      var last = utils.last(prev.nodes);
+
+      var node = pos(new Node({
+        type: 'text',
+        multiplier: 1,
+        val: m[0]
+      }));
+
+      if (node.val === '\\\\') {
+        return node;
+      }
+
+      if (node.val === '${') {
+        var str = this.input;
+        var idx = -1;
+        var ch;
+
+        while ((ch = str[++idx])) {
+          this.consume(1);
+          node.val += ch;
+          if (ch === '\\') {
+            node.val += str[++idx];
+            continue;
+          }
+          if (ch === '}') {
+            break;
+          }
+        }
+      }
+
+      if (this.options.unescape !== false) {
+        node.val = node.val.replace(/\\([{}])/g, '$1');
+      }
+
+      if (last.val === '"' && this.input.charAt(0) === '"') {
+        last.val = node.val;
+        this.consume(1);
+        return;
+      }
+
+      return concatNodes.call(this, pos, node, prev, options);
+    })
+
+    /**
+     * Brackets: "[...]" (basic, this is overridden by
+     * other parsers in more advanced implementations)
+     */
+
+    .set('bracket', function() {
+      var isInside = this.isInside('brace');
+      var pos = this.position();
+      var m = this.match(/^(?:\[([!^]?)([^\]]{2,}|\]-)(\]|[^*+?]+)|\[)/);
+      if (!m) return;
+
+      var prev = this.prev();
+      var val = m[0];
+      var negated = m[1] ? '^' : '';
+      var inner = m[2] || '';
+      var close = m[3] || '';
+
+      if (isInside && prev.type === 'brace') {
+        prev.text = prev.text || '';
+        prev.text += val;
+      }
+
+      var esc = this.input.slice(0, 2);
+      if (inner === '' && esc === '\\]') {
+        inner += esc;
+        this.consume(2);
+
+        var str = this.input;
+        var idx = -1;
+        var ch;
+
+        while ((ch = str[++idx])) {
+          this.consume(1);
+          if (ch === ']') {
+            close = ch;
+            break;
+          }
+          inner += ch;
+        }
+      }
+
+      return pos(new Node({
+        type: 'bracket',
+        val: val,
+        escaped: close !== ']',
+        negated: negated,
+        inner: inner,
+        close: close
+      }));
+    })
+
+    /**
+     * Empty braces (we capture these early to
+     * speed up processing in the compiler)
+     */
+
+    .set('multiplier', function() {
+      var isInside = this.isInside('brace');
+      var pos = this.position();
+      var m = this.match(/^\{((?:,|\{,+\})+)\}/);
+      if (!m) return;
+
+      this.multiplier = true;
+      var prev = this.prev();
+      var val = m[0];
+
+      if (isInside && prev.type === 'brace') {
+        prev.text = prev.text || '';
+        prev.text += val;
+      }
+
+      var node = pos(new Node({
+        type: 'text',
+        multiplier: 1,
+        match: m,
+        val: val
+      }));
+
+      return concatNodes.call(this, pos, node, prev, options);
+    })
+
+    /**
+     * Open
+     */
+
+    .set('brace.open', function() {
+      var pos = this.position();
+      var m = this.match(/^\{(?!(?:[^\\}]?|,+)\})/);
+      if (!m) return;
+
+      var prev = this.prev();
+      var last = utils.last(prev.nodes);
+
+      // if the last parsed character was an extglob character
+      // we need to _not optimize_ the brace pattern because
+      // it might be mistaken for an extglob by a downstream parser
+      if (last && last.val && isExtglobChar(last.val.slice(-1))) {
+        last.optimize = false;
+      }
+
+      var open = pos(new Node({
+        type: 'brace.open',
+        val: m[0]
+      }));
+
+      var node = pos(new Node({
+        type: 'brace',
+        nodes: []
+      }));
+
+      node.push(open);
+      prev.push(node);
+      this.push('brace', node);
+    })
+
+    /**
+     * Close
+     */
+
+    .set('brace.close', function() {
+      var pos = this.position();
+      var m = this.match(/^\}/);
+      if (!m || !m[0]) return;
+
+      var brace = this.pop('brace');
+      var node = pos(new Node({
+        type: 'brace.close',
+        val: m[0]
+      }));
+
+      if (!this.isType(brace, 'brace')) {
+        if (this.options.strict) {
+          throw new Error('missing opening "{"');
+        }
+        node.type = 'text';
+        node.multiplier = 0;
+        node.escaped = true;
+        return node;
+      }
+
+      var prev = this.prev();
+      var last = utils.last(prev.nodes);
+      if (last.text) {
+        var lastNode = utils.last(last.nodes);
+        if (lastNode.val === ')' && /[!@*?+]\(/.test(last.text)) {
+          var open = last.nodes[0];
+          var text = last.nodes[1];
+          if (open.type === 'brace.open' && text && text.type === 'text') {
+            text.optimize = false;
+          }
+        }
+      }
+
+      if (brace.nodes.length > 2) {
+        var first = brace.nodes[1];
+        if (first.type === 'text' && first.val === ',') {
+          brace.nodes.splice(1, 1);
+          brace.nodes.push(first);
+        }
+      }
+
+      brace.push(node);
+    })
+
+    /**
+     * Capture boundary characters
+     */
+
+    .set('boundary', function() {
+      var pos = this.position();
+      var m = this.match(/^[$^](?!\{)/);
+      if (!m) return;
+      return pos(new Node({
+        type: 'text',
+        val: m[0]
+      }));
+    })
+
+    /**
+     * One or zero, non-comma characters wrapped in braces
+     */
+
+    .set('nobrace', function() {
+      var isInside = this.isInside('brace');
+      var pos = this.position();
+      var m = this.match(/^\{[^,]?\}/);
+      if (!m) return;
+
+      var prev = this.prev();
+      var val = m[0];
+
+      if (isInside && prev.type === 'brace') {
+        prev.text = prev.text || '';
+        prev.text += val;
+      }
+
+      return pos(new Node({
+        type: 'text',
+        multiplier: 0,
+        val: val
+      }));
+    })
+
+    /**
+     * Text
+     */
+
+    .set('text', function() {
+      var isInside = this.isInside('brace');
+      var pos = this.position();
+      var m = this.match(/^((?!\\)[^${}[\]])+/);
+      if (!m) return;
+
+      var prev = this.prev();
+      var val = m[0];
+
+      if (isInside && prev.type === 'brace') {
+        prev.text = prev.text || '';
+        prev.text += val;
+      }
+
+      var node = pos(new Node({
+        type: 'text',
+        multiplier: 1,
+        val: val
+      }));
+
+      return concatNodes.call(this, pos, node, prev, options);
+    });
+};
+
+/**
+ * Returns true if the character is an extglob character.
+ */
+
+function isExtglobChar(ch) {
+  return ch === '!' || ch === '@' || ch === '*' || ch === '?' || ch === '+';
+}
+
+/**
+ * Combine text nodes, and calculate empty sets (`{,,}`)
+ * @param {Function} `pos` Function to calculate node position
+ * @param {Object} `node` AST node
+ * @return {Object}
+ */
+
+function concatNodes(pos, node, parent, options) {
+  node.orig = node.val;
+  var prev = this.prev();
+  var last = utils.last(prev.nodes);
+  var isEscaped = false;
+
+  if (node.val.length > 1) {
+    var a = node.val.charAt(0);
+    var b = node.val.slice(-1);
+
+    isEscaped = (a === '"' && b === '"')
+      || (a === "'" && b === "'")
+      || (a === '`' && b === '`');
+  }
+
+  if (isEscaped && options.unescape !== false) {
+    node.val = node.val.slice(1, node.val.length - 1);
+    node.escaped = true;
+  }
+
+  if (node.match) {
+    var match = node.match[1];
+    if (!match || match.indexOf('}') === -1) {
+      match = node.match[0];
+    }
+
+    // replace each set with a single ","
+    var val = match.replace(/\{/g, ',').replace(/\}/g, '');
+    node.multiplier *= val.length;
+    node.val = '';
+  }
+
+  var simpleText = last.type === 'text'
+    && last.multiplier === 1
+    && node.multiplier === 1
+    && node.val;
+
+  if (simpleText) {
+    last.val += node.val;
+    return;
+  }
+
+  prev.push(node);
+}
+
+
+/***/ }),
+
+/***/ 7691:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var splitString = __webpack_require__(4960);
+var utils = module.exports;
+
+/**
+ * Module dependencies
+ */
+
+utils.extend = __webpack_require__(670);
+utils.flatten = __webpack_require__(7493);
+utils.isObject = __webpack_require__(5509);
+utils.fillRange = __webpack_require__(791);
+utils.repeat = __webpack_require__(3301);
+utils.unique = __webpack_require__(340);
+
+utils.define = function(obj, key, val) {
+  Object.defineProperty(obj, key, {
+    writable: true,
+    configurable: true,
+    enumerable: false,
+    value: val
+  });
+};
+
+/**
+ * Returns true if the given string contains only empty brace sets.
+ */
+
+utils.isEmptySets = function(str) {
+  return /^(?:\{,\})+$/.test(str);
+};
+
+/**
+ * Returns true if the given string contains only empty brace sets.
+ */
+
+utils.isQuotedString = function(str) {
+  var open = str.charAt(0);
+  if (open === '\'' || open === '"' || open === '`') {
+    return str.slice(-1) === open;
+  }
+  return false;
+};
+
+/**
+ * Create the key to use for memoization. The unique key is generated
+ * by iterating over the options and concatenating key-value pairs
+ * to the pattern string.
+ */
+
+utils.createKey = function(pattern, options) {
+  var id = pattern;
+  if (typeof options === 'undefined') {
+    return id;
+  }
+  var keys = Object.keys(options);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    id += ';' + key + '=' + String(options[key]);
+  }
+  return id;
+};
+
+/**
+ * Normalize options
+ */
+
+utils.createOptions = function(options) {
+  var opts = utils.extend.apply(null, arguments);
+  if (typeof opts.expand === 'boolean') {
+    opts.optimize = !opts.expand;
+  }
+  if (typeof opts.optimize === 'boolean') {
+    opts.expand = !opts.optimize;
+  }
+  if (opts.optimize === true) {
+    opts.makeRe = true;
+  }
+  return opts;
+};
+
+/**
+ * Join patterns in `a` to patterns in `b`
+ */
+
+utils.join = function(a, b, options) {
+  options = options || {};
+  a = utils.arrayify(a);
+  b = utils.arrayify(b);
+
+  if (!a.length) return b;
+  if (!b.length) return a;
+
+  var len = a.length;
+  var idx = -1;
+  var arr = [];
+
+  while (++idx < len) {
+    var val = a[idx];
+    if (Array.isArray(val)) {
+      for (var i = 0; i < val.length; i++) {
+        val[i] = utils.join(val[i], b, options);
+      }
+      arr.push(val);
+      continue;
+    }
+
+    for (var j = 0; j < b.length; j++) {
+      var bval = b[j];
+
+      if (Array.isArray(bval)) {
+        arr.push(utils.join(val, bval, options));
+      } else {
+        arr.push(val + bval);
+      }
+    }
+  }
+  return arr;
+};
+
+/**
+ * Split the given string on `,` if not escaped.
+ */
+
+utils.split = function(str, options) {
+  var opts = utils.extend({sep: ','}, options);
+  if (typeof opts.keepQuotes !== 'boolean') {
+    opts.keepQuotes = true;
+  }
+  if (opts.unescape === false) {
+    opts.keepEscaping = true;
+  }
+  return splitString(str, opts, utils.escapeBrackets(opts));
+};
+
+/**
+ * Expand ranges or sets in the given `pattern`.
+ *
+ * @param {String} `str`
+ * @param {Object} `options`
+ * @return {Object}
+ */
+
+utils.expand = function(str, options) {
+  var opts = utils.extend({rangeLimit: 10000}, options);
+  var segs = utils.split(str, opts);
+  var tok = { segs: segs };
+
+  if (utils.isQuotedString(str)) {
+    return tok;
+  }
+
+  if (opts.rangeLimit === true) {
+    opts.rangeLimit = 10000;
+  }
+
+  if (segs.length > 1) {
+    if (opts.optimize === false) {
+      tok.val = segs[0];
+      return tok;
+    }
+
+    tok.segs = utils.stringifyArray(tok.segs);
+  } else if (segs.length === 1) {
+    var arr = str.split('..');
+
+    if (arr.length === 1) {
+      tok.val = tok.segs[tok.segs.length - 1] || tok.val || str;
+      tok.segs = [];
+      return tok;
+    }
+
+    if (arr.length === 2 && arr[0] === arr[1]) {
+      tok.escaped = true;
+      tok.val = arr[0];
+      tok.segs = [];
+      return tok;
+    }
+
+    if (arr.length > 1) {
+      if (opts.optimize !== false) {
+        opts.optimize = true;
+        delete opts.expand;
+      }
+
+      if (opts.optimize !== true) {
+        var min = Math.min(arr[0], arr[1]);
+        var max = Math.max(arr[0], arr[1]);
+        var step = arr[2] || 1;
+
+        if (opts.rangeLimit !== false && ((max - min) / step >= opts.rangeLimit)) {
+          throw new RangeError('expanded array length exceeds range limit. Use options.rangeLimit to increase or disable the limit.');
+        }
+      }
+
+      arr.push(opts);
+      tok.segs = utils.fillRange.apply(null, arr);
+
+      if (!tok.segs.length) {
+        tok.escaped = true;
+        tok.val = str;
+        return tok;
+      }
+
+      if (opts.optimize === true) {
+        tok.segs = utils.stringifyArray(tok.segs);
+      }
+
+      if (tok.segs === '') {
+        tok.val = str;
+      } else {
+        tok.val = tok.segs[0];
+      }
+      return tok;
+    }
+  } else {
+    tok.val = str;
+  }
+  return tok;
+};
+
+/**
+ * Ensure commas inside brackets and parens are not split.
+ * @param {Object} `tok` Token from the `split-string` module
+ * @return {undefined}
+ */
+
+utils.escapeBrackets = function(options) {
+  return function(tok) {
+    if (tok.escaped && tok.val === 'b') {
+      tok.val = '\\b';
+      return;
+    }
+
+    if (tok.val !== '(' && tok.val !== '[') return;
+    var opts = utils.extend({}, options);
+    var brackets = [];
+    var parens = [];
+    var stack = [];
+    var val = tok.val;
+    var str = tok.str;
+    var i = tok.idx - 1;
+
+    while (++i < str.length) {
+      var ch = str[i];
+
+      if (ch === '\\') {
+        val += (opts.keepEscaping === false ? '' : ch) + str[++i];
+        continue;
+      }
+
+      if (ch === '(') {
+        parens.push(ch);
+        stack.push(ch);
+      }
+
+      if (ch === '[') {
+        brackets.push(ch);
+        stack.push(ch);
+      }
+
+      if (ch === ')') {
+        parens.pop();
+        stack.pop();
+        if (!stack.length) {
+          val += ch;
+          break;
+        }
+      }
+
+      if (ch === ']') {
+        brackets.pop();
+        stack.pop();
+        if (!stack.length) {
+          val += ch;
+          break;
+        }
+      }
+      val += ch;
+    }
+
+    tok.split = false;
+    tok.val = val.slice(1);
+    tok.idx = i;
+  };
+};
+
+/**
+ * Returns true if the given string looks like a regex quantifier
+ * @return {Boolean}
+ */
+
+utils.isQuantifier = function(str) {
+  return /^(?:[0-9]?,[0-9]|[0-9],)$/.test(str);
+};
+
+/**
+ * Cast `val` to an array.
+ * @param {*} `val`
+ */
+
+utils.stringifyArray = function(arr) {
+  return [utils.arrayify(arr).join('|')];
+};
+
+/**
+ * Cast `val` to an array.
+ * @param {*} `val`
+ */
+
+utils.arrayify = function(arr) {
+  if (typeof arr === 'undefined') {
+    return [];
+  }
+  if (typeof arr === 'string') {
+    return [arr];
+  }
+  return arr;
+};
+
+/**
+ * Returns true if the given `str` is a non-empty string
+ * @return {Boolean}
+ */
+
+utils.isString = function(str) {
+  return str != null && typeof str === 'string';
+};
+
+/**
+ * Get the last element from `array`
+ * @param {Array} `array`
+ * @return {*}
+ */
+
+utils.last = function(arr, n) {
+  return arr[arr.length - (n || 1)];
+};
+
+utils.escapeRegex = function(str) {
+  return str.replace(/\\?([!^*?()[\]{}+?/])/g, '\\$1');
+};
+
+
+/***/ }),
+
+/***/ 670:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var isObject = __webpack_require__(2081);
+
+module.exports = function extend(o/*, objects*/) {
+  if (!isObject(o)) { o = {}; }
+
+  var len = arguments.length;
+  for (var i = 1; i < len; i++) {
+    var obj = arguments[i];
+
+    if (isObject(obj)) {
+      assign(o, obj);
+    }
+  }
+  return o;
+};
+
+function assign(a, b) {
+  for (var key in b) {
+    if (hasOwn(b, key)) {
+      a[key] = b[key];
+    }
+  }
+}
+
+/**
+ * Returns true if the given `key` is an own property of `obj`.
+ */
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+
+/***/ }),
+
+/***/ 2081:
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * is-extendable <https://github.com/jonschlinkert/is-extendable>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+module.exports = function isExtendable(val) {
+  return typeof val !== 'undefined' && val !== null
+    && (typeof val === 'object' || typeof val === 'function');
+};
+
+
+/***/ }),
+
+/***/ 8633:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * define-property <https://github.com/jonschlinkert/define-property>
+ *
+ * Copyright (c) 2015-2018, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var isobject = __webpack_require__(5509);
+var isDescriptor = __webpack_require__(567);
+var define = (typeof Reflect !== 'undefined' && Reflect.defineProperty)
+  ? Reflect.defineProperty
+  : Object.defineProperty;
+
+module.exports = function defineProperty(obj, key, val) {
+  if (!isobject(obj) && typeof obj !== 'function' && !Array.isArray(obj)) {
+    throw new TypeError('expected an object, function, or array');
+  }
+
+  if (typeof key !== 'string') {
+    throw new TypeError('expected "key" to be a string');
+  }
+
+  if (isDescriptor(val)) {
+    define(obj, key, val);
+    return obj;
+  }
+
+  define(obj, key, {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: val
+  });
+
+  return obj;
+};
+
+
+/***/ }),
+
+/***/ 6832:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var isExtendable = __webpack_require__(3386);
+var assignSymbols = __webpack_require__(8782);
+
+module.exports = Object.assign || function(obj/*, objects*/) {
+  if (obj === null || typeof obj === 'undefined') {
+    throw new TypeError('Cannot convert undefined or null to object');
+  }
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  for (var i = 1; i < arguments.length; i++) {
+    var val = arguments[i];
+    if (isString(val)) {
+      val = toObject(val);
+    }
+    if (isObject(val)) {
+      assign(obj, val);
+      assignSymbols(obj, val);
+    }
+  }
+  return obj;
+};
+
+function assign(a, b) {
+  for (var key in b) {
+    if (hasOwn(b, key)) {
+      a[key] = b[key];
+    }
+  }
+}
+
+function isString(val) {
+  return (val && typeof val === 'string');
+}
+
+function toObject(str) {
+  var obj = {};
+  for (var i in str) {
+    obj[i] = str[i];
+  }
+  return obj;
+}
+
+function isObject(val) {
+  return (val && typeof val === 'object') || isExtendable(val);
+}
+
+/**
+ * Returns true if the given `key` is an own property of `obj`.
+ */
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function isEnum(obj, key) {
+  return Object.prototype.propertyIsEnumerable.call(obj, key);
+}
+
+
+/***/ }),
+
+/***/ 791:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * fill-range <https://github.com/jonschlinkert/fill-range>
+ *
+ * Copyright (c) 2014-2015, 2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var util = __webpack_require__(1669);
+var isNumber = __webpack_require__(5680);
+var extend = __webpack_require__(2893);
+var repeat = __webpack_require__(6976);
+var toRegex = __webpack_require__(6867);
+
+/**
+ * Return a range of numbers or letters.
+ *
+ * @param  {String} `start` Start of the range
+ * @param  {String} `stop` End of the range
+ * @param  {String} `step` Increment or decrement to use.
+ * @param  {Function} `fn` Custom function to modify each element in the range.
+ * @return {Array}
+ */
+
+function fillRange(start, stop, step, options) {
+  if (typeof start === 'undefined') {
+    return [];
+  }
+
+  if (typeof stop === 'undefined' || start === stop) {
+    // special case, for handling negative zero
+    var isString = typeof start === 'string';
+    if (isNumber(start) && !toNumber(start)) {
+      return [isString ? '0' : 0];
+    }
+    return [start];
+  }
+
+  if (typeof step !== 'number' && typeof step !== 'string') {
+    options = step;
+    step = undefined;
+  }
+
+  if (typeof options === 'function') {
+    options = { transform: options };
+  }
+
+  var opts = extend({step: step}, options);
+  if (opts.step && !isValidNumber(opts.step)) {
+    if (opts.strictRanges === true) {
+      throw new TypeError('expected options.step to be a number');
+    }
+    return [];
+  }
+
+  opts.isNumber = isValidNumber(start) && isValidNumber(stop);
+  if (!opts.isNumber && !isValid(start, stop)) {
+    if (opts.strictRanges === true) {
+      throw new RangeError('invalid range arguments: ' + util.inspect([start, stop]));
+    }
+    return [];
+  }
+
+  opts.isPadded = isPadded(start) || isPadded(stop);
+  opts.toString = opts.stringify
+    || typeof opts.step === 'string'
+    || typeof start === 'string'
+    || typeof stop === 'string'
+    || !opts.isNumber;
+
+  if (opts.isPadded) {
+    opts.maxLength = Math.max(String(start).length, String(stop).length);
+  }
+
+  // support legacy minimatch/fill-range options
+  if (typeof opts.optimize === 'boolean') opts.toRegex = opts.optimize;
+  if (typeof opts.makeRe === 'boolean') opts.toRegex = opts.makeRe;
+  return expand(start, stop, opts);
+}
+
+function expand(start, stop, options) {
+  var a = options.isNumber ? toNumber(start) : start.charCodeAt(0);
+  var b = options.isNumber ? toNumber(stop) : stop.charCodeAt(0);
+
+  var step = Math.abs(toNumber(options.step)) || 1;
+  if (options.toRegex && step === 1) {
+    return toRange(a, b, start, stop, options);
+  }
+
+  var zero = {greater: [], lesser: []};
+  var asc = a < b;
+  var arr = new Array(Math.round((asc ? b - a : a - b) / step));
+  var idx = 0;
+
+  while (asc ? a <= b : a >= b) {
+    var val = options.isNumber ? a : String.fromCharCode(a);
+    if (options.toRegex && (val >= 0 || !options.isNumber)) {
+      zero.greater.push(val);
+    } else {
+      zero.lesser.push(Math.abs(val));
+    }
+
+    if (options.isPadded) {
+      val = zeros(val, options);
+    }
+
+    if (options.toString) {
+      val = String(val);
+    }
+
+    if (typeof options.transform === 'function') {
+      arr[idx++] = options.transform(val, a, b, step, idx, arr, options);
+    } else {
+      arr[idx++] = val;
+    }
+
+    if (asc) {
+      a += step;
+    } else {
+      a -= step;
+    }
+  }
+
+  if (options.toRegex === true) {
+    return toSequence(arr, zero, options);
+  }
+  return arr;
+}
+
+function toRange(a, b, start, stop, options) {
+  if (options.isPadded) {
+    return toRegex(start, stop, options);
+  }
+
+  if (options.isNumber) {
+    return toRegex(Math.min(a, b), Math.max(a, b), options);
+  }
+
+  var start = String.fromCharCode(Math.min(a, b));
+  var stop = String.fromCharCode(Math.max(a, b));
+  return '[' + start + '-' + stop + ']';
+}
+
+function toSequence(arr, zeros, options) {
+  var greater = '', lesser = '';
+  if (zeros.greater.length) {
+    greater = zeros.greater.join('|');
+  }
+  if (zeros.lesser.length) {
+    lesser = '-(' + zeros.lesser.join('|') + ')';
+  }
+  var res = greater && lesser
+    ? greater + '|' + lesser
+    : greater || lesser;
+
+  if (options.capture) {
+    return '(' + res + ')';
+  }
+  return res;
+}
+
+function zeros(val, options) {
+  if (options.isPadded) {
+    var str = String(val);
+    var len = str.length;
+    var dash = '';
+    if (str.charAt(0) === '-') {
+      dash = '-';
+      str = str.slice(1);
+    }
+    var diff = options.maxLength - len;
+    var pad = repeat('0', diff);
+    val = (dash + pad + str);
+  }
+  if (options.stringify) {
+    return String(val);
+  }
+  return val;
+}
+
+function toNumber(val) {
+  return Number(val) || 0;
+}
+
+function isPadded(str) {
+  return /^-?0\d/.test(str);
+}
+
+function isValid(min, max) {
+  return (isValidNumber(min) || isValidLetter(min))
+      && (isValidNumber(max) || isValidLetter(max));
+}
+
+function isValidLetter(ch) {
+  return typeof ch === 'string' && ch.length === 1 && /^\w+$/.test(ch);
+}
+
+function isValidNumber(n) {
+  return isNumber(n) && !/\./.test(n);
+}
+
+/**
+ * Expose `fillRange`
+ * @type {Function}
+ */
+
+module.exports = fillRange;
+
+
+/***/ }),
+
+/***/ 2893:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var isObject = __webpack_require__(3786);
+
+module.exports = function extend(o/*, objects*/) {
+  if (!isObject(o)) { o = {}; }
+
+  var len = arguments.length;
+  for (var i = 1; i < len; i++) {
+    var obj = arguments[i];
+
+    if (isObject(obj)) {
+      assign(o, obj);
+    }
+  }
+  return o;
+};
+
+function assign(a, b) {
+  for (var key in b) {
+    if (hasOwn(b, key)) {
+      a[key] = b[key];
+    }
+  }
+}
+
+/**
+ * Returns true if the given `key` is an own property of `obj`.
+ */
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+
+/***/ }),
+
+/***/ 3786:
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * is-extendable <https://github.com/jonschlinkert/is-extendable>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+module.exports = function isExtendable(val) {
+  return typeof val !== 'undefined' && val !== null
+    && (typeof val === 'object' || typeof val === 'function');
+};
+
+
+/***/ }),
+
 /***/ 4460:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -17556,6 +18077,1716 @@ module.exports = function isGlob(str) {
   }
   return false;
 };
+
+
+/***/ }),
+
+/***/ 3386:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * is-extendable <https://github.com/jonschlinkert/is-extendable>
+ *
+ * Copyright (c) 2015-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var isPlainObject = __webpack_require__(7810);
+
+module.exports = function isExtendable(val) {
+  return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
+};
+
+
+/***/ }),
+
+/***/ 3913:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+/**
+ * Module dependencies
+ */
+
+var util = __webpack_require__(1669);
+var braces = __webpack_require__(5582);
+var toRegex = __webpack_require__(6855);
+var extend = __webpack_require__(6832);
+
+/**
+ * Local dependencies
+ */
+
+var compilers = __webpack_require__(4499);
+var parsers = __webpack_require__(1145);
+var cache = __webpack_require__(7519);
+var utils = __webpack_require__(5233);
+var MAX_LENGTH = 1024 * 64;
+
+/**
+ * The main function takes a list of strings and one or more
+ * glob patterns to use for matching.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm(list, patterns[, options]);
+ *
+ * console.log(mm(['a.js', 'a.txt'], ['*.js']));
+ * //=> [ 'a.js' ]
+ * ```
+ * @param {Array} `list` A list of strings to match
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Array} Returns an array of matches
+ * @summary false
+ * @api public
+ */
+
+function micromatch(list, patterns, options) {
+  patterns = utils.arrayify(patterns);
+  list = utils.arrayify(list);
+
+  var len = patterns.length;
+  if (list.length === 0 || len === 0) {
+    return [];
+  }
+
+  if (len === 1) {
+    return micromatch.match(list, patterns[0], options);
+  }
+
+  var omit = [];
+  var keep = [];
+  var idx = -1;
+
+  while (++idx < len) {
+    var pattern = patterns[idx];
+
+    if (typeof pattern === 'string' && pattern.charCodeAt(0) === 33 /* ! */) {
+      omit.push.apply(omit, micromatch.match(list, pattern.slice(1), options));
+    } else {
+      keep.push.apply(keep, micromatch.match(list, pattern, options));
+    }
+  }
+
+  var matches = utils.diff(keep, omit);
+  if (!options || options.nodupes !== false) {
+    return utils.unique(matches);
+  }
+
+  return matches;
+}
+
+/**
+ * Similar to the main function, but `pattern` must be a string.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.match(list, pattern[, options]);
+ *
+ * console.log(mm.match(['a.a', 'a.aa', 'a.b', 'a.c'], '*.a'));
+ * //=> ['a.a', 'a.aa']
+ * ```
+ * @param {Array} `list` Array of strings to match
+ * @param {String} `pattern` Glob pattern to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Array} Returns an array of matches
+ * @api public
+ */
+
+micromatch.match = function(list, pattern, options) {
+  if (Array.isArray(pattern)) {
+    throw new TypeError('expected pattern to be a string');
+  }
+
+  var unixify = utils.unixify(options);
+  var isMatch = memoize('match', pattern, options, micromatch.matcher);
+  var matches = [];
+
+  list = utils.arrayify(list);
+  var len = list.length;
+  var idx = -1;
+
+  while (++idx < len) {
+    var ele = list[idx];
+    if (ele === pattern || isMatch(ele)) {
+      matches.push(utils.value(ele, unixify, options));
+    }
+  }
+
+  // if no options were passed, uniquify results and return
+  if (typeof options === 'undefined') {
+    return utils.unique(matches);
+  }
+
+  if (matches.length === 0) {
+    if (options.failglob === true) {
+      throw new Error('no matches found for "' + pattern + '"');
+    }
+    if (options.nonull === true || options.nullglob === true) {
+      return [options.unescape ? utils.unescape(pattern) : pattern];
+    }
+  }
+
+  // if `opts.ignore` was defined, diff ignored list
+  if (options.ignore) {
+    matches = micromatch.not(matches, options.ignore, options);
+  }
+
+  return options.nodupes !== false ? utils.unique(matches) : matches;
+};
+
+/**
+ * Returns true if the specified `string` matches the given glob `pattern`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.isMatch(string, pattern[, options]);
+ *
+ * console.log(mm.isMatch('a.a', '*.a'));
+ * //=> true
+ * console.log(mm.isMatch('a.b', '*.a'));
+ * //=> false
+ * ```
+ * @param {String} `string` String to match
+ * @param {String} `pattern` Glob pattern to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if the string matches the glob pattern.
+ * @api public
+ */
+
+micromatch.isMatch = function(str, pattern, options) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
+  }
+
+  if (isEmptyString(str) || isEmptyString(pattern)) {
+    return false;
+  }
+
+  var equals = utils.equalsPattern(options);
+  if (equals(str)) {
+    return true;
+  }
+
+  var isMatch = memoize('isMatch', pattern, options, micromatch.matcher);
+  return isMatch(str);
+};
+
+/**
+ * Returns true if some of the strings in the given `list` match any of the
+ * given glob `patterns`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.some(list, patterns[, options]);
+ *
+ * console.log(mm.some(['foo.js', 'bar.js'], ['*.js', '!foo.js']));
+ * // true
+ * console.log(mm.some(['foo.js'], ['*.js', '!foo.js']));
+ * // false
+ * ```
+ * @param  {String|Array} `list` The string or array of strings to test. Returns as soon as the first match is found.
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if any patterns match `str`
+ * @api public
+ */
+
+micromatch.some = function(list, patterns, options) {
+  if (typeof list === 'string') {
+    list = [list];
+  }
+  for (var i = 0; i < list.length; i++) {
+    if (micromatch(list[i], patterns, options).length === 1) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Returns true if every string in the given `list` matches
+ * any of the given glob `patterns`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.every(list, patterns[, options]);
+ *
+ * console.log(mm.every('foo.js', ['foo.js']));
+ * // true
+ * console.log(mm.every(['foo.js', 'bar.js'], ['*.js']));
+ * // true
+ * console.log(mm.every(['foo.js', 'bar.js'], ['*.js', '!foo.js']));
+ * // false
+ * console.log(mm.every(['foo.js'], ['*.js', '!foo.js']));
+ * // false
+ * ```
+ * @param  {String|Array} `list` The string or array of strings to test.
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if any patterns match `str`
+ * @api public
+ */
+
+micromatch.every = function(list, patterns, options) {
+  if (typeof list === 'string') {
+    list = [list];
+  }
+  for (var i = 0; i < list.length; i++) {
+    if (micromatch(list[i], patterns, options).length !== 1) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Returns true if **any** of the given glob `patterns`
+ * match the specified `string`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.any(string, patterns[, options]);
+ *
+ * console.log(mm.any('a.a', ['b.*', '*.a']));
+ * //=> true
+ * console.log(mm.any('a.a', 'b.*'));
+ * //=> false
+ * ```
+ * @param  {String|Array} `str` The string to test.
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if any patterns match `str`
+ * @api public
+ */
+
+micromatch.any = function(str, patterns, options) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
+  }
+
+  if (isEmptyString(str) || isEmptyString(patterns)) {
+    return false;
+  }
+
+  if (typeof patterns === 'string') {
+    patterns = [patterns];
+  }
+
+  for (var i = 0; i < patterns.length; i++) {
+    if (micromatch.isMatch(str, patterns[i], options)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Returns true if **all** of the given `patterns` match
+ * the specified string.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.all(string, patterns[, options]);
+ *
+ * console.log(mm.all('foo.js', ['foo.js']));
+ * // true
+ *
+ * console.log(mm.all('foo.js', ['*.js', '!foo.js']));
+ * // false
+ *
+ * console.log(mm.all('foo.js', ['*.js', 'foo.js']));
+ * // true
+ *
+ * console.log(mm.all('foo.js', ['*.js', 'f*', '*o*', '*o.js']));
+ * // true
+ * ```
+ * @param  {String|Array} `str` The string to test.
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if any patterns match `str`
+ * @api public
+ */
+
+micromatch.all = function(str, patterns, options) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
+  }
+  if (typeof patterns === 'string') {
+    patterns = [patterns];
+  }
+  for (var i = 0; i < patterns.length; i++) {
+    if (!micromatch.isMatch(str, patterns[i], options)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Returns a list of strings that _**do not match any**_ of the given `patterns`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.not(list, patterns[, options]);
+ *
+ * console.log(mm.not(['a.a', 'b.b', 'c.c'], '*.a'));
+ * //=> ['b.b', 'c.c']
+ * ```
+ * @param {Array} `list` Array of strings to match.
+ * @param {String|Array} `patterns` One or more glob pattern to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Array} Returns an array of strings that **do not match** the given patterns.
+ * @api public
+ */
+
+micromatch.not = function(list, patterns, options) {
+  var opts = extend({}, options);
+  var ignore = opts.ignore;
+  delete opts.ignore;
+
+  var unixify = utils.unixify(opts);
+  list = utils.arrayify(list).map(unixify);
+
+  var matches = utils.diff(list, micromatch(list, patterns, opts));
+  if (ignore) {
+    matches = utils.diff(matches, micromatch(list, ignore));
+  }
+
+  return opts.nodupes !== false ? utils.unique(matches) : matches;
+};
+
+/**
+ * Returns true if the given `string` contains the given pattern. Similar
+ * to [.isMatch](#isMatch) but the pattern can match any part of the string.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.contains(string, pattern[, options]);
+ *
+ * console.log(mm.contains('aa/bb/cc', '*b'));
+ * //=> true
+ * console.log(mm.contains('aa/bb/cc', '*d'));
+ * //=> false
+ * ```
+ * @param {String} `str` The string to match.
+ * @param {String|Array} `patterns` Glob pattern to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns true if the patter matches any part of `str`.
+ * @api public
+ */
+
+micromatch.contains = function(str, patterns, options) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
+  }
+
+  if (typeof patterns === 'string') {
+    if (isEmptyString(str) || isEmptyString(patterns)) {
+      return false;
+    }
+
+    var equals = utils.equalsPattern(patterns, options);
+    if (equals(str)) {
+      return true;
+    }
+    var contains = utils.containsPattern(patterns, options);
+    if (contains(str)) {
+      return true;
+    }
+  }
+
+  var opts = extend({}, options, {contains: true});
+  return micromatch.any(str, patterns, opts);
+};
+
+/**
+ * Returns true if the given pattern and options should enable
+ * the `matchBase` option.
+ * @return {Boolean}
+ * @api private
+ */
+
+micromatch.matchBase = function(pattern, options) {
+  if (pattern && pattern.indexOf('/') !== -1 || !options) return false;
+  return options.basename === true || options.matchBase === true;
+};
+
+/**
+ * Filter the keys of the given object with the given `glob` pattern
+ * and `options`. Does not attempt to match nested keys. If you need this feature,
+ * use [glob-object][] instead.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.matchKeys(object, patterns[, options]);
+ *
+ * var obj = { aa: 'a', ab: 'b', ac: 'c' };
+ * console.log(mm.matchKeys(obj, '*b'));
+ * //=> { ab: 'b' }
+ * ```
+ * @param {Object} `object` The object with keys to filter.
+ * @param {String|Array} `patterns` One or more glob patterns to use for matching.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Object} Returns an object with only keys that match the given patterns.
+ * @api public
+ */
+
+micromatch.matchKeys = function(obj, patterns, options) {
+  if (!utils.isObject(obj)) {
+    throw new TypeError('expected the first argument to be an object');
+  }
+  var keys = micromatch(Object.keys(obj), patterns, options);
+  return utils.pick(obj, keys);
+};
+
+/**
+ * Returns a memoized matcher function from the given glob `pattern` and `options`.
+ * The returned function takes a string to match as its only argument and returns
+ * true if the string is a match.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.matcher(pattern[, options]);
+ *
+ * var isMatch = mm.matcher('*.!(*a)');
+ * console.log(isMatch('a.a'));
+ * //=> false
+ * console.log(isMatch('a.b'));
+ * //=> true
+ * ```
+ * @param {String} `pattern` Glob pattern
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed.
+ * @return {Function} Returns a matcher function.
+ * @api public
+ */
+
+micromatch.matcher = function matcher(pattern, options) {
+  if (Array.isArray(pattern)) {
+    return compose(pattern, options, matcher);
+  }
+
+  // if pattern is a regex
+  if (pattern instanceof RegExp) {
+    return test(pattern);
+  }
+
+  // if pattern is invalid
+  if (!utils.isString(pattern)) {
+    throw new TypeError('expected pattern to be an array, string or regex');
+  }
+
+  // if pattern is a non-glob string
+  if (!utils.hasSpecialChars(pattern)) {
+    if (options && options.nocase === true) {
+      pattern = pattern.toLowerCase();
+    }
+    return utils.matchPath(pattern, options);
+  }
+
+  // if pattern is a glob string
+  var re = micromatch.makeRe(pattern, options);
+
+  // if `options.matchBase` or `options.basename` is defined
+  if (micromatch.matchBase(pattern, options)) {
+    return utils.matchBasename(re, options);
+  }
+
+  function test(regex) {
+    var equals = utils.equalsPattern(options);
+    var unixify = utils.unixify(options);
+
+    return function(str) {
+      if (equals(str)) {
+        return true;
+      }
+
+      if (regex.test(unixify(str))) {
+        return true;
+      }
+      return false;
+    };
+  }
+
+  var fn = test(re);
+  Object.defineProperty(fn, 'result', {
+    configurable: true,
+    enumerable: false,
+    value: re.result
+  });
+  return fn;
+};
+
+/**
+ * Returns an array of matches captured by `pattern` in `string, or `null` if the pattern did not match.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.capture(pattern, string[, options]);
+ *
+ * console.log(mm.capture('test/*.js', 'test/foo.js'));
+ * //=> ['foo']
+ * console.log(mm.capture('test/*.js', 'foo/bar.css'));
+ * //=> null
+ * ```
+ * @param {String} `pattern` Glob pattern to use for matching.
+ * @param {String} `string` String to match
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed
+ * @return {Boolean} Returns an array of captures if the string matches the glob pattern, otherwise `null`.
+ * @api public
+ */
+
+micromatch.capture = function(pattern, str, options) {
+  var re = micromatch.makeRe(pattern, extend({capture: true}, options));
+  var unixify = utils.unixify(options);
+
+  function match() {
+    return function(string) {
+      var match = re.exec(unixify(string));
+      if (!match) {
+        return null;
+      }
+
+      return match.slice(1);
+    };
+  }
+
+  var capture = memoize('capture', pattern, options, match);
+  return capture(str);
+};
+
+/**
+ * Create a regular expression from the given glob `pattern`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.makeRe(pattern[, options]);
+ *
+ * console.log(mm.makeRe('*.js'));
+ * //=> /^(?:(\.[\\\/])?(?!\.)(?=.)[^\/]*?\.js)$/
+ * ```
+ * @param {String} `pattern` A glob pattern to convert to regex.
+ * @param {Object} `options` See available [options](#options) for changing how matches are performed.
+ * @return {RegExp} Returns a regex created from the given pattern.
+ * @api public
+ */
+
+micromatch.makeRe = function(pattern, options) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('expected pattern to be a string');
+  }
+
+  if (pattern.length > MAX_LENGTH) {
+    throw new Error('expected pattern to be less than ' + MAX_LENGTH + ' characters');
+  }
+
+  function makeRe() {
+    var result = micromatch.create(pattern, options);
+    var ast_array = [];
+    var output = result.map(function(obj) {
+      obj.ast.state = obj.state;
+      ast_array.push(obj.ast);
+      return obj.output;
+    });
+
+    var regex = toRegex(output.join('|'), options);
+    Object.defineProperty(regex, 'result', {
+      configurable: true,
+      enumerable: false,
+      value: ast_array
+    });
+    return regex;
+  }
+
+  return memoize('makeRe', pattern, options, makeRe);
+};
+
+/**
+ * Expand the given brace `pattern`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * console.log(mm.braces('foo/{a,b}/bar'));
+ * //=> ['foo/(a|b)/bar']
+ *
+ * console.log(mm.braces('foo/{a,b}/bar', {expand: true}));
+ * //=> ['foo/(a|b)/bar']
+ * ```
+ * @param {String} `pattern` String with brace pattern to expand.
+ * @param {Object} `options` Any [options](#options) to change how expansion is performed. See the [braces][] library for all available options.
+ * @return {Array}
+ * @api public
+ */
+
+micromatch.braces = function(pattern, options) {
+  if (typeof pattern !== 'string' && !Array.isArray(pattern)) {
+    throw new TypeError('expected pattern to be an array or string');
+  }
+
+  function expand() {
+    if (options && options.nobrace === true || !/\{.*\}/.test(pattern)) {
+      return utils.arrayify(pattern);
+    }
+    return braces(pattern, options);
+  }
+
+  return memoize('braces', pattern, options, expand);
+};
+
+/**
+ * Proxy to the [micromatch.braces](#method), for parity with
+ * minimatch.
+ */
+
+micromatch.braceExpand = function(pattern, options) {
+  var opts = extend({}, options, {expand: true});
+  return micromatch.braces(pattern, opts);
+};
+
+/**
+ * Parses the given glob `pattern` and returns an array of abstract syntax
+ * trees (ASTs), with the compiled `output` and optional source `map` on
+ * each AST.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.create(pattern[, options]);
+ *
+ * console.log(mm.create('abc/*.js'));
+ * // [{ options: { source: 'string', sourcemap: true },
+ * //   state: {},
+ * //   compilers:
+ * //    { ... },
+ * //   output: '(\\.[\\\\\\/])?abc\\/(?!\\.)(?=.)[^\\/]*?\\.js',
+ * //   ast:
+ * //    { type: 'root',
+ * //      errors: [],
+ * //      nodes:
+ * //       [ ... ],
+ * //      dot: false,
+ * //      input: 'abc/*.js' },
+ * //   parsingErrors: [],
+ * //   map:
+ * //    { version: 3,
+ * //      sources: [ 'string' ],
+ * //      names: [],
+ * //      mappings: 'AAAA,GAAG,EAAC,kBAAC,EAAC,EAAE',
+ * //      sourcesContent: [ 'abc/*.js' ] },
+ * //   position: { line: 1, column: 28 },
+ * //   content: {},
+ * //   files: {},
+ * //   idx: 6 }]
+ * ```
+ * @param {String} `pattern` Glob pattern to parse and compile.
+ * @param {Object} `options` Any [options](#options) to change how parsing and compiling is performed.
+ * @return {Object} Returns an object with the parsed AST, compiled string and optional source map.
+ * @api public
+ */
+
+micromatch.create = function(pattern, options) {
+  return memoize('create', pattern, options, function() {
+    function create(str, opts) {
+      return micromatch.compile(micromatch.parse(str, opts), opts);
+    }
+
+    pattern = micromatch.braces(pattern, options);
+    var len = pattern.length;
+    var idx = -1;
+    var res = [];
+
+    while (++idx < len) {
+      res.push(create(pattern[idx], options));
+    }
+    return res;
+  });
+};
+
+/**
+ * Parse the given `str` with the given `options`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.parse(pattern[, options]);
+ *
+ * var ast = mm.parse('a/{b,c}/d');
+ * console.log(ast);
+ * // { type: 'root',
+ * //   errors: [],
+ * //   input: 'a/{b,c}/d',
+ * //   nodes:
+ * //    [ { type: 'bos', val: '' },
+ * //      { type: 'text', val: 'a/' },
+ * //      { type: 'brace',
+ * //        nodes:
+ * //         [ { type: 'brace.open', val: '{' },
+ * //           { type: 'text', val: 'b,c' },
+ * //           { type: 'brace.close', val: '}' } ] },
+ * //      { type: 'text', val: '/d' },
+ * //      { type: 'eos', val: '' } ] }
+ * ```
+ * @param {String} `str`
+ * @param {Object} `options`
+ * @return {Object} Returns an AST
+ * @api public
+ */
+
+micromatch.parse = function(pattern, options) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  function parse() {
+    var snapdragon = utils.instantiate(null, options);
+    parsers(snapdragon, options);
+
+    var ast = snapdragon.parse(pattern, options);
+    utils.define(ast, 'snapdragon', snapdragon);
+    ast.input = pattern;
+    return ast;
+  }
+
+  return memoize('parse', pattern, options, parse);
+};
+
+/**
+ * Compile the given `ast` or string with the given `options`.
+ *
+ * ```js
+ * var mm = require('micromatch');
+ * mm.compile(ast[, options]);
+ *
+ * var ast = mm.parse('a/{b,c}/d');
+ * console.log(mm.compile(ast));
+ * // { options: { source: 'string' },
+ * //   state: {},
+ * //   compilers:
+ * //    { eos: [Function],
+ * //      noop: [Function],
+ * //      bos: [Function],
+ * //      brace: [Function],
+ * //      'brace.open': [Function],
+ * //      text: [Function],
+ * //      'brace.close': [Function] },
+ * //   output: [ 'a/(b|c)/d' ],
+ * //   ast:
+ * //    { ... },
+ * //   parsingErrors: [] }
+ * ```
+ * @param {Object|String} `ast`
+ * @param {Object} `options`
+ * @return {Object} Returns an object that has an `output` property with the compiled string.
+ * @api public
+ */
+
+micromatch.compile = function(ast, options) {
+  if (typeof ast === 'string') {
+    ast = micromatch.parse(ast, options);
+  }
+
+  return memoize('compile', ast.input, options, function() {
+    var snapdragon = utils.instantiate(ast, options);
+    compilers(snapdragon, options);
+    return snapdragon.compile(ast, options);
+  });
+};
+
+/**
+ * Clear the regex cache.
+ *
+ * ```js
+ * mm.clearCache();
+ * ```
+ * @api public
+ */
+
+micromatch.clearCache = function() {
+  micromatch.cache.caches = {};
+};
+
+/**
+ * Returns true if the given value is effectively an empty string
+ */
+
+function isEmptyString(val) {
+  return String(val) === '' || String(val) === './';
+}
+
+/**
+ * Compose a matcher function with the given patterns.
+ * This allows matcher functions to be compiled once and
+ * called multiple times.
+ */
+
+function compose(patterns, options, matcher) {
+  var matchers;
+
+  return memoize('compose', String(patterns), options, function() {
+    return function(file) {
+      // delay composition until it's invoked the first time,
+      // after that it won't be called again
+      if (!matchers) {
+        matchers = [];
+        for (var i = 0; i < patterns.length; i++) {
+          matchers.push(matcher(patterns[i], options));
+        }
+      }
+
+      var len = matchers.length;
+      while (len--) {
+        if (matchers[len](file) === true) {
+          return true;
+        }
+      }
+      return false;
+    };
+  });
+}
+
+/**
+ * Memoize a generated regex or function. A unique key is generated
+ * from the `type` (usually method name), the `pattern`, and
+ * user-defined options.
+ */
+
+function memoize(type, pattern, options, fn) {
+  var key = utils.createKey(type + '=' + pattern, options);
+
+  if (options && options.cache === false) {
+    return fn(pattern, options);
+  }
+
+  if (cache.has(type, key)) {
+    return cache.get(type, key);
+  }
+
+  var val = fn(pattern, options);
+  cache.set(type, key, val);
+  return val;
+}
+
+/**
+ * Expose compiler, parser and cache on `micromatch`
+ */
+
+micromatch.compilers = compilers;
+micromatch.parsers = parsers;
+micromatch.caches = cache.caches;
+
+/**
+ * Expose `micromatch`
+ * @type {Function}
+ */
+
+module.exports = micromatch;
+
+
+/***/ }),
+
+/***/ 7519:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = new (__webpack_require__(4838))();
+
+
+/***/ }),
+
+/***/ 4499:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var nanomatch = __webpack_require__(2316);
+var extglob = __webpack_require__(2129);
+
+module.exports = function(snapdragon) {
+  var compilers = snapdragon.compiler.compilers;
+  var opts = snapdragon.options;
+
+  // register nanomatch compilers
+  snapdragon.use(nanomatch.compilers);
+
+  // get references to some specific nanomatch compilers before they
+  // are overridden by the extglob and/or custom compilers
+  var escape = compilers.escape;
+  var qmark = compilers.qmark;
+  var slash = compilers.slash;
+  var star = compilers.star;
+  var text = compilers.text;
+  var plus = compilers.plus;
+  var dot = compilers.dot;
+
+  // register extglob compilers or escape exglobs if disabled
+  if (opts.extglob === false || opts.noext === true) {
+    snapdragon.compiler.use(escapeExtglobs);
+  } else {
+    snapdragon.use(extglob.compilers);
+  }
+
+  snapdragon.use(function() {
+    this.options.star = this.options.star || function(/*node*/) {
+      return '[^\\\\/]*?';
+    };
+  });
+
+  // custom micromatch compilers
+  snapdragon.compiler
+
+    // reset referenced compiler
+    .set('dot', dot)
+    .set('escape', escape)
+    .set('plus', plus)
+    .set('slash', slash)
+    .set('qmark', qmark)
+    .set('star', star)
+    .set('text', text);
+};
+
+function escapeExtglobs(compiler) {
+  compiler.set('paren', function(node) {
+    var val = '';
+    visit(node, function(tok) {
+      if (tok.val) val += (/^\W/.test(tok.val) ? '\\' : '') + tok.val;
+    });
+    return this.emit(val, node);
+  });
+
+  /**
+   * Visit `node` with the given `fn`
+   */
+
+  function visit(node, fn) {
+    return node.nodes ? mapVisit(node.nodes, fn) : fn(node);
+  }
+
+  /**
+   * Map visit over array of `nodes`.
+   */
+
+  function mapVisit(nodes, fn) {
+    var len = nodes.length;
+    var idx = -1;
+    while (++idx < len) {
+      visit(nodes[idx], fn);
+    }
+  }
+}
+
+
+/***/ }),
+
+/***/ 1145:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var extglob = __webpack_require__(2129);
+var nanomatch = __webpack_require__(2316);
+var regexNot = __webpack_require__(2527);
+var toRegex = __webpack_require__(6855);
+var not;
+
+/**
+ * Characters to use in negation regex (we want to "not" match
+ * characters that are matched by other parsers)
+ */
+
+var TEXT = '([!@*?+]?\\(|\\)|\\[:?(?=.*?:?\\])|:?\\]|[*+?!^$.\\\\/])+';
+var createNotRegex = function(opts) {
+  return not || (not = textRegex(TEXT));
+};
+
+/**
+ * Parsers
+ */
+
+module.exports = function(snapdragon) {
+  var parsers = snapdragon.parser.parsers;
+
+  // register nanomatch parsers
+  snapdragon.use(nanomatch.parsers);
+
+  // get references to some specific nanomatch parsers before they
+  // are overridden by the extglob and/or parsers
+  var escape = parsers.escape;
+  var slash = parsers.slash;
+  var qmark = parsers.qmark;
+  var plus = parsers.plus;
+  var star = parsers.star;
+  var dot = parsers.dot;
+
+  // register extglob parsers
+  snapdragon.use(extglob.parsers);
+
+  // custom micromatch parsers
+  snapdragon.parser
+    .use(function() {
+      // override "notRegex" created in nanomatch parser
+      this.notRegex = /^\!+(?!\()/;
+    })
+    // reset the referenced parsers
+    .capture('escape', escape)
+    .capture('slash', slash)
+    .capture('qmark', qmark)
+    .capture('star', star)
+    .capture('plus', plus)
+    .capture('dot', dot)
+
+    /**
+     * Override `text` parser
+     */
+
+    .capture('text', function() {
+      if (this.isInside('bracket')) return;
+      var pos = this.position();
+      var m = this.match(createNotRegex(this.options));
+      if (!m || !m[0]) return;
+
+      // escape regex boundary characters and simple brackets
+      var val = m[0].replace(/([[\]^$])/g, '\\$1');
+
+      return pos({
+        type: 'text',
+        val: val
+      });
+    });
+};
+
+/**
+ * Create text regex
+ */
+
+function textRegex(pattern) {
+  var notStr = regexNot.create(pattern, {contains: true, strictClose: false});
+  var prefix = '(?:[\\^]|\\\\|';
+  return toRegex(prefix + notStr + ')', {strictClose: false});
+}
+
+
+/***/ }),
+
+/***/ 5233:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var utils = module.exports;
+var path = __webpack_require__(5622);
+
+/**
+ * Module dependencies
+ */
+
+var Snapdragon = __webpack_require__(2403);
+utils.define = __webpack_require__(8633);
+utils.diff = __webpack_require__(8915);
+utils.extend = __webpack_require__(6832);
+utils.pick = __webpack_require__(9962);
+utils.typeOf = __webpack_require__(6961);
+utils.unique = __webpack_require__(340);
+
+/**
+ * Returns true if the platform is windows, or `path.sep` is `\\`.
+ * This is defined as a function to allow `path.sep` to be set in unit tests,
+ * or by the user, if there is a reason to do so.
+ * @return {Boolean}
+ */
+
+utils.isWindows = function() {
+  return path.sep === '\\' || process.platform === 'win32';
+};
+
+/**
+ * Get the `Snapdragon` instance to use
+ */
+
+utils.instantiate = function(ast, options) {
+  var snapdragon;
+  // if an instance was created by `.parse`, use that instance
+  if (utils.typeOf(ast) === 'object' && ast.snapdragon) {
+    snapdragon = ast.snapdragon;
+  // if the user supplies an instance on options, use that instance
+  } else if (utils.typeOf(options) === 'object' && options.snapdragon) {
+    snapdragon = options.snapdragon;
+  // create a new instance
+  } else {
+    snapdragon = new Snapdragon(options);
+  }
+
+  utils.define(snapdragon, 'parse', function(str, options) {
+    var parsed = Snapdragon.prototype.parse.apply(this, arguments);
+    parsed.input = str;
+
+    // escape unmatched brace/bracket/parens
+    var last = this.parser.stack.pop();
+    if (last && this.options.strictErrors !== true) {
+      var open = last.nodes[0];
+      var inner = last.nodes[1];
+      if (last.type === 'bracket') {
+        if (inner.val.charAt(0) === '[') {
+          inner.val = '\\' + inner.val;
+        }
+
+      } else {
+        open.val = '\\' + open.val;
+        var sibling = open.parent.nodes[1];
+        if (sibling.type === 'star') {
+          sibling.loose = true;
+        }
+      }
+    }
+
+    // add non-enumerable parser reference
+    utils.define(parsed, 'parser', this.parser);
+    return parsed;
+  });
+
+  return snapdragon;
+};
+
+/**
+ * Create the key to use for memoization. The key is generated
+ * by iterating over the options and concatenating key-value pairs
+ * to the pattern string.
+ */
+
+utils.createKey = function(pattern, options) {
+  if (utils.typeOf(options) !== 'object') {
+    return pattern;
+  }
+  var val = pattern;
+  var keys = Object.keys(options);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    val += ';' + key + '=' + String(options[key]);
+  }
+  return val;
+};
+
+/**
+ * Cast `val` to an array
+ * @return {Array}
+ */
+
+utils.arrayify = function(val) {
+  if (typeof val === 'string') return [val];
+  return val ? (Array.isArray(val) ? val : [val]) : [];
+};
+
+/**
+ * Return true if `val` is a non-empty string
+ */
+
+utils.isString = function(val) {
+  return typeof val === 'string';
+};
+
+/**
+ * Return true if `val` is a non-empty string
+ */
+
+utils.isObject = function(val) {
+  return utils.typeOf(val) === 'object';
+};
+
+/**
+ * Returns true if the given `str` has special characters
+ */
+
+utils.hasSpecialChars = function(str) {
+  return /(?:(?:(^|\/)[!.])|[*?+()|\[\]{}]|[+@]\()/.test(str);
+};
+
+/**
+ * Escape regex characters in the given string
+ */
+
+utils.escapeRegex = function(str) {
+  return str.replace(/[-[\]{}()^$|*+?.\\\/\s]/g, '\\$&');
+};
+
+/**
+ * Normalize slashes in the given filepath.
+ *
+ * @param {String} `filepath`
+ * @return {String}
+ */
+
+utils.toPosixPath = function(str) {
+  return str.replace(/\\+/g, '/');
+};
+
+/**
+ * Strip backslashes before special characters in a string.
+ *
+ * @param {String} `str`
+ * @return {String}
+ */
+
+utils.unescape = function(str) {
+  return utils.toPosixPath(str.replace(/\\(?=[*+?!.])/g, ''));
+};
+
+/**
+ * Strip the prefix from a filepath
+ * @param {String} `fp`
+ * @return {String}
+ */
+
+utils.stripPrefix = function(str) {
+  if (str.charAt(0) !== '.') {
+    return str;
+  }
+  var ch = str.charAt(1);
+  if (utils.isSlash(ch)) {
+    return str.slice(2);
+  }
+  return str;
+};
+
+/**
+ * Returns true if the given str is an escaped or
+ * unescaped path character
+ */
+
+utils.isSlash = function(str) {
+  return str === '/' || str === '\\/' || str === '\\' || str === '\\\\';
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern matches or contains a `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.matchPath = function(pattern, options) {
+  return (options && options.contains)
+    ? utils.containsPattern(pattern, options)
+    : utils.equalsPattern(pattern, options);
+};
+
+/**
+ * Returns true if the given (original) filepath or unixified path are equal
+ * to the given pattern.
+ */
+
+utils._equals = function(filepath, unixPath, pattern) {
+  return pattern === filepath || pattern === unixPath;
+};
+
+/**
+ * Returns true if the given (original) filepath or unixified path contain
+ * the given pattern.
+ */
+
+utils._contains = function(filepath, unixPath, pattern) {
+  return filepath.indexOf(pattern) !== -1 || unixPath.indexOf(pattern) !== -1;
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern is the same as a given `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.equalsPattern = function(pattern, options) {
+  var unixify = utils.unixify(options);
+  options = options || {};
+
+  return function fn(filepath) {
+    var equal = utils._equals(filepath, unixify(filepath), pattern);
+    if (equal === true || options.nocase !== true) {
+      return equal;
+    }
+    var lower = filepath.toLowerCase();
+    return utils._equals(lower, unixify(lower), pattern);
+  };
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern contains a `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.containsPattern = function(pattern, options) {
+  var unixify = utils.unixify(options);
+  options = options || {};
+
+  return function(filepath) {
+    var contains = utils._contains(filepath, unixify(filepath), pattern);
+    if (contains === true || options.nocase !== true) {
+      return contains;
+    }
+    var lower = filepath.toLowerCase();
+    return utils._contains(lower, unixify(lower), pattern);
+  };
+};
+
+/**
+ * Returns a function that returns true if the given
+ * regex matches the `filename` of a file path.
+ *
+ * @param {RegExp} `re` Matching regex
+ * @return {Function}
+ */
+
+utils.matchBasename = function(re) {
+  return function(filepath) {
+    return re.test(path.basename(filepath));
+  };
+};
+
+/**
+ * Determines the filepath to return based on the provided options.
+ * @return {any}
+ */
+
+utils.value = function(str, unixify, options) {
+  if (options && options.unixify === false) {
+    return str;
+  }
+  return unixify(str);
+};
+
+/**
+ * Returns a function that normalizes slashes in a string to forward
+ * slashes, strips `./` from beginning of paths, and optionally unescapes
+ * special characters.
+ * @return {Function}
+ */
+
+utils.unixify = function(options) {
+  options = options || {};
+  return function(filepath) {
+    if (utils.isWindows() || options.unixify === true) {
+      filepath = utils.toPosixPath(filepath);
+    }
+    if (options.stripPrefix !== false) {
+      filepath = utils.stripPrefix(filepath);
+    }
+    if (options.unescape === true) {
+      filepath = utils.unescape(filepath);
+    }
+    return filepath;
+  };
+};
+
+
+/***/ }),
+
+/***/ 6867:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * to-regex-range <https://github.com/jonschlinkert/to-regex-range>
+ *
+ * Copyright (c) 2015, 2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var repeat = __webpack_require__(6976);
+var isNumber = __webpack_require__(5680);
+var cache = {};
+
+function toRegexRange(min, max, options) {
+  if (isNumber(min) === false) {
+    throw new RangeError('toRegexRange: first argument is invalid.');
+  }
+
+  if (typeof max === 'undefined' || min === max) {
+    return String(min);
+  }
+
+  if (isNumber(max) === false) {
+    throw new RangeError('toRegexRange: second argument is invalid.');
+  }
+
+  options = options || {};
+  var relax = String(options.relaxZeros);
+  var shorthand = String(options.shorthand);
+  var capture = String(options.capture);
+  var key = min + ':' + max + '=' + relax + shorthand + capture;
+  if (cache.hasOwnProperty(key)) {
+    return cache[key].result;
+  }
+
+  var a = Math.min(min, max);
+  var b = Math.max(min, max);
+
+  if (Math.abs(a - b) === 1) {
+    var result = min + '|' + max;
+    if (options.capture) {
+      return '(' + result + ')';
+    }
+    return result;
+  }
+
+  var isPadded = padding(min) || padding(max);
+  var positives = [];
+  var negatives = [];
+
+  var tok = {min: min, max: max, a: a, b: b};
+  if (isPadded) {
+    tok.isPadded = isPadded;
+    tok.maxLen = String(tok.max).length;
+  }
+
+  if (a < 0) {
+    var newMin = b < 0 ? Math.abs(b) : 1;
+    var newMax = Math.abs(a);
+    negatives = splitToPatterns(newMin, newMax, tok, options);
+    a = tok.a = 0;
+  }
+
+  if (b >= 0) {
+    positives = splitToPatterns(a, b, tok, options);
+  }
+
+  tok.negatives = negatives;
+  tok.positives = positives;
+  tok.result = siftPatterns(negatives, positives, options);
+
+  if (options.capture && (positives.length + negatives.length) > 1) {
+    tok.result = '(' + tok.result + ')';
+  }
+
+  cache[key] = tok;
+  return tok.result;
+}
+
+function siftPatterns(neg, pos, options) {
+  var onlyNegative = filterPatterns(neg, pos, '-', false, options) || [];
+  var onlyPositive = filterPatterns(pos, neg, '', false, options) || [];
+  var intersected = filterPatterns(neg, pos, '-?', true, options) || [];
+  var subpatterns = onlyNegative.concat(intersected).concat(onlyPositive);
+  return subpatterns.join('|');
+}
+
+function splitToRanges(min, max) {
+  min = Number(min);
+  max = Number(max);
+
+  var nines = 1;
+  var stops = [max];
+  var stop = +countNines(min, nines);
+
+  while (min <= stop && stop <= max) {
+    stops = push(stops, stop);
+    nines += 1;
+    stop = +countNines(min, nines);
+  }
+
+  var zeros = 1;
+  stop = countZeros(max + 1, zeros) - 1;
+
+  while (min < stop && stop <= max) {
+    stops = push(stops, stop);
+    zeros += 1;
+    stop = countZeros(max + 1, zeros) - 1;
+  }
+
+  stops.sort(compare);
+  return stops;
+}
+
+/**
+ * Convert a range to a regex pattern
+ * @param {Number} `start`
+ * @param {Number} `stop`
+ * @return {String}
+ */
+
+function rangeToPattern(start, stop, options) {
+  if (start === stop) {
+    return {pattern: String(start), digits: []};
+  }
+
+  var zipped = zip(String(start), String(stop));
+  var len = zipped.length, i = -1;
+
+  var pattern = '';
+  var digits = 0;
+
+  while (++i < len) {
+    var numbers = zipped[i];
+    var startDigit = numbers[0];
+    var stopDigit = numbers[1];
+
+    if (startDigit === stopDigit) {
+      pattern += startDigit;
+
+    } else if (startDigit !== '0' || stopDigit !== '9') {
+      pattern += toCharacterClass(startDigit, stopDigit);
+
+    } else {
+      digits += 1;
+    }
+  }
+
+  if (digits) {
+    pattern += options.shorthand ? '\\d' : '[0-9]';
+  }
+
+  return { pattern: pattern, digits: [digits] };
+}
+
+function splitToPatterns(min, max, tok, options) {
+  var ranges = splitToRanges(min, max);
+  var len = ranges.length;
+  var idx = -1;
+
+  var tokens = [];
+  var start = min;
+  var prev;
+
+  while (++idx < len) {
+    var range = ranges[idx];
+    var obj = rangeToPattern(start, range, options);
+    var zeros = '';
+
+    if (!tok.isPadded && prev && prev.pattern === obj.pattern) {
+      if (prev.digits.length > 1) {
+        prev.digits.pop();
+      }
+      prev.digits.push(obj.digits[0]);
+      prev.string = prev.pattern + toQuantifier(prev.digits);
+      start = range + 1;
+      continue;
+    }
+
+    if (tok.isPadded) {
+      zeros = padZeros(range, tok);
+    }
+
+    obj.string = zeros + obj.pattern + toQuantifier(obj.digits);
+    tokens.push(obj);
+    start = range + 1;
+    prev = obj;
+  }
+
+  return tokens;
+}
+
+function filterPatterns(arr, comparison, prefix, intersection, options) {
+  var res = [];
+
+  for (var i = 0; i < arr.length; i++) {
+    var tok = arr[i];
+    var ele = tok.string;
+
+    if (options.relaxZeros !== false) {
+      if (prefix === '-' && ele.charAt(0) === '0') {
+        if (ele.charAt(1) === '{') {
+          ele = '0*' + ele.replace(/^0\{\d+\}/, '');
+        } else {
+          ele = '0*' + ele.slice(1);
+        }
+      }
+    }
+
+    if (!intersection && !contains(comparison, 'string', ele)) {
+      res.push(prefix + ele);
+    }
+
+    if (intersection && contains(comparison, 'string', ele)) {
+      res.push(prefix + ele);
+    }
+  }
+  return res;
+}
+
+/**
+ * Zip strings (`for in` can be used on string characters)
+ */
+
+function zip(a, b) {
+  var arr = [];
+  for (var ch in a) arr.push([a[ch], b[ch]]);
+  return arr;
+}
+
+function compare(a, b) {
+  return a > b ? 1 : b > a ? -1 : 0;
+}
+
+function push(arr, ele) {
+  if (arr.indexOf(ele) === -1) arr.push(ele);
+  return arr;
+}
+
+function contains(arr, key, val) {
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i][key] === val) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function countNines(min, len) {
+  return String(min).slice(0, -len) + repeat('9', len);
+}
+
+function countZeros(integer, zeros) {
+  return integer - (integer % Math.pow(10, zeros));
+}
+
+function toQuantifier(digits) {
+  var start = digits[0];
+  var stop = digits[1] ? (',' + digits[1]) : '';
+  if (!stop && (!start || start === 1)) {
+    return '';
+  }
+  return '{' + start + stop + '}';
+}
+
+function toCharacterClass(a, b) {
+  return '[' + a + ((b - a === 1) ? '' : '-') + b + ']';
+}
+
+function padding(str) {
+  return /^-?(0+)\d/.exec(str);
+}
+
+function padZeros(val, tok) {
+  if (tok.isPadded) {
+    var diff = Math.abs(tok.maxLen - String(val).length);
+    switch (diff) {
+      case 0:
+        return '';
+      case 1:
+        return '0';
+      default: {
+        return '0{' + diff + '}';
+      }
+    }
+  }
+  return val;
+}
+
+/**
+ * Expose `toRegexRange`
+ */
+
+module.exports = toRegexRange;
 
 
 /***/ }),
@@ -18521,7 +20752,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 var path = __webpack_require__(5622);
 var globParent = __webpack_require__(4460);
 var isGlob = __webpack_require__(4466);
-var micromatch = __webpack_require__(6228);
+var micromatch = __webpack_require__(3913);
 var GLOBSTAR = '**';
 /**
  * Return true for static pattern.
@@ -18686,222 +20917,6 @@ function merge(streams) {
     return mergedStream;
 }
 exports.merge = merge;
-
-
-/***/ }),
-
-/***/ 6330:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-/*!
- * fill-range <https://github.com/jonschlinkert/fill-range>
- *
- * Copyright (c) 2014-2015, 2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var util = __webpack_require__(1669);
-var isNumber = __webpack_require__(5680);
-var extend = __webpack_require__(7512);
-var repeat = __webpack_require__(6976);
-var toRegex = __webpack_require__(1861);
-
-/**
- * Return a range of numbers or letters.
- *
- * @param  {String} `start` Start of the range
- * @param  {String} `stop` End of the range
- * @param  {String} `step` Increment or decrement to use.
- * @param  {Function} `fn` Custom function to modify each element in the range.
- * @return {Array}
- */
-
-function fillRange(start, stop, step, options) {
-  if (typeof start === 'undefined') {
-    return [];
-  }
-
-  if (typeof stop === 'undefined' || start === stop) {
-    // special case, for handling negative zero
-    var isString = typeof start === 'string';
-    if (isNumber(start) && !toNumber(start)) {
-      return [isString ? '0' : 0];
-    }
-    return [start];
-  }
-
-  if (typeof step !== 'number' && typeof step !== 'string') {
-    options = step;
-    step = undefined;
-  }
-
-  if (typeof options === 'function') {
-    options = { transform: options };
-  }
-
-  var opts = extend({step: step}, options);
-  if (opts.step && !isValidNumber(opts.step)) {
-    if (opts.strictRanges === true) {
-      throw new TypeError('expected options.step to be a number');
-    }
-    return [];
-  }
-
-  opts.isNumber = isValidNumber(start) && isValidNumber(stop);
-  if (!opts.isNumber && !isValid(start, stop)) {
-    if (opts.strictRanges === true) {
-      throw new RangeError('invalid range arguments: ' + util.inspect([start, stop]));
-    }
-    return [];
-  }
-
-  opts.isPadded = isPadded(start) || isPadded(stop);
-  opts.toString = opts.stringify
-    || typeof opts.step === 'string'
-    || typeof start === 'string'
-    || typeof stop === 'string'
-    || !opts.isNumber;
-
-  if (opts.isPadded) {
-    opts.maxLength = Math.max(String(start).length, String(stop).length);
-  }
-
-  // support legacy minimatch/fill-range options
-  if (typeof opts.optimize === 'boolean') opts.toRegex = opts.optimize;
-  if (typeof opts.makeRe === 'boolean') opts.toRegex = opts.makeRe;
-  return expand(start, stop, opts);
-}
-
-function expand(start, stop, options) {
-  var a = options.isNumber ? toNumber(start) : start.charCodeAt(0);
-  var b = options.isNumber ? toNumber(stop) : stop.charCodeAt(0);
-
-  var step = Math.abs(toNumber(options.step)) || 1;
-  if (options.toRegex && step === 1) {
-    return toRange(a, b, start, stop, options);
-  }
-
-  var zero = {greater: [], lesser: []};
-  var asc = a < b;
-  var arr = new Array(Math.round((asc ? b - a : a - b) / step));
-  var idx = 0;
-
-  while (asc ? a <= b : a >= b) {
-    var val = options.isNumber ? a : String.fromCharCode(a);
-    if (options.toRegex && (val >= 0 || !options.isNumber)) {
-      zero.greater.push(val);
-    } else {
-      zero.lesser.push(Math.abs(val));
-    }
-
-    if (options.isPadded) {
-      val = zeros(val, options);
-    }
-
-    if (options.toString) {
-      val = String(val);
-    }
-
-    if (typeof options.transform === 'function') {
-      arr[idx++] = options.transform(val, a, b, step, idx, arr, options);
-    } else {
-      arr[idx++] = val;
-    }
-
-    if (asc) {
-      a += step;
-    } else {
-      a -= step;
-    }
-  }
-
-  if (options.toRegex === true) {
-    return toSequence(arr, zero, options);
-  }
-  return arr;
-}
-
-function toRange(a, b, start, stop, options) {
-  if (options.isPadded) {
-    return toRegex(start, stop, options);
-  }
-
-  if (options.isNumber) {
-    return toRegex(Math.min(a, b), Math.max(a, b), options);
-  }
-
-  var start = String.fromCharCode(Math.min(a, b));
-  var stop = String.fromCharCode(Math.max(a, b));
-  return '[' + start + '-' + stop + ']';
-}
-
-function toSequence(arr, zeros, options) {
-  var greater = '', lesser = '';
-  if (zeros.greater.length) {
-    greater = zeros.greater.join('|');
-  }
-  if (zeros.lesser.length) {
-    lesser = '-(' + zeros.lesser.join('|') + ')';
-  }
-  var res = greater && lesser
-    ? greater + '|' + lesser
-    : greater || lesser;
-
-  if (options.capture) {
-    return '(' + res + ')';
-  }
-  return res;
-}
-
-function zeros(val, options) {
-  if (options.isPadded) {
-    var str = String(val);
-    var len = str.length;
-    var dash = '';
-    if (str.charAt(0) === '-') {
-      dash = '-';
-      str = str.slice(1);
-    }
-    var diff = options.maxLength - len;
-    var pad = repeat('0', diff);
-    val = (dash + pad + str);
-  }
-  if (options.stringify) {
-    return String(val);
-  }
-  return val;
-}
-
-function toNumber(val) {
-  return Number(val) || 0;
-}
-
-function isPadded(str) {
-  return /^-?0\d/.test(str);
-}
-
-function isValid(min, max) {
-  return (isValidNumber(min) || isValidLetter(min))
-      && (isValidNumber(max) || isValidLetter(max));
-}
-
-function isValidLetter(ch) {
-  return typeof ch === 'string' && ch.length === 1 && /^\w+$/.test(ch);
-}
-
-function isValidNumber(n) {
-  return isNumber(n) && !/\./.test(n);
-}
-
-/**
- * Expose `fillRange`
- * @type {Function}
- */
-
-module.exports = fillRange;
 
 
 /***/ }),
@@ -22318,7 +24333,7 @@ const path = __webpack_require__(5622);
 const fastGlob = __webpack_require__(2147);
 const gitIgnore = __webpack_require__(1230);
 const pify = __webpack_require__(4810);
-const slash = __webpack_require__(7543);
+const slash = __webpack_require__(2158);
 
 const DEFAULT_IGNORE = [
 	'**/node_modules/**',
@@ -22569,6 +24584,25 @@ module.exports.hasMagic = (patterns, options) => []
 	.some(pattern => glob.hasMagic(pattern, options));
 
 module.exports.gitignore = gitignore;
+
+
+/***/ }),
+
+/***/ 2158:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = input => {
+	const isExtendedLengthPath = /^\\\\\?\\/.test(input);
+	const hasNonAscii = /[^\u0000-\u0080]+/.test(input); // eslint-disable-line no-control-regex
+
+	if (isExtendedLengthPath || hasNonAscii) {
+		return input;
+	}
+
+	return input.replace(/\\/g, '/');
+};
 
 
 /***/ }),
@@ -24002,7 +26036,7 @@ function fromUrl (giturl, opts) {
     isGitHubShorthand(giturl) ? 'github:' + giturl : giturl
   )
   var parsed = parseGitUrl(url)
-  var shortcutMatch = url.match(new RegExp('^([^:]+):(?:(?:[^@:]+(?:[^@]+)?@)?([^/]*))[/](.+?)(?:[.]git)?($|#)'))
+  var shortcutMatch = url.match(/^([^:]+):(?:[^@]+@)?(?:([^/]*)\/)?([^#]+)/)
   var matches = Object.keys(gitHosts).map(function (gitHostName) {
     try {
       var gitHostInfo = gitHosts[gitHostName]
@@ -24016,7 +26050,7 @@ function fromUrl (giturl, opts) {
       var defaultRepresentation = null
       if (shortcutMatch && shortcutMatch[1] === gitHostName) {
         user = shortcutMatch[2] && decodeURIComponent(shortcutMatch[2])
-        project = decodeURIComponent(shortcutMatch[3])
+        project = decodeURIComponent(shortcutMatch[3].replace(/\.git$/, ''))
         defaultRepresentation = 'shortcut'
       } else {
         if (parsed.host && parsed.host !== gitHostInfo.domain && parsed.host.replace(/^www[.]/, '') !== gitHostInfo.domain) return
@@ -25161,60 +27195,6 @@ module.exports = function isExtglob(str) {
   }
 
   return false;
-};
-
-
-/***/ }),
-
-/***/ 4882:
-/***/ ((module) => {
-
-"use strict";
-
-/* eslint-disable yoda */
-module.exports = x => {
-	if (Number.isNaN(x)) {
-		return false;
-	}
-
-	// code points are derived from:
-	// http://www.unix.org/Public/UNIDATA/EastAsianWidth.txt
-	if (
-		x >= 0x1100 && (
-			x <= 0x115f ||  // Hangul Jamo
-			x === 0x2329 || // LEFT-POINTING ANGLE BRACKET
-			x === 0x232a || // RIGHT-POINTING ANGLE BRACKET
-			// CJK Radicals Supplement .. Enclosed CJK Letters and Months
-			(0x2e80 <= x && x <= 0x3247 && x !== 0x303f) ||
-			// Enclosed CJK Letters and Months .. CJK Unified Ideographs Extension A
-			(0x3250 <= x && x <= 0x4dbf) ||
-			// CJK Unified Ideographs .. Yi Radicals
-			(0x4e00 <= x && x <= 0xa4c6) ||
-			// Hangul Jamo Extended-A
-			(0xa960 <= x && x <= 0xa97c) ||
-			// Hangul Syllables
-			(0xac00 <= x && x <= 0xd7a3) ||
-			// CJK Compatibility Ideographs
-			(0xf900 <= x && x <= 0xfaff) ||
-			// Vertical Forms
-			(0xfe10 <= x && x <= 0xfe19) ||
-			// CJK Compatibility Forms .. Small Form Variants
-			(0xfe30 <= x && x <= 0xfe6b) ||
-			// Halfwidth and Fullwidth Forms
-			(0xff01 <= x && x <= 0xff60) ||
-			(0xffe0 <= x && x <= 0xffe6) ||
-			// Kana Supplement
-			(0x1b000 <= x && x <= 0x1b001) ||
-			// Enclosed Ideographic Supplement
-			(0x1f200 <= x && x <= 0x1f251) ||
-			// CJK Unified Ideographs Extension B .. Tertiary Ideographic Plane
-			(0x20000 <= x && x <= 0x3fffd)
-		)
-	) {
-		return true;
-	}
-
-	return false;
 };
 
 
@@ -29954,15 +31934,12 @@ module.exports.sync = (filePath, options) => parse(fs.readFileSync(filePath, 'ut
 
 const fs = __webpack_require__(5747);
 const path = __webpack_require__(5622);
-const pify = __webpack_require__(4810);
-const semver = __webpack_require__(3689);
+const pify = __webpack_require__(6250);
 
 const defaults = {
 	mode: 0o777 & (~process.umask()),
 	fs
 };
-
-const useNativeRecursiveOption = semver.satisfies(process.version, '>=10.12.0');
 
 // https://github.com/nodejs/node/issues/8987
 // https://github.com/libuv/libuv/pull/1088
@@ -29971,56 +31948,27 @@ const checkPath = pth => {
 		const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path.parse(pth).root, ''));
 
 		if (pathHasInvalidWinCharacters) {
-			const error = new Error(`Path contains invalid characters: ${pth}`);
-			error.code = 'EINVAL';
-			throw error;
+			const err = new Error(`Path contains invalid characters: ${pth}`);
+			err.code = 'EINVAL';
+			throw err;
 		}
 	}
 };
 
-const permissionError = pth => {
-	// This replicates the exception of `fs.mkdir` with native the
-	// `recusive` option when run on an invalid drive under Windows.
-	const error = new Error(`operation not permitted, mkdir '${pth}'`);
-	error.code = 'EPERM';
-	error.errno = -4048;
-	error.path = pth;
-	error.syscall = 'mkdir';
-	return error;
-};
-
-const makeDir = (input, options) => Promise.resolve().then(() => {
+module.exports = (input, opts) => Promise.resolve().then(() => {
 	checkPath(input);
-	options = Object.assign({}, defaults, options);
+	opts = Object.assign({}, defaults, opts);
 
-	// TODO: Use util.promisify when targeting Node.js 8
-	const mkdir = pify(options.fs.mkdir);
-	const stat = pify(options.fs.stat);
-
-	if (useNativeRecursiveOption && options.fs.mkdir === fs.mkdir) {
-		const pth = path.resolve(input);
-
-		return mkdir(pth, {
-			mode: options.mode,
-			recursive: true
-		}).then(() => pth);
-	}
+	const mkdir = pify(opts.fs.mkdir);
+	const stat = pify(opts.fs.stat);
 
 	const make = pth => {
-		return mkdir(pth, options.mode)
+		return mkdir(pth, opts.mode)
 			.then(() => pth)
-			.catch(error => {
-				if (error.code === 'EPERM') {
-					throw error;
-				}
-
-				if (error.code === 'ENOENT') {
-					if (path.dirname(pth) === pth) {
-						throw permissionError(pth);
-					}
-
-					if (error.message.includes('null bytes')) {
-						throw error;
+			.catch(err => {
+				if (err.code === 'ENOENT') {
+					if (err.message.includes('null bytes') || path.dirname(pth) === pth) {
+						throw err;
 					}
 
 					return make(path.dirname(pth)).then(() => make(pth));
@@ -30029,7 +31977,7 @@ const makeDir = (input, options) => Promise.resolve().then(() => {
 				return stat(pth)
 					.then(stats => stats.isDirectory() ? pth : Promise.reject())
 					.catch(() => {
-						throw error;
+						throw err;
 					});
 			});
 	};
@@ -30037,39 +31985,17 @@ const makeDir = (input, options) => Promise.resolve().then(() => {
 	return make(path.resolve(input));
 });
 
-module.exports = makeDir;
-module.exports.default = makeDir;
-
-module.exports.sync = (input, options) => {
+module.exports.sync = (input, opts) => {
 	checkPath(input);
-	options = Object.assign({}, defaults, options);
-
-	if (useNativeRecursiveOption && options.fs.mkdirSync === fs.mkdirSync) {
-		const pth = path.resolve(input);
-
-		fs.mkdirSync(pth, {
-			mode: options.mode,
-			recursive: true
-		});
-
-		return pth;
-	}
+	opts = Object.assign({}, defaults, opts);
 
 	const make = pth => {
 		try {
-			options.fs.mkdirSync(pth, options.mode);
-		} catch (error) {
-			if (error.code === 'EPERM') {
-				throw error;
-			}
-
-			if (error.code === 'ENOENT') {
-				if (path.dirname(pth) === pth) {
-					throw permissionError(pth);
-				}
-
-				if (error.message.includes('null bytes')) {
-					throw error;
+			opts.fs.mkdirSync(pth, opts.mode);
+		} catch (err) {
+			if (err.code === 'ENOENT') {
+				if (err.message.includes('null bytes') || path.dirname(pth) === pth) {
+					throw err;
 				}
 
 				make(path.dirname(pth));
@@ -30077,11 +32003,11 @@ module.exports.sync = (input, options) => {
 			}
 
 			try {
-				if (!options.fs.statSync(pth).isDirectory()) {
+				if (!opts.fs.statSync(pth).isDirectory()) {
 					throw new Error('The path is not a directory');
 				}
 			} catch (_) {
-				throw error;
+				throw err;
 			}
 		}
 
@@ -30094,1492 +32020,94 @@ module.exports.sync = (input, options) => {
 
 /***/ }),
 
-/***/ 3689:
-/***/ ((module, exports) => {
-
-exports = module.exports = SemVer
-
-var debug
-/* istanbul ignore next */
-if (typeof process === 'object' &&
-    process.env &&
-    process.env.NODE_DEBUG &&
-    /\bsemver\b/i.test(process.env.NODE_DEBUG)) {
-  debug = function () {
-    var args = Array.prototype.slice.call(arguments, 0)
-    args.unshift('SEMVER')
-    console.log.apply(console, args)
-  }
-} else {
-  debug = function () {}
-}
-
-// Note: this is the semver.org version of the spec that it implements
-// Not necessarily the package version of this code.
-exports.SEMVER_SPEC_VERSION = '2.0.0'
-
-var MAX_LENGTH = 256
-var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
-  /* istanbul ignore next */ 9007199254740991
-
-// Max safe segment length for coercion.
-var MAX_SAFE_COMPONENT_LENGTH = 16
-
-// The actual regexps go on exports.re
-var re = exports.re = []
-var src = exports.src = []
-var R = 0
-
-// The following Regular Expressions can be used for tokenizing,
-// validating, and parsing SemVer version strings.
-
-// ## Numeric Identifier
-// A single `0`, or a non-zero digit followed by zero or more digits.
-
-var NUMERICIDENTIFIER = R++
-src[NUMERICIDENTIFIER] = '0|[1-9]\\d*'
-var NUMERICIDENTIFIERLOOSE = R++
-src[NUMERICIDENTIFIERLOOSE] = '[0-9]+'
-
-// ## Non-numeric Identifier
-// Zero or more digits, followed by a letter or hyphen, and then zero or
-// more letters, digits, or hyphens.
-
-var NONNUMERICIDENTIFIER = R++
-src[NONNUMERICIDENTIFIER] = '\\d*[a-zA-Z-][a-zA-Z0-9-]*'
-
-// ## Main Version
-// Three dot-separated numeric identifiers.
-
-var MAINVERSION = R++
-src[MAINVERSION] = '(' + src[NUMERICIDENTIFIER] + ')\\.' +
-                   '(' + src[NUMERICIDENTIFIER] + ')\\.' +
-                   '(' + src[NUMERICIDENTIFIER] + ')'
-
-var MAINVERSIONLOOSE = R++
-src[MAINVERSIONLOOSE] = '(' + src[NUMERICIDENTIFIERLOOSE] + ')\\.' +
-                        '(' + src[NUMERICIDENTIFIERLOOSE] + ')\\.' +
-                        '(' + src[NUMERICIDENTIFIERLOOSE] + ')'
-
-// ## Pre-release Version Identifier
-// A numeric identifier, or a non-numeric identifier.
-
-var PRERELEASEIDENTIFIER = R++
-src[PRERELEASEIDENTIFIER] = '(?:' + src[NUMERICIDENTIFIER] +
-                            '|' + src[NONNUMERICIDENTIFIER] + ')'
-
-var PRERELEASEIDENTIFIERLOOSE = R++
-src[PRERELEASEIDENTIFIERLOOSE] = '(?:' + src[NUMERICIDENTIFIERLOOSE] +
-                                 '|' + src[NONNUMERICIDENTIFIER] + ')'
-
-// ## Pre-release Version
-// Hyphen, followed by one or more dot-separated pre-release version
-// identifiers.
-
-var PRERELEASE = R++
-src[PRERELEASE] = '(?:-(' + src[PRERELEASEIDENTIFIER] +
-                  '(?:\\.' + src[PRERELEASEIDENTIFIER] + ')*))'
-
-var PRERELEASELOOSE = R++
-src[PRERELEASELOOSE] = '(?:-?(' + src[PRERELEASEIDENTIFIERLOOSE] +
-                       '(?:\\.' + src[PRERELEASEIDENTIFIERLOOSE] + ')*))'
-
-// ## Build Metadata Identifier
-// Any combination of digits, letters, or hyphens.
-
-var BUILDIDENTIFIER = R++
-src[BUILDIDENTIFIER] = '[0-9A-Za-z-]+'
-
-// ## Build Metadata
-// Plus sign, followed by one or more period-separated build metadata
-// identifiers.
-
-var BUILD = R++
-src[BUILD] = '(?:\\+(' + src[BUILDIDENTIFIER] +
-             '(?:\\.' + src[BUILDIDENTIFIER] + ')*))'
-
-// ## Full Version String
-// A main version, followed optionally by a pre-release version and
-// build metadata.
-
-// Note that the only major, minor, patch, and pre-release sections of
-// the version string are capturing groups.  The build metadata is not a
-// capturing group, because it should not ever be used in version
-// comparison.
-
-var FULL = R++
-var FULLPLAIN = 'v?' + src[MAINVERSION] +
-                src[PRERELEASE] + '?' +
-                src[BUILD] + '?'
-
-src[FULL] = '^' + FULLPLAIN + '$'
-
-// like full, but allows v1.2.3 and =1.2.3, which people do sometimes.
-// also, 1.0.0alpha1 (prerelease without the hyphen) which is pretty
-// common in the npm registry.
-var LOOSEPLAIN = '[v=\\s]*' + src[MAINVERSIONLOOSE] +
-                 src[PRERELEASELOOSE] + '?' +
-                 src[BUILD] + '?'
-
-var LOOSE = R++
-src[LOOSE] = '^' + LOOSEPLAIN + '$'
-
-var GTLT = R++
-src[GTLT] = '((?:<|>)?=?)'
-
-// Something like "2.*" or "1.2.x".
-// Note that "x.x" is a valid xRange identifer, meaning "any version"
-// Only the first item is strictly required.
-var XRANGEIDENTIFIERLOOSE = R++
-src[XRANGEIDENTIFIERLOOSE] = src[NUMERICIDENTIFIERLOOSE] + '|x|X|\\*'
-var XRANGEIDENTIFIER = R++
-src[XRANGEIDENTIFIER] = src[NUMERICIDENTIFIER] + '|x|X|\\*'
-
-var XRANGEPLAIN = R++
-src[XRANGEPLAIN] = '[v=\\s]*(' + src[XRANGEIDENTIFIER] + ')' +
-                   '(?:\\.(' + src[XRANGEIDENTIFIER] + ')' +
-                   '(?:\\.(' + src[XRANGEIDENTIFIER] + ')' +
-                   '(?:' + src[PRERELEASE] + ')?' +
-                   src[BUILD] + '?' +
-                   ')?)?'
-
-var XRANGEPLAINLOOSE = R++
-src[XRANGEPLAINLOOSE] = '[v=\\s]*(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
-                        '(?:\\.(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
-                        '(?:\\.(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
-                        '(?:' + src[PRERELEASELOOSE] + ')?' +
-                        src[BUILD] + '?' +
-                        ')?)?'
-
-var XRANGE = R++
-src[XRANGE] = '^' + src[GTLT] + '\\s*' + src[XRANGEPLAIN] + '$'
-var XRANGELOOSE = R++
-src[XRANGELOOSE] = '^' + src[GTLT] + '\\s*' + src[XRANGEPLAINLOOSE] + '$'
-
-// Coercion.
-// Extract anything that could conceivably be a part of a valid semver
-var COERCE = R++
-src[COERCE] = '(?:^|[^\\d])' +
-              '(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '})' +
-              '(?:\\.(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '}))?' +
-              '(?:\\.(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '}))?' +
-              '(?:$|[^\\d])'
-
-// Tilde ranges.
-// Meaning is "reasonably at or greater than"
-var LONETILDE = R++
-src[LONETILDE] = '(?:~>?)'
-
-var TILDETRIM = R++
-src[TILDETRIM] = '(\\s*)' + src[LONETILDE] + '\\s+'
-re[TILDETRIM] = new RegExp(src[TILDETRIM], 'g')
-var tildeTrimReplace = '$1~'
-
-var TILDE = R++
-src[TILDE] = '^' + src[LONETILDE] + src[XRANGEPLAIN] + '$'
-var TILDELOOSE = R++
-src[TILDELOOSE] = '^' + src[LONETILDE] + src[XRANGEPLAINLOOSE] + '$'
-
-// Caret ranges.
-// Meaning is "at least and backwards compatible with"
-var LONECARET = R++
-src[LONECARET] = '(?:\\^)'
-
-var CARETTRIM = R++
-src[CARETTRIM] = '(\\s*)' + src[LONECARET] + '\\s+'
-re[CARETTRIM] = new RegExp(src[CARETTRIM], 'g')
-var caretTrimReplace = '$1^'
-
-var CARET = R++
-src[CARET] = '^' + src[LONECARET] + src[XRANGEPLAIN] + '$'
-var CARETLOOSE = R++
-src[CARETLOOSE] = '^' + src[LONECARET] + src[XRANGEPLAINLOOSE] + '$'
-
-// A simple gt/lt/eq thing, or just "" to indicate "any version"
-var COMPARATORLOOSE = R++
-src[COMPARATORLOOSE] = '^' + src[GTLT] + '\\s*(' + LOOSEPLAIN + ')$|^$'
-var COMPARATOR = R++
-src[COMPARATOR] = '^' + src[GTLT] + '\\s*(' + FULLPLAIN + ')$|^$'
-
-// An expression to strip any whitespace between the gtlt and the thing
-// it modifies, so that `> 1.2.3` ==> `>1.2.3`
-var COMPARATORTRIM = R++
-src[COMPARATORTRIM] = '(\\s*)' + src[GTLT] +
-                      '\\s*(' + LOOSEPLAIN + '|' + src[XRANGEPLAIN] + ')'
-
-// this one has to use the /g flag
-re[COMPARATORTRIM] = new RegExp(src[COMPARATORTRIM], 'g')
-var comparatorTrimReplace = '$1$2$3'
-
-// Something like `1.2.3 - 1.2.4`
-// Note that these all use the loose form, because they'll be
-// checked against either the strict or loose comparator form
-// later.
-var HYPHENRANGE = R++
-src[HYPHENRANGE] = '^\\s*(' + src[XRANGEPLAIN] + ')' +
-                   '\\s+-\\s+' +
-                   '(' + src[XRANGEPLAIN] + ')' +
-                   '\\s*$'
-
-var HYPHENRANGELOOSE = R++
-src[HYPHENRANGELOOSE] = '^\\s*(' + src[XRANGEPLAINLOOSE] + ')' +
-                        '\\s+-\\s+' +
-                        '(' + src[XRANGEPLAINLOOSE] + ')' +
-                        '\\s*$'
-
-// Star ranges basically just allow anything at all.
-var STAR = R++
-src[STAR] = '(<|>)?=?\\s*\\*'
-
-// Compile to actual regexp objects.
-// All are flag-free, unless they were created above with a flag.
-for (var i = 0; i < R; i++) {
-  debug(i, src[i])
-  if (!re[i]) {
-    re[i] = new RegExp(src[i])
-  }
-}
-
-exports.parse = parse
-function parse (version, options) {
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-
-  if (version instanceof SemVer) {
-    return version
-  }
-
-  if (typeof version !== 'string') {
-    return null
-  }
-
-  if (version.length > MAX_LENGTH) {
-    return null
-  }
-
-  var r = options.loose ? re[LOOSE] : re[FULL]
-  if (!r.test(version)) {
-    return null
-  }
-
-  try {
-    return new SemVer(version, options)
-  } catch (er) {
-    return null
-  }
-}
-
-exports.valid = valid
-function valid (version, options) {
-  var v = parse(version, options)
-  return v ? v.version : null
-}
-
-exports.clean = clean
-function clean (version, options) {
-  var s = parse(version.trim().replace(/^[=v]+/, ''), options)
-  return s ? s.version : null
-}
-
-exports.SemVer = SemVer
-
-function SemVer (version, options) {
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-  if (version instanceof SemVer) {
-    if (version.loose === options.loose) {
-      return version
-    } else {
-      version = version.version
-    }
-  } else if (typeof version !== 'string') {
-    throw new TypeError('Invalid Version: ' + version)
-  }
-
-  if (version.length > MAX_LENGTH) {
-    throw new TypeError('version is longer than ' + MAX_LENGTH + ' characters')
-  }
-
-  if (!(this instanceof SemVer)) {
-    return new SemVer(version, options)
-  }
-
-  debug('SemVer', version, options)
-  this.options = options
-  this.loose = !!options.loose
-
-  var m = version.trim().match(options.loose ? re[LOOSE] : re[FULL])
-
-  if (!m) {
-    throw new TypeError('Invalid Version: ' + version)
-  }
-
-  this.raw = version
-
-  // these are actually numbers
-  this.major = +m[1]
-  this.minor = +m[2]
-  this.patch = +m[3]
-
-  if (this.major > MAX_SAFE_INTEGER || this.major < 0) {
-    throw new TypeError('Invalid major version')
-  }
-
-  if (this.minor > MAX_SAFE_INTEGER || this.minor < 0) {
-    throw new TypeError('Invalid minor version')
-  }
-
-  if (this.patch > MAX_SAFE_INTEGER || this.patch < 0) {
-    throw new TypeError('Invalid patch version')
-  }
-
-  // numberify any prerelease numeric ids
-  if (!m[4]) {
-    this.prerelease = []
-  } else {
-    this.prerelease = m[4].split('.').map(function (id) {
-      if (/^[0-9]+$/.test(id)) {
-        var num = +id
-        if (num >= 0 && num < MAX_SAFE_INTEGER) {
-          return num
-        }
-      }
-      return id
-    })
-  }
-
-  this.build = m[5] ? m[5].split('.') : []
-  this.format()
-}
-
-SemVer.prototype.format = function () {
-  this.version = this.major + '.' + this.minor + '.' + this.patch
-  if (this.prerelease.length) {
-    this.version += '-' + this.prerelease.join('.')
-  }
-  return this.version
-}
-
-SemVer.prototype.toString = function () {
-  return this.version
-}
-
-SemVer.prototype.compare = function (other) {
-  debug('SemVer.compare', this.version, this.options, other)
-  if (!(other instanceof SemVer)) {
-    other = new SemVer(other, this.options)
-  }
-
-  return this.compareMain(other) || this.comparePre(other)
-}
-
-SemVer.prototype.compareMain = function (other) {
-  if (!(other instanceof SemVer)) {
-    other = new SemVer(other, this.options)
-  }
-
-  return compareIdentifiers(this.major, other.major) ||
-         compareIdentifiers(this.minor, other.minor) ||
-         compareIdentifiers(this.patch, other.patch)
-}
-
-SemVer.prototype.comparePre = function (other) {
-  if (!(other instanceof SemVer)) {
-    other = new SemVer(other, this.options)
-  }
-
-  // NOT having a prerelease is > having one
-  if (this.prerelease.length && !other.prerelease.length) {
-    return -1
-  } else if (!this.prerelease.length && other.prerelease.length) {
-    return 1
-  } else if (!this.prerelease.length && !other.prerelease.length) {
-    return 0
-  }
-
-  var i = 0
-  do {
-    var a = this.prerelease[i]
-    var b = other.prerelease[i]
-    debug('prerelease compare', i, a, b)
-    if (a === undefined && b === undefined) {
-      return 0
-    } else if (b === undefined) {
-      return 1
-    } else if (a === undefined) {
-      return -1
-    } else if (a === b) {
-      continue
-    } else {
-      return compareIdentifiers(a, b)
-    }
-  } while (++i)
-}
-
-// preminor will bump the version up to the next minor release, and immediately
-// down to pre-release. premajor and prepatch work the same way.
-SemVer.prototype.inc = function (release, identifier) {
-  switch (release) {
-    case 'premajor':
-      this.prerelease.length = 0
-      this.patch = 0
-      this.minor = 0
-      this.major++
-      this.inc('pre', identifier)
-      break
-    case 'preminor':
-      this.prerelease.length = 0
-      this.patch = 0
-      this.minor++
-      this.inc('pre', identifier)
-      break
-    case 'prepatch':
-      // If this is already a prerelease, it will bump to the next version
-      // drop any prereleases that might already exist, since they are not
-      // relevant at this point.
-      this.prerelease.length = 0
-      this.inc('patch', identifier)
-      this.inc('pre', identifier)
-      break
-    // If the input is a non-prerelease version, this acts the same as
-    // prepatch.
-    case 'prerelease':
-      if (this.prerelease.length === 0) {
-        this.inc('patch', identifier)
-      }
-      this.inc('pre', identifier)
-      break
-
-    case 'major':
-      // If this is a pre-major version, bump up to the same major version.
-      // Otherwise increment major.
-      // 1.0.0-5 bumps to 1.0.0
-      // 1.1.0 bumps to 2.0.0
-      if (this.minor !== 0 ||
-          this.patch !== 0 ||
-          this.prerelease.length === 0) {
-        this.major++
-      }
-      this.minor = 0
-      this.patch = 0
-      this.prerelease = []
-      break
-    case 'minor':
-      // If this is a pre-minor version, bump up to the same minor version.
-      // Otherwise increment minor.
-      // 1.2.0-5 bumps to 1.2.0
-      // 1.2.1 bumps to 1.3.0
-      if (this.patch !== 0 || this.prerelease.length === 0) {
-        this.minor++
-      }
-      this.patch = 0
-      this.prerelease = []
-      break
-    case 'patch':
-      // If this is not a pre-release version, it will increment the patch.
-      // If it is a pre-release it will bump up to the same patch version.
-      // 1.2.0-5 patches to 1.2.0
-      // 1.2.0 patches to 1.2.1
-      if (this.prerelease.length === 0) {
-        this.patch++
-      }
-      this.prerelease = []
-      break
-    // This probably shouldn't be used publicly.
-    // 1.0.0 "pre" would become 1.0.0-0 which is the wrong direction.
-    case 'pre':
-      if (this.prerelease.length === 0) {
-        this.prerelease = [0]
-      } else {
-        var i = this.prerelease.length
-        while (--i >= 0) {
-          if (typeof this.prerelease[i] === 'number') {
-            this.prerelease[i]++
-            i = -2
-          }
-        }
-        if (i === -1) {
-          // didn't increment anything
-          this.prerelease.push(0)
-        }
-      }
-      if (identifier) {
-        // 1.2.0-beta.1 bumps to 1.2.0-beta.2,
-        // 1.2.0-beta.fooblz or 1.2.0-beta bumps to 1.2.0-beta.0
-        if (this.prerelease[0] === identifier) {
-          if (isNaN(this.prerelease[1])) {
-            this.prerelease = [identifier, 0]
-          }
-        } else {
-          this.prerelease = [identifier, 0]
-        }
-      }
-      break
-
-    default:
-      throw new Error('invalid increment argument: ' + release)
-  }
-  this.format()
-  this.raw = this.version
-  return this
-}
-
-exports.inc = inc
-function inc (version, release, loose, identifier) {
-  if (typeof (loose) === 'string') {
-    identifier = loose
-    loose = undefined
-  }
-
-  try {
-    return new SemVer(version, loose).inc(release, identifier).version
-  } catch (er) {
-    return null
-  }
-}
-
-exports.diff = diff
-function diff (version1, version2) {
-  if (eq(version1, version2)) {
-    return null
-  } else {
-    var v1 = parse(version1)
-    var v2 = parse(version2)
-    var prefix = ''
-    if (v1.prerelease.length || v2.prerelease.length) {
-      prefix = 'pre'
-      var defaultResult = 'prerelease'
-    }
-    for (var key in v1) {
-      if (key === 'major' || key === 'minor' || key === 'patch') {
-        if (v1[key] !== v2[key]) {
-          return prefix + key
-        }
-      }
-    }
-    return defaultResult // may be undefined
-  }
-}
-
-exports.compareIdentifiers = compareIdentifiers
-
-var numeric = /^[0-9]+$/
-function compareIdentifiers (a, b) {
-  var anum = numeric.test(a)
-  var bnum = numeric.test(b)
-
-  if (anum && bnum) {
-    a = +a
-    b = +b
-  }
-
-  return a === b ? 0
-    : (anum && !bnum) ? -1
-    : (bnum && !anum) ? 1
-    : a < b ? -1
-    : 1
-}
-
-exports.rcompareIdentifiers = rcompareIdentifiers
-function rcompareIdentifiers (a, b) {
-  return compareIdentifiers(b, a)
-}
-
-exports.major = major
-function major (a, loose) {
-  return new SemVer(a, loose).major
-}
-
-exports.minor = minor
-function minor (a, loose) {
-  return new SemVer(a, loose).minor
-}
-
-exports.patch = patch
-function patch (a, loose) {
-  return new SemVer(a, loose).patch
-}
-
-exports.compare = compare
-function compare (a, b, loose) {
-  return new SemVer(a, loose).compare(new SemVer(b, loose))
-}
-
-exports.compareLoose = compareLoose
-function compareLoose (a, b) {
-  return compare(a, b, true)
-}
-
-exports.rcompare = rcompare
-function rcompare (a, b, loose) {
-  return compare(b, a, loose)
-}
-
-exports.sort = sort
-function sort (list, loose) {
-  return list.sort(function (a, b) {
-    return exports.compare(a, b, loose)
-  })
-}
-
-exports.rsort = rsort
-function rsort (list, loose) {
-  return list.sort(function (a, b) {
-    return exports.rcompare(a, b, loose)
-  })
-}
-
-exports.gt = gt
-function gt (a, b, loose) {
-  return compare(a, b, loose) > 0
-}
-
-exports.lt = lt
-function lt (a, b, loose) {
-  return compare(a, b, loose) < 0
-}
-
-exports.eq = eq
-function eq (a, b, loose) {
-  return compare(a, b, loose) === 0
-}
-
-exports.neq = neq
-function neq (a, b, loose) {
-  return compare(a, b, loose) !== 0
-}
-
-exports.gte = gte
-function gte (a, b, loose) {
-  return compare(a, b, loose) >= 0
-}
-
-exports.lte = lte
-function lte (a, b, loose) {
-  return compare(a, b, loose) <= 0
-}
-
-exports.cmp = cmp
-function cmp (a, op, b, loose) {
-  switch (op) {
-    case '===':
-      if (typeof a === 'object')
-        a = a.version
-      if (typeof b === 'object')
-        b = b.version
-      return a === b
-
-    case '!==':
-      if (typeof a === 'object')
-        a = a.version
-      if (typeof b === 'object')
-        b = b.version
-      return a !== b
-
-    case '':
-    case '=':
-    case '==':
-      return eq(a, b, loose)
-
-    case '!=':
-      return neq(a, b, loose)
-
-    case '>':
-      return gt(a, b, loose)
-
-    case '>=':
-      return gte(a, b, loose)
-
-    case '<':
-      return lt(a, b, loose)
-
-    case '<=':
-      return lte(a, b, loose)
-
-    default:
-      throw new TypeError('Invalid operator: ' + op)
-  }
-}
-
-exports.Comparator = Comparator
-function Comparator (comp, options) {
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-
-  if (comp instanceof Comparator) {
-    if (comp.loose === !!options.loose) {
-      return comp
-    } else {
-      comp = comp.value
-    }
-  }
-
-  if (!(this instanceof Comparator)) {
-    return new Comparator(comp, options)
-  }
-
-  debug('comparator', comp, options)
-  this.options = options
-  this.loose = !!options.loose
-  this.parse(comp)
-
-  if (this.semver === ANY) {
-    this.value = ''
-  } else {
-    this.value = this.operator + this.semver.version
-  }
-
-  debug('comp', this)
-}
-
-var ANY = {}
-Comparator.prototype.parse = function (comp) {
-  var r = this.options.loose ? re[COMPARATORLOOSE] : re[COMPARATOR]
-  var m = comp.match(r)
-
-  if (!m) {
-    throw new TypeError('Invalid comparator: ' + comp)
-  }
-
-  this.operator = m[1]
-  if (this.operator === '=') {
-    this.operator = ''
-  }
-
-  // if it literally is just '>' or '' then allow anything.
-  if (!m[2]) {
-    this.semver = ANY
-  } else {
-    this.semver = new SemVer(m[2], this.options.loose)
-  }
-}
-
-Comparator.prototype.toString = function () {
-  return this.value
-}
-
-Comparator.prototype.test = function (version) {
-  debug('Comparator.test', version, this.options.loose)
-
-  if (this.semver === ANY) {
-    return true
-  }
-
-  if (typeof version === 'string') {
-    version = new SemVer(version, this.options)
-  }
-
-  return cmp(version, this.operator, this.semver, this.options)
-}
-
-Comparator.prototype.intersects = function (comp, options) {
-  if (!(comp instanceof Comparator)) {
-    throw new TypeError('a Comparator is required')
-  }
-
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-
-  var rangeTmp
-
-  if (this.operator === '') {
-    rangeTmp = new Range(comp.value, options)
-    return satisfies(this.value, rangeTmp, options)
-  } else if (comp.operator === '') {
-    rangeTmp = new Range(this.value, options)
-    return satisfies(comp.semver, rangeTmp, options)
-  }
-
-  var sameDirectionIncreasing =
-    (this.operator === '>=' || this.operator === '>') &&
-    (comp.operator === '>=' || comp.operator === '>')
-  var sameDirectionDecreasing =
-    (this.operator === '<=' || this.operator === '<') &&
-    (comp.operator === '<=' || comp.operator === '<')
-  var sameSemVer = this.semver.version === comp.semver.version
-  var differentDirectionsInclusive =
-    (this.operator === '>=' || this.operator === '<=') &&
-    (comp.operator === '>=' || comp.operator === '<=')
-  var oppositeDirectionsLessThan =
-    cmp(this.semver, '<', comp.semver, options) &&
-    ((this.operator === '>=' || this.operator === '>') &&
-    (comp.operator === '<=' || comp.operator === '<'))
-  var oppositeDirectionsGreaterThan =
-    cmp(this.semver, '>', comp.semver, options) &&
-    ((this.operator === '<=' || this.operator === '<') &&
-    (comp.operator === '>=' || comp.operator === '>'))
-
-  return sameDirectionIncreasing || sameDirectionDecreasing ||
-    (sameSemVer && differentDirectionsInclusive) ||
-    oppositeDirectionsLessThan || oppositeDirectionsGreaterThan
-}
-
-exports.Range = Range
-function Range (range, options) {
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-
-  if (range instanceof Range) {
-    if (range.loose === !!options.loose &&
-        range.includePrerelease === !!options.includePrerelease) {
-      return range
-    } else {
-      return new Range(range.raw, options)
-    }
-  }
-
-  if (range instanceof Comparator) {
-    return new Range(range.value, options)
-  }
-
-  if (!(this instanceof Range)) {
-    return new Range(range, options)
-  }
-
-  this.options = options
-  this.loose = !!options.loose
-  this.includePrerelease = !!options.includePrerelease
-
-  // First, split based on boolean or ||
-  this.raw = range
-  this.set = range.split(/\s*\|\|\s*/).map(function (range) {
-    return this.parseRange(range.trim())
-  }, this).filter(function (c) {
-    // throw out any that are not relevant for whatever reason
-    return c.length
-  })
-
-  if (!this.set.length) {
-    throw new TypeError('Invalid SemVer Range: ' + range)
-  }
-
-  this.format()
-}
-
-Range.prototype.format = function () {
-  this.range = this.set.map(function (comps) {
-    return comps.join(' ').trim()
-  }).join('||').trim()
-  return this.range
-}
-
-Range.prototype.toString = function () {
-  return this.range
-}
-
-Range.prototype.parseRange = function (range) {
-  var loose = this.options.loose
-  range = range.trim()
-  // `1.2.3 - 1.2.4` => `>=1.2.3 <=1.2.4`
-  var hr = loose ? re[HYPHENRANGELOOSE] : re[HYPHENRANGE]
-  range = range.replace(hr, hyphenReplace)
-  debug('hyphen replace', range)
-  // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
-  range = range.replace(re[COMPARATORTRIM], comparatorTrimReplace)
-  debug('comparator trim', range, re[COMPARATORTRIM])
-
-  // `~ 1.2.3` => `~1.2.3`
-  range = range.replace(re[TILDETRIM], tildeTrimReplace)
-
-  // `^ 1.2.3` => `^1.2.3`
-  range = range.replace(re[CARETTRIM], caretTrimReplace)
-
-  // normalize spaces
-  range = range.split(/\s+/).join(' ')
-
-  // At this point, the range is completely trimmed and
-  // ready to be split into comparators.
-
-  var compRe = loose ? re[COMPARATORLOOSE] : re[COMPARATOR]
-  var set = range.split(' ').map(function (comp) {
-    return parseComparator(comp, this.options)
-  }, this).join(' ').split(/\s+/)
-  if (this.options.loose) {
-    // in loose mode, throw out any that are not valid comparators
-    set = set.filter(function (comp) {
-      return !!comp.match(compRe)
-    })
-  }
-  set = set.map(function (comp) {
-    return new Comparator(comp, this.options)
-  }, this)
-
-  return set
-}
-
-Range.prototype.intersects = function (range, options) {
-  if (!(range instanceof Range)) {
-    throw new TypeError('a Range is required')
-  }
-
-  return this.set.some(function (thisComparators) {
-    return thisComparators.every(function (thisComparator) {
-      return range.set.some(function (rangeComparators) {
-        return rangeComparators.every(function (rangeComparator) {
-          return thisComparator.intersects(rangeComparator, options)
-        })
-      })
-    })
-  })
-}
-
-// Mostly just for testing and legacy API reasons
-exports.toComparators = toComparators
-function toComparators (range, options) {
-  return new Range(range, options).set.map(function (comp) {
-    return comp.map(function (c) {
-      return c.value
-    }).join(' ').trim().split(' ')
-  })
-}
-
-// comprised of xranges, tildes, stars, and gtlt's at this point.
-// already replaced the hyphen ranges
-// turn into a set of JUST comparators.
-function parseComparator (comp, options) {
-  debug('comp', comp, options)
-  comp = replaceCarets(comp, options)
-  debug('caret', comp)
-  comp = replaceTildes(comp, options)
-  debug('tildes', comp)
-  comp = replaceXRanges(comp, options)
-  debug('xrange', comp)
-  comp = replaceStars(comp, options)
-  debug('stars', comp)
-  return comp
-}
-
-function isX (id) {
-  return !id || id.toLowerCase() === 'x' || id === '*'
-}
-
-// ~, ~> --> * (any, kinda silly)
-// ~2, ~2.x, ~2.x.x, ~>2, ~>2.x ~>2.x.x --> >=2.0.0 <3.0.0
-// ~2.0, ~2.0.x, ~>2.0, ~>2.0.x --> >=2.0.0 <2.1.0
-// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0 <1.3.0
-// ~1.2.3, ~>1.2.3 --> >=1.2.3 <1.3.0
-// ~1.2.0, ~>1.2.0 --> >=1.2.0 <1.3.0
-function replaceTildes (comp, options) {
-  return comp.trim().split(/\s+/).map(function (comp) {
-    return replaceTilde(comp, options)
-  }).join(' ')
-}
-
-function replaceTilde (comp, options) {
-  var r = options.loose ? re[TILDELOOSE] : re[TILDE]
-  return comp.replace(r, function (_, M, m, p, pr) {
-    debug('tilde', comp, _, M, m, p, pr)
-    var ret
-
-    if (isX(M)) {
-      ret = ''
-    } else if (isX(m)) {
-      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
-    } else if (isX(p)) {
-      // ~1.2 == >=1.2.0 <1.3.0
-      ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
-    } else if (pr) {
-      debug('replaceTilde pr', pr)
-      ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
-            ' <' + M + '.' + (+m + 1) + '.0'
-    } else {
-      // ~1.2.3 == >=1.2.3 <1.3.0
-      ret = '>=' + M + '.' + m + '.' + p +
-            ' <' + M + '.' + (+m + 1) + '.0'
-    }
-
-    debug('tilde return', ret)
-    return ret
-  })
-}
-
-// ^ --> * (any, kinda silly)
-// ^2, ^2.x, ^2.x.x --> >=2.0.0 <3.0.0
-// ^2.0, ^2.0.x --> >=2.0.0 <3.0.0
-// ^1.2, ^1.2.x --> >=1.2.0 <2.0.0
-// ^1.2.3 --> >=1.2.3 <2.0.0
-// ^1.2.0 --> >=1.2.0 <2.0.0
-function replaceCarets (comp, options) {
-  return comp.trim().split(/\s+/).map(function (comp) {
-    return replaceCaret(comp, options)
-  }).join(' ')
-}
-
-function replaceCaret (comp, options) {
-  debug('caret', comp, options)
-  var r = options.loose ? re[CARETLOOSE] : re[CARET]
-  return comp.replace(r, function (_, M, m, p, pr) {
-    debug('caret', comp, _, M, m, p, pr)
-    var ret
-
-    if (isX(M)) {
-      ret = ''
-    } else if (isX(m)) {
-      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
-    } else if (isX(p)) {
-      if (M === '0') {
-        ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
-      } else {
-        ret = '>=' + M + '.' + m + '.0 <' + (+M + 1) + '.0.0'
-      }
-    } else if (pr) {
-      debug('replaceCaret pr', pr)
-      if (M === '0') {
-        if (m === '0') {
-          ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
-                ' <' + M + '.' + m + '.' + (+p + 1)
-        } else {
-          ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
-                ' <' + M + '.' + (+m + 1) + '.0'
-        }
-      } else {
-        ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
-              ' <' + (+M + 1) + '.0.0'
-      }
-    } else {
-      debug('no pr')
-      if (M === '0') {
-        if (m === '0') {
-          ret = '>=' + M + '.' + m + '.' + p +
-                ' <' + M + '.' + m + '.' + (+p + 1)
-        } else {
-          ret = '>=' + M + '.' + m + '.' + p +
-                ' <' + M + '.' + (+m + 1) + '.0'
-        }
-      } else {
-        ret = '>=' + M + '.' + m + '.' + p +
-              ' <' + (+M + 1) + '.0.0'
-      }
-    }
-
-    debug('caret return', ret)
-    return ret
-  })
-}
-
-function replaceXRanges (comp, options) {
-  debug('replaceXRanges', comp, options)
-  return comp.split(/\s+/).map(function (comp) {
-    return replaceXRange(comp, options)
-  }).join(' ')
-}
-
-function replaceXRange (comp, options) {
-  comp = comp.trim()
-  var r = options.loose ? re[XRANGELOOSE] : re[XRANGE]
-  return comp.replace(r, function (ret, gtlt, M, m, p, pr) {
-    debug('xRange', comp, ret, gtlt, M, m, p, pr)
-    var xM = isX(M)
-    var xm = xM || isX(m)
-    var xp = xm || isX(p)
-    var anyX = xp
-
-    if (gtlt === '=' && anyX) {
-      gtlt = ''
-    }
-
-    if (xM) {
-      if (gtlt === '>' || gtlt === '<') {
-        // nothing is allowed
-        ret = '<0.0.0'
-      } else {
-        // nothing is forbidden
-        ret = '*'
-      }
-    } else if (gtlt && anyX) {
-      // we know patch is an x, because we have any x at all.
-      // replace X with 0
-      if (xm) {
-        m = 0
-      }
-      p = 0
-
-      if (gtlt === '>') {
-        // >1 => >=2.0.0
-        // >1.2 => >=1.3.0
-        // >1.2.3 => >= 1.2.4
-        gtlt = '>='
-        if (xm) {
-          M = +M + 1
-          m = 0
-          p = 0
-        } else {
-          m = +m + 1
-          p = 0
-        }
-      } else if (gtlt === '<=') {
-        // <=0.7.x is actually <0.8.0, since any 0.7.x should
-        // pass.  Similarly, <=7.x is actually <8.0.0, etc.
-        gtlt = '<'
-        if (xm) {
-          M = +M + 1
-        } else {
-          m = +m + 1
-        }
-      }
-
-      ret = gtlt + M + '.' + m + '.' + p
-    } else if (xm) {
-      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
-    } else if (xp) {
-      ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
-    }
-
-    debug('xRange return', ret)
-
-    return ret
-  })
-}
-
-// Because * is AND-ed with everything else in the comparator,
-// and '' means "any version", just remove the *s entirely.
-function replaceStars (comp, options) {
-  debug('replaceStars', comp, options)
-  // Looseness is ignored here.  star is always as loose as it gets!
-  return comp.trim().replace(re[STAR], '')
-}
-
-// This function is passed to string.replace(re[HYPHENRANGE])
-// M, m, patch, prerelease, build
-// 1.2 - 3.4.5 => >=1.2.0 <=3.4.5
-// 1.2.3 - 3.4 => >=1.2.0 <3.5.0 Any 3.4.x will do
-// 1.2 - 3.4 => >=1.2.0 <3.5.0
-function hyphenReplace ($0,
-  from, fM, fm, fp, fpr, fb,
-  to, tM, tm, tp, tpr, tb) {
-  if (isX(fM)) {
-    from = ''
-  } else if (isX(fm)) {
-    from = '>=' + fM + '.0.0'
-  } else if (isX(fp)) {
-    from = '>=' + fM + '.' + fm + '.0'
-  } else {
-    from = '>=' + from
-  }
-
-  if (isX(tM)) {
-    to = ''
-  } else if (isX(tm)) {
-    to = '<' + (+tM + 1) + '.0.0'
-  } else if (isX(tp)) {
-    to = '<' + tM + '.' + (+tm + 1) + '.0'
-  } else if (tpr) {
-    to = '<=' + tM + '.' + tm + '.' + tp + '-' + tpr
-  } else {
-    to = '<=' + to
-  }
-
-  return (from + ' ' + to).trim()
-}
-
-// if ANY of the sets match ALL of its comparators, then pass
-Range.prototype.test = function (version) {
-  if (!version) {
-    return false
-  }
-
-  if (typeof version === 'string') {
-    version = new SemVer(version, this.options)
-  }
-
-  for (var i = 0; i < this.set.length; i++) {
-    if (testSet(this.set[i], version, this.options)) {
-      return true
-    }
-  }
-  return false
-}
-
-function testSet (set, version, options) {
-  for (var i = 0; i < set.length; i++) {
-    if (!set[i].test(version)) {
-      return false
-    }
-  }
-
-  if (version.prerelease.length && !options.includePrerelease) {
-    // Find the set of versions that are allowed to have prereleases
-    // For example, ^1.2.3-pr.1 desugars to >=1.2.3-pr.1 <2.0.0
-    // That should allow `1.2.3-pr.2` to pass.
-    // However, `1.2.4-alpha.notready` should NOT be allowed,
-    // even though it's within the range set by the comparators.
-    for (i = 0; i < set.length; i++) {
-      debug(set[i].semver)
-      if (set[i].semver === ANY) {
-        continue
-      }
-
-      if (set[i].semver.prerelease.length > 0) {
-        var allowed = set[i].semver
-        if (allowed.major === version.major &&
-            allowed.minor === version.minor &&
-            allowed.patch === version.patch) {
-          return true
-        }
-      }
-    }
-
-    // Version has a -pre, but it's not one of the ones we like.
-    return false
-  }
-
-  return true
-}
-
-exports.satisfies = satisfies
-function satisfies (version, range, options) {
-  try {
-    range = new Range(range, options)
-  } catch (er) {
-    return false
-  }
-  return range.test(version)
-}
-
-exports.maxSatisfying = maxSatisfying
-function maxSatisfying (versions, range, options) {
-  var max = null
-  var maxSV = null
-  try {
-    var rangeObj = new Range(range, options)
-  } catch (er) {
-    return null
-  }
-  versions.forEach(function (v) {
-    if (rangeObj.test(v)) {
-      // satisfies(v, range, options)
-      if (!max || maxSV.compare(v) === -1) {
-        // compare(max, v, true)
-        max = v
-        maxSV = new SemVer(max, options)
-      }
-    }
-  })
-  return max
-}
-
-exports.minSatisfying = minSatisfying
-function minSatisfying (versions, range, options) {
-  var min = null
-  var minSV = null
-  try {
-    var rangeObj = new Range(range, options)
-  } catch (er) {
-    return null
-  }
-  versions.forEach(function (v) {
-    if (rangeObj.test(v)) {
-      // satisfies(v, range, options)
-      if (!min || minSV.compare(v) === 1) {
-        // compare(min, v, true)
-        min = v
-        minSV = new SemVer(min, options)
-      }
-    }
-  })
-  return min
-}
-
-exports.minVersion = minVersion
-function minVersion (range, loose) {
-  range = new Range(range, loose)
-
-  var minver = new SemVer('0.0.0')
-  if (range.test(minver)) {
-    return minver
-  }
-
-  minver = new SemVer('0.0.0-0')
-  if (range.test(minver)) {
-    return minver
-  }
-
-  minver = null
-  for (var i = 0; i < range.set.length; ++i) {
-    var comparators = range.set[i]
-
-    comparators.forEach(function (comparator) {
-      // Clone to avoid manipulating the comparator's semver object.
-      var compver = new SemVer(comparator.semver.version)
-      switch (comparator.operator) {
-        case '>':
-          if (compver.prerelease.length === 0) {
-            compver.patch++
-          } else {
-            compver.prerelease.push(0)
-          }
-          compver.raw = compver.format()
-          /* fallthrough */
-        case '':
-        case '>=':
-          if (!minver || gt(minver, compver)) {
-            minver = compver
-          }
-          break
-        case '<':
-        case '<=':
-          /* Ignore maximum versions */
-          break
-        /* istanbul ignore next */
-        default:
-          throw new Error('Unexpected operation: ' + comparator.operator)
-      }
-    })
-  }
-
-  if (minver && range.test(minver)) {
-    return minver
-  }
-
-  return null
-}
-
-exports.validRange = validRange
-function validRange (range, options) {
-  try {
-    // Return '*' instead of '' so that truthiness works.
-    // This will throw if it's invalid anyway
-    return new Range(range, options).range || '*'
-  } catch (er) {
-    return null
-  }
-}
-
-// Determine if version is less than all the versions possible in the range
-exports.ltr = ltr
-function ltr (version, range, options) {
-  return outside(version, range, '<', options)
-}
-
-// Determine if version is greater than all the versions possible in the range.
-exports.gtr = gtr
-function gtr (version, range, options) {
-  return outside(version, range, '>', options)
-}
-
-exports.outside = outside
-function outside (version, range, hilo, options) {
-  version = new SemVer(version, options)
-  range = new Range(range, options)
-
-  var gtfn, ltefn, ltfn, comp, ecomp
-  switch (hilo) {
-    case '>':
-      gtfn = gt
-      ltefn = lte
-      ltfn = lt
-      comp = '>'
-      ecomp = '>='
-      break
-    case '<':
-      gtfn = lt
-      ltefn = gte
-      ltfn = gt
-      comp = '<'
-      ecomp = '<='
-      break
-    default:
-      throw new TypeError('Must provide a hilo val of "<" or ">"')
-  }
-
-  // If it satisifes the range it is not outside
-  if (satisfies(version, range, options)) {
-    return false
-  }
-
-  // From now on, variable terms are as if we're in "gtr" mode.
-  // but note that everything is flipped for the "ltr" function.
-
-  for (var i = 0; i < range.set.length; ++i) {
-    var comparators = range.set[i]
-
-    var high = null
-    var low = null
-
-    comparators.forEach(function (comparator) {
-      if (comparator.semver === ANY) {
-        comparator = new Comparator('>=0.0.0')
-      }
-      high = high || comparator
-      low = low || comparator
-      if (gtfn(comparator.semver, high.semver, options)) {
-        high = comparator
-      } else if (ltfn(comparator.semver, low.semver, options)) {
-        low = comparator
-      }
-    })
-
-    // If the edge version comparator has a operator then our version
-    // isn't outside it
-    if (high.operator === comp || high.operator === ecomp) {
-      return false
-    }
-
-    // If the lowest version comparator has an operator and our version
-    // is less than it then it isn't higher than the range
-    if ((!low.operator || low.operator === comp) &&
-        ltefn(version, low.semver)) {
-      return false
-    } else if (low.operator === ecomp && ltfn(version, low.semver)) {
-      return false
-    }
-  }
-  return true
-}
-
-exports.prerelease = prerelease
-function prerelease (version, options) {
-  var parsed = parse(version, options)
-  return (parsed && parsed.prerelease.length) ? parsed.prerelease : null
-}
-
-exports.intersects = intersects
-function intersects (r1, r2, options) {
-  r1 = new Range(r1, options)
-  r2 = new Range(r2, options)
-  return r1.intersects(r2)
-}
-
-exports.coerce = coerce
-function coerce (version) {
-  if (version instanceof SemVer) {
-    return version
-  }
-
-  if (typeof version !== 'string') {
-    return null
-  }
-
-  var match = version.match(re[COERCE])
-
-  if (match == null) {
-    return null
-  }
-
-  return parse(match[1] +
-    '.' + (match[2] || '0') +
-    '.' + (match[3] || '0'))
-}
+/***/ 6250:
+/***/ ((module) => {
+
+"use strict";
+
+
+const processFn = (fn, opts) => function () {
+	const P = opts.promiseModule;
+	const args = new Array(arguments.length);
+
+	for (let i = 0; i < arguments.length; i++) {
+		args[i] = arguments[i];
+	}
+
+	return new P((resolve, reject) => {
+		if (opts.errorFirst) {
+			args.push(function (err, result) {
+				if (opts.multiArgs) {
+					const results = new Array(arguments.length - 1);
+
+					for (let i = 1; i < arguments.length; i++) {
+						results[i - 1] = arguments[i];
+					}
+
+					if (err) {
+						results.unshift(err);
+						reject(results);
+					} else {
+						resolve(results);
+					}
+				} else if (err) {
+					reject(err);
+				} else {
+					resolve(result);
+				}
+			});
+		} else {
+			args.push(function (result) {
+				if (opts.multiArgs) {
+					const results = new Array(arguments.length - 1);
+
+					for (let i = 0; i < arguments.length; i++) {
+						results[i] = arguments[i];
+					}
+
+					resolve(results);
+				} else {
+					resolve(result);
+				}
+			});
+		}
+
+		fn.apply(this, args);
+	});
+};
+
+module.exports = (obj, opts) => {
+	opts = Object.assign({
+		exclude: [/.+(Sync|Stream)$/],
+		errorFirst: true,
+		promiseModule: Promise
+	}, opts);
+
+	const filter = key => {
+		const match = pattern => typeof pattern === 'string' ? key === pattern : pattern.test(key);
+		return opts.include ? opts.include.some(match) : !opts.exclude.some(match);
+	};
+
+	let ret;
+	if (typeof obj === 'function') {
+		ret = function () {
+			if (opts.excludeMain) {
+				return obj.apply(this, arguments);
+			}
+
+			return processFn(obj, opts).apply(this, arguments);
+		};
+	} else {
+		ret = Object.create(Object.getPrototypeOf(obj));
+	}
+
+	for (const key in obj) { // eslint-disable-line guard-for-in
+		const x = obj[key];
+		ret[key] = typeof x === 'function' && filter(key) ? processFn(x, opts) : x;
+	}
+
+	return ret;
+};
 
 
 /***/ }),
@@ -31885,1528 +32413,6 @@ function pauseStreams (streams, options) {
   }
   return streams
 }
-
-
-/***/ }),
-
-/***/ 6228:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-/**
- * Module dependencies
- */
-
-var util = __webpack_require__(1669);
-var braces = __webpack_require__(610);
-var toRegex = __webpack_require__(6855);
-var extend = __webpack_require__(8710);
-
-/**
- * Local dependencies
- */
-
-var compilers = __webpack_require__(837);
-var parsers = __webpack_require__(2057);
-var cache = __webpack_require__(1145);
-var utils = __webpack_require__(4713);
-var MAX_LENGTH = 1024 * 64;
-
-/**
- * The main function takes a list of strings and one or more
- * glob patterns to use for matching.
- *
- * ```js
- * var mm = require('micromatch');
- * mm(list, patterns[, options]);
- *
- * console.log(mm(['a.js', 'a.txt'], ['*.js']));
- * //=> [ 'a.js' ]
- * ```
- * @param {Array} `list` A list of strings to match
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Array} Returns an array of matches
- * @summary false
- * @api public
- */
-
-function micromatch(list, patterns, options) {
-  patterns = utils.arrayify(patterns);
-  list = utils.arrayify(list);
-
-  var len = patterns.length;
-  if (list.length === 0 || len === 0) {
-    return [];
-  }
-
-  if (len === 1) {
-    return micromatch.match(list, patterns[0], options);
-  }
-
-  var omit = [];
-  var keep = [];
-  var idx = -1;
-
-  while (++idx < len) {
-    var pattern = patterns[idx];
-
-    if (typeof pattern === 'string' && pattern.charCodeAt(0) === 33 /* ! */) {
-      omit.push.apply(omit, micromatch.match(list, pattern.slice(1), options));
-    } else {
-      keep.push.apply(keep, micromatch.match(list, pattern, options));
-    }
-  }
-
-  var matches = utils.diff(keep, omit);
-  if (!options || options.nodupes !== false) {
-    return utils.unique(matches);
-  }
-
-  return matches;
-}
-
-/**
- * Similar to the main function, but `pattern` must be a string.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.match(list, pattern[, options]);
- *
- * console.log(mm.match(['a.a', 'a.aa', 'a.b', 'a.c'], '*.a'));
- * //=> ['a.a', 'a.aa']
- * ```
- * @param {Array} `list` Array of strings to match
- * @param {String} `pattern` Glob pattern to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Array} Returns an array of matches
- * @api public
- */
-
-micromatch.match = function(list, pattern, options) {
-  if (Array.isArray(pattern)) {
-    throw new TypeError('expected pattern to be a string');
-  }
-
-  var unixify = utils.unixify(options);
-  var isMatch = memoize('match', pattern, options, micromatch.matcher);
-  var matches = [];
-
-  list = utils.arrayify(list);
-  var len = list.length;
-  var idx = -1;
-
-  while (++idx < len) {
-    var ele = list[idx];
-    if (ele === pattern || isMatch(ele)) {
-      matches.push(utils.value(ele, unixify, options));
-    }
-  }
-
-  // if no options were passed, uniquify results and return
-  if (typeof options === 'undefined') {
-    return utils.unique(matches);
-  }
-
-  if (matches.length === 0) {
-    if (options.failglob === true) {
-      throw new Error('no matches found for "' + pattern + '"');
-    }
-    if (options.nonull === true || options.nullglob === true) {
-      return [options.unescape ? utils.unescape(pattern) : pattern];
-    }
-  }
-
-  // if `opts.ignore` was defined, diff ignored list
-  if (options.ignore) {
-    matches = micromatch.not(matches, options.ignore, options);
-  }
-
-  return options.nodupes !== false ? utils.unique(matches) : matches;
-};
-
-/**
- * Returns true if the specified `string` matches the given glob `pattern`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.isMatch(string, pattern[, options]);
- *
- * console.log(mm.isMatch('a.a', '*.a'));
- * //=> true
- * console.log(mm.isMatch('a.b', '*.a'));
- * //=> false
- * ```
- * @param {String} `string` String to match
- * @param {String} `pattern` Glob pattern to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if the string matches the glob pattern.
- * @api public
- */
-
-micromatch.isMatch = function(str, pattern, options) {
-  if (typeof str !== 'string') {
-    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
-  }
-
-  if (isEmptyString(str) || isEmptyString(pattern)) {
-    return false;
-  }
-
-  var equals = utils.equalsPattern(options);
-  if (equals(str)) {
-    return true;
-  }
-
-  var isMatch = memoize('isMatch', pattern, options, micromatch.matcher);
-  return isMatch(str);
-};
-
-/**
- * Returns true if some of the strings in the given `list` match any of the
- * given glob `patterns`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.some(list, patterns[, options]);
- *
- * console.log(mm.some(['foo.js', 'bar.js'], ['*.js', '!foo.js']));
- * // true
- * console.log(mm.some(['foo.js'], ['*.js', '!foo.js']));
- * // false
- * ```
- * @param  {String|Array} `list` The string or array of strings to test. Returns as soon as the first match is found.
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if any patterns match `str`
- * @api public
- */
-
-micromatch.some = function(list, patterns, options) {
-  if (typeof list === 'string') {
-    list = [list];
-  }
-  for (var i = 0; i < list.length; i++) {
-    if (micromatch(list[i], patterns, options).length === 1) {
-      return true;
-    }
-  }
-  return false;
-};
-
-/**
- * Returns true if every string in the given `list` matches
- * any of the given glob `patterns`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.every(list, patterns[, options]);
- *
- * console.log(mm.every('foo.js', ['foo.js']));
- * // true
- * console.log(mm.every(['foo.js', 'bar.js'], ['*.js']));
- * // true
- * console.log(mm.every(['foo.js', 'bar.js'], ['*.js', '!foo.js']));
- * // false
- * console.log(mm.every(['foo.js'], ['*.js', '!foo.js']));
- * // false
- * ```
- * @param  {String|Array} `list` The string or array of strings to test.
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if any patterns match `str`
- * @api public
- */
-
-micromatch.every = function(list, patterns, options) {
-  if (typeof list === 'string') {
-    list = [list];
-  }
-  for (var i = 0; i < list.length; i++) {
-    if (micromatch(list[i], patterns, options).length !== 1) {
-      return false;
-    }
-  }
-  return true;
-};
-
-/**
- * Returns true if **any** of the given glob `patterns`
- * match the specified `string`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.any(string, patterns[, options]);
- *
- * console.log(mm.any('a.a', ['b.*', '*.a']));
- * //=> true
- * console.log(mm.any('a.a', 'b.*'));
- * //=> false
- * ```
- * @param  {String|Array} `str` The string to test.
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if any patterns match `str`
- * @api public
- */
-
-micromatch.any = function(str, patterns, options) {
-  if (typeof str !== 'string') {
-    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
-  }
-
-  if (isEmptyString(str) || isEmptyString(patterns)) {
-    return false;
-  }
-
-  if (typeof patterns === 'string') {
-    patterns = [patterns];
-  }
-
-  for (var i = 0; i < patterns.length; i++) {
-    if (micromatch.isMatch(str, patterns[i], options)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-/**
- * Returns true if **all** of the given `patterns` match
- * the specified string.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.all(string, patterns[, options]);
- *
- * console.log(mm.all('foo.js', ['foo.js']));
- * // true
- *
- * console.log(mm.all('foo.js', ['*.js', '!foo.js']));
- * // false
- *
- * console.log(mm.all('foo.js', ['*.js', 'foo.js']));
- * // true
- *
- * console.log(mm.all('foo.js', ['*.js', 'f*', '*o*', '*o.js']));
- * // true
- * ```
- * @param  {String|Array} `str` The string to test.
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if any patterns match `str`
- * @api public
- */
-
-micromatch.all = function(str, patterns, options) {
-  if (typeof str !== 'string') {
-    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
-  }
-  if (typeof patterns === 'string') {
-    patterns = [patterns];
-  }
-  for (var i = 0; i < patterns.length; i++) {
-    if (!micromatch.isMatch(str, patterns[i], options)) {
-      return false;
-    }
-  }
-  return true;
-};
-
-/**
- * Returns a list of strings that _**do not match any**_ of the given `patterns`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.not(list, patterns[, options]);
- *
- * console.log(mm.not(['a.a', 'b.b', 'c.c'], '*.a'));
- * //=> ['b.b', 'c.c']
- * ```
- * @param {Array} `list` Array of strings to match.
- * @param {String|Array} `patterns` One or more glob pattern to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Array} Returns an array of strings that **do not match** the given patterns.
- * @api public
- */
-
-micromatch.not = function(list, patterns, options) {
-  var opts = extend({}, options);
-  var ignore = opts.ignore;
-  delete opts.ignore;
-
-  var unixify = utils.unixify(opts);
-  list = utils.arrayify(list).map(unixify);
-
-  var matches = utils.diff(list, micromatch(list, patterns, opts));
-  if (ignore) {
-    matches = utils.diff(matches, micromatch(list, ignore));
-  }
-
-  return opts.nodupes !== false ? utils.unique(matches) : matches;
-};
-
-/**
- * Returns true if the given `string` contains the given pattern. Similar
- * to [.isMatch](#isMatch) but the pattern can match any part of the string.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.contains(string, pattern[, options]);
- *
- * console.log(mm.contains('aa/bb/cc', '*b'));
- * //=> true
- * console.log(mm.contains('aa/bb/cc', '*d'));
- * //=> false
- * ```
- * @param {String} `str` The string to match.
- * @param {String|Array} `patterns` Glob pattern to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns true if the patter matches any part of `str`.
- * @api public
- */
-
-micromatch.contains = function(str, patterns, options) {
-  if (typeof str !== 'string') {
-    throw new TypeError('expected a string: "' + util.inspect(str) + '"');
-  }
-
-  if (typeof patterns === 'string') {
-    if (isEmptyString(str) || isEmptyString(patterns)) {
-      return false;
-    }
-
-    var equals = utils.equalsPattern(patterns, options);
-    if (equals(str)) {
-      return true;
-    }
-    var contains = utils.containsPattern(patterns, options);
-    if (contains(str)) {
-      return true;
-    }
-  }
-
-  var opts = extend({}, options, {contains: true});
-  return micromatch.any(str, patterns, opts);
-};
-
-/**
- * Returns true if the given pattern and options should enable
- * the `matchBase` option.
- * @return {Boolean}
- * @api private
- */
-
-micromatch.matchBase = function(pattern, options) {
-  if (pattern && pattern.indexOf('/') !== -1 || !options) return false;
-  return options.basename === true || options.matchBase === true;
-};
-
-/**
- * Filter the keys of the given object with the given `glob` pattern
- * and `options`. Does not attempt to match nested keys. If you need this feature,
- * use [glob-object][] instead.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.matchKeys(object, patterns[, options]);
- *
- * var obj = { aa: 'a', ab: 'b', ac: 'c' };
- * console.log(mm.matchKeys(obj, '*b'));
- * //=> { ab: 'b' }
- * ```
- * @param {Object} `object` The object with keys to filter.
- * @param {String|Array} `patterns` One or more glob patterns to use for matching.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Object} Returns an object with only keys that match the given patterns.
- * @api public
- */
-
-micromatch.matchKeys = function(obj, patterns, options) {
-  if (!utils.isObject(obj)) {
-    throw new TypeError('expected the first argument to be an object');
-  }
-  var keys = micromatch(Object.keys(obj), patterns, options);
-  return utils.pick(obj, keys);
-};
-
-/**
- * Returns a memoized matcher function from the given glob `pattern` and `options`.
- * The returned function takes a string to match as its only argument and returns
- * true if the string is a match.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.matcher(pattern[, options]);
- *
- * var isMatch = mm.matcher('*.!(*a)');
- * console.log(isMatch('a.a'));
- * //=> false
- * console.log(isMatch('a.b'));
- * //=> true
- * ```
- * @param {String} `pattern` Glob pattern
- * @param {Object} `options` See available [options](#options) for changing how matches are performed.
- * @return {Function} Returns a matcher function.
- * @api public
- */
-
-micromatch.matcher = function matcher(pattern, options) {
-  if (Array.isArray(pattern)) {
-    return compose(pattern, options, matcher);
-  }
-
-  // if pattern is a regex
-  if (pattern instanceof RegExp) {
-    return test(pattern);
-  }
-
-  // if pattern is invalid
-  if (!utils.isString(pattern)) {
-    throw new TypeError('expected pattern to be an array, string or regex');
-  }
-
-  // if pattern is a non-glob string
-  if (!utils.hasSpecialChars(pattern)) {
-    if (options && options.nocase === true) {
-      pattern = pattern.toLowerCase();
-    }
-    return utils.matchPath(pattern, options);
-  }
-
-  // if pattern is a glob string
-  var re = micromatch.makeRe(pattern, options);
-
-  // if `options.matchBase` or `options.basename` is defined
-  if (micromatch.matchBase(pattern, options)) {
-    return utils.matchBasename(re, options);
-  }
-
-  function test(regex) {
-    var equals = utils.equalsPattern(options);
-    var unixify = utils.unixify(options);
-
-    return function(str) {
-      if (equals(str)) {
-        return true;
-      }
-
-      if (regex.test(unixify(str))) {
-        return true;
-      }
-      return false;
-    };
-  }
-
-  var fn = test(re);
-  Object.defineProperty(fn, 'result', {
-    configurable: true,
-    enumerable: false,
-    value: re.result
-  });
-  return fn;
-};
-
-/**
- * Returns an array of matches captured by `pattern` in `string, or `null` if the pattern did not match.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.capture(pattern, string[, options]);
- *
- * console.log(mm.capture('test/*.js', 'test/foo.js'));
- * //=> ['foo']
- * console.log(mm.capture('test/*.js', 'foo/bar.css'));
- * //=> null
- * ```
- * @param {String} `pattern` Glob pattern to use for matching.
- * @param {String} `string` String to match
- * @param {Object} `options` See available [options](#options) for changing how matches are performed
- * @return {Boolean} Returns an array of captures if the string matches the glob pattern, otherwise `null`.
- * @api public
- */
-
-micromatch.capture = function(pattern, str, options) {
-  var re = micromatch.makeRe(pattern, extend({capture: true}, options));
-  var unixify = utils.unixify(options);
-
-  function match() {
-    return function(string) {
-      var match = re.exec(unixify(string));
-      if (!match) {
-        return null;
-      }
-
-      return match.slice(1);
-    };
-  }
-
-  var capture = memoize('capture', pattern, options, match);
-  return capture(str);
-};
-
-/**
- * Create a regular expression from the given glob `pattern`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.makeRe(pattern[, options]);
- *
- * console.log(mm.makeRe('*.js'));
- * //=> /^(?:(\.[\\\/])?(?!\.)(?=.)[^\/]*?\.js)$/
- * ```
- * @param {String} `pattern` A glob pattern to convert to regex.
- * @param {Object} `options` See available [options](#options) for changing how matches are performed.
- * @return {RegExp} Returns a regex created from the given pattern.
- * @api public
- */
-
-micromatch.makeRe = function(pattern, options) {
-  if (typeof pattern !== 'string') {
-    throw new TypeError('expected pattern to be a string');
-  }
-
-  if (pattern.length > MAX_LENGTH) {
-    throw new Error('expected pattern to be less than ' + MAX_LENGTH + ' characters');
-  }
-
-  function makeRe() {
-    var result = micromatch.create(pattern, options);
-    var ast_array = [];
-    var output = result.map(function(obj) {
-      obj.ast.state = obj.state;
-      ast_array.push(obj.ast);
-      return obj.output;
-    });
-
-    var regex = toRegex(output.join('|'), options);
-    Object.defineProperty(regex, 'result', {
-      configurable: true,
-      enumerable: false,
-      value: ast_array
-    });
-    return regex;
-  }
-
-  return memoize('makeRe', pattern, options, makeRe);
-};
-
-/**
- * Expand the given brace `pattern`.
- *
- * ```js
- * var mm = require('micromatch');
- * console.log(mm.braces('foo/{a,b}/bar'));
- * //=> ['foo/(a|b)/bar']
- *
- * console.log(mm.braces('foo/{a,b}/bar', {expand: true}));
- * //=> ['foo/(a|b)/bar']
- * ```
- * @param {String} `pattern` String with brace pattern to expand.
- * @param {Object} `options` Any [options](#options) to change how expansion is performed. See the [braces][] library for all available options.
- * @return {Array}
- * @api public
- */
-
-micromatch.braces = function(pattern, options) {
-  if (typeof pattern !== 'string' && !Array.isArray(pattern)) {
-    throw new TypeError('expected pattern to be an array or string');
-  }
-
-  function expand() {
-    if (options && options.nobrace === true || !/\{.*\}/.test(pattern)) {
-      return utils.arrayify(pattern);
-    }
-    return braces(pattern, options);
-  }
-
-  return memoize('braces', pattern, options, expand);
-};
-
-/**
- * Proxy to the [micromatch.braces](#method), for parity with
- * minimatch.
- */
-
-micromatch.braceExpand = function(pattern, options) {
-  var opts = extend({}, options, {expand: true});
-  return micromatch.braces(pattern, opts);
-};
-
-/**
- * Parses the given glob `pattern` and returns an array of abstract syntax
- * trees (ASTs), with the compiled `output` and optional source `map` on
- * each AST.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.create(pattern[, options]);
- *
- * console.log(mm.create('abc/*.js'));
- * // [{ options: { source: 'string', sourcemap: true },
- * //   state: {},
- * //   compilers:
- * //    { ... },
- * //   output: '(\\.[\\\\\\/])?abc\\/(?!\\.)(?=.)[^\\/]*?\\.js',
- * //   ast:
- * //    { type: 'root',
- * //      errors: [],
- * //      nodes:
- * //       [ ... ],
- * //      dot: false,
- * //      input: 'abc/*.js' },
- * //   parsingErrors: [],
- * //   map:
- * //    { version: 3,
- * //      sources: [ 'string' ],
- * //      names: [],
- * //      mappings: 'AAAA,GAAG,EAAC,kBAAC,EAAC,EAAE',
- * //      sourcesContent: [ 'abc/*.js' ] },
- * //   position: { line: 1, column: 28 },
- * //   content: {},
- * //   files: {},
- * //   idx: 6 }]
- * ```
- * @param {String} `pattern` Glob pattern to parse and compile.
- * @param {Object} `options` Any [options](#options) to change how parsing and compiling is performed.
- * @return {Object} Returns an object with the parsed AST, compiled string and optional source map.
- * @api public
- */
-
-micromatch.create = function(pattern, options) {
-  return memoize('create', pattern, options, function() {
-    function create(str, opts) {
-      return micromatch.compile(micromatch.parse(str, opts), opts);
-    }
-
-    pattern = micromatch.braces(pattern, options);
-    var len = pattern.length;
-    var idx = -1;
-    var res = [];
-
-    while (++idx < len) {
-      res.push(create(pattern[idx], options));
-    }
-    return res;
-  });
-};
-
-/**
- * Parse the given `str` with the given `options`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.parse(pattern[, options]);
- *
- * var ast = mm.parse('a/{b,c}/d');
- * console.log(ast);
- * // { type: 'root',
- * //   errors: [],
- * //   input: 'a/{b,c}/d',
- * //   nodes:
- * //    [ { type: 'bos', val: '' },
- * //      { type: 'text', val: 'a/' },
- * //      { type: 'brace',
- * //        nodes:
- * //         [ { type: 'brace.open', val: '{' },
- * //           { type: 'text', val: 'b,c' },
- * //           { type: 'brace.close', val: '}' } ] },
- * //      { type: 'text', val: '/d' },
- * //      { type: 'eos', val: '' } ] }
- * ```
- * @param {String} `str`
- * @param {Object} `options`
- * @return {Object} Returns an AST
- * @api public
- */
-
-micromatch.parse = function(pattern, options) {
-  if (typeof pattern !== 'string') {
-    throw new TypeError('expected a string');
-  }
-
-  function parse() {
-    var snapdragon = utils.instantiate(null, options);
-    parsers(snapdragon, options);
-
-    var ast = snapdragon.parse(pattern, options);
-    utils.define(ast, 'snapdragon', snapdragon);
-    ast.input = pattern;
-    return ast;
-  }
-
-  return memoize('parse', pattern, options, parse);
-};
-
-/**
- * Compile the given `ast` or string with the given `options`.
- *
- * ```js
- * var mm = require('micromatch');
- * mm.compile(ast[, options]);
- *
- * var ast = mm.parse('a/{b,c}/d');
- * console.log(mm.compile(ast));
- * // { options: { source: 'string' },
- * //   state: {},
- * //   compilers:
- * //    { eos: [Function],
- * //      noop: [Function],
- * //      bos: [Function],
- * //      brace: [Function],
- * //      'brace.open': [Function],
- * //      text: [Function],
- * //      'brace.close': [Function] },
- * //   output: [ 'a/(b|c)/d' ],
- * //   ast:
- * //    { ... },
- * //   parsingErrors: [] }
- * ```
- * @param {Object|String} `ast`
- * @param {Object} `options`
- * @return {Object} Returns an object that has an `output` property with the compiled string.
- * @api public
- */
-
-micromatch.compile = function(ast, options) {
-  if (typeof ast === 'string') {
-    ast = micromatch.parse(ast, options);
-  }
-
-  return memoize('compile', ast.input, options, function() {
-    var snapdragon = utils.instantiate(ast, options);
-    compilers(snapdragon, options);
-    return snapdragon.compile(ast, options);
-  });
-};
-
-/**
- * Clear the regex cache.
- *
- * ```js
- * mm.clearCache();
- * ```
- * @api public
- */
-
-micromatch.clearCache = function() {
-  micromatch.cache.caches = {};
-};
-
-/**
- * Returns true if the given value is effectively an empty string
- */
-
-function isEmptyString(val) {
-  return String(val) === '' || String(val) === './';
-}
-
-/**
- * Compose a matcher function with the given patterns.
- * This allows matcher functions to be compiled once and
- * called multiple times.
- */
-
-function compose(patterns, options, matcher) {
-  var matchers;
-
-  return memoize('compose', String(patterns), options, function() {
-    return function(file) {
-      // delay composition until it's invoked the first time,
-      // after that it won't be called again
-      if (!matchers) {
-        matchers = [];
-        for (var i = 0; i < patterns.length; i++) {
-          matchers.push(matcher(patterns[i], options));
-        }
-      }
-
-      var len = matchers.length;
-      while (len--) {
-        if (matchers[len](file) === true) {
-          return true;
-        }
-      }
-      return false;
-    };
-  });
-}
-
-/**
- * Memoize a generated regex or function. A unique key is generated
- * from the `type` (usually method name), the `pattern`, and
- * user-defined options.
- */
-
-function memoize(type, pattern, options, fn) {
-  var key = utils.createKey(type + '=' + pattern, options);
-
-  if (options && options.cache === false) {
-    return fn(pattern, options);
-  }
-
-  if (cache.has(type, key)) {
-    return cache.get(type, key);
-  }
-
-  var val = fn(pattern, options);
-  cache.set(type, key, val);
-  return val;
-}
-
-/**
- * Expose compiler, parser and cache on `micromatch`
- */
-
-micromatch.compilers = compilers;
-micromatch.parsers = parsers;
-micromatch.caches = cache.caches;
-
-/**
- * Expose `micromatch`
- * @type {Function}
- */
-
-module.exports = micromatch;
-
-
-/***/ }),
-
-/***/ 1145:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-module.exports = new (__webpack_require__(4838))();
-
-
-/***/ }),
-
-/***/ 837:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var nanomatch = __webpack_require__(2316);
-var extglob = __webpack_require__(2129);
-
-module.exports = function(snapdragon) {
-  var compilers = snapdragon.compiler.compilers;
-  var opts = snapdragon.options;
-
-  // register nanomatch compilers
-  snapdragon.use(nanomatch.compilers);
-
-  // get references to some specific nanomatch compilers before they
-  // are overridden by the extglob and/or custom compilers
-  var escape = compilers.escape;
-  var qmark = compilers.qmark;
-  var slash = compilers.slash;
-  var star = compilers.star;
-  var text = compilers.text;
-  var plus = compilers.plus;
-  var dot = compilers.dot;
-
-  // register extglob compilers or escape exglobs if disabled
-  if (opts.extglob === false || opts.noext === true) {
-    snapdragon.compiler.use(escapeExtglobs);
-  } else {
-    snapdragon.use(extglob.compilers);
-  }
-
-  snapdragon.use(function() {
-    this.options.star = this.options.star || function(/*node*/) {
-      return '[^\\\\/]*?';
-    };
-  });
-
-  // custom micromatch compilers
-  snapdragon.compiler
-
-    // reset referenced compiler
-    .set('dot', dot)
-    .set('escape', escape)
-    .set('plus', plus)
-    .set('slash', slash)
-    .set('qmark', qmark)
-    .set('star', star)
-    .set('text', text);
-};
-
-function escapeExtglobs(compiler) {
-  compiler.set('paren', function(node) {
-    var val = '';
-    visit(node, function(tok) {
-      if (tok.val) val += (/^\W/.test(tok.val) ? '\\' : '') + tok.val;
-    });
-    return this.emit(val, node);
-  });
-
-  /**
-   * Visit `node` with the given `fn`
-   */
-
-  function visit(node, fn) {
-    return node.nodes ? mapVisit(node.nodes, fn) : fn(node);
-  }
-
-  /**
-   * Map visit over array of `nodes`.
-   */
-
-  function mapVisit(nodes, fn) {
-    var len = nodes.length;
-    var idx = -1;
-    while (++idx < len) {
-      visit(nodes[idx], fn);
-    }
-  }
-}
-
-
-/***/ }),
-
-/***/ 2057:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var extglob = __webpack_require__(2129);
-var nanomatch = __webpack_require__(2316);
-var regexNot = __webpack_require__(2527);
-var toRegex = __webpack_require__(6855);
-var not;
-
-/**
- * Characters to use in negation regex (we want to "not" match
- * characters that are matched by other parsers)
- */
-
-var TEXT = '([!@*?+]?\\(|\\)|\\[:?(?=.*?:?\\])|:?\\]|[*+?!^$.\\\\/])+';
-var createNotRegex = function(opts) {
-  return not || (not = textRegex(TEXT));
-};
-
-/**
- * Parsers
- */
-
-module.exports = function(snapdragon) {
-  var parsers = snapdragon.parser.parsers;
-
-  // register nanomatch parsers
-  snapdragon.use(nanomatch.parsers);
-
-  // get references to some specific nanomatch parsers before they
-  // are overridden by the extglob and/or parsers
-  var escape = parsers.escape;
-  var slash = parsers.slash;
-  var qmark = parsers.qmark;
-  var plus = parsers.plus;
-  var star = parsers.star;
-  var dot = parsers.dot;
-
-  // register extglob parsers
-  snapdragon.use(extglob.parsers);
-
-  // custom micromatch parsers
-  snapdragon.parser
-    .use(function() {
-      // override "notRegex" created in nanomatch parser
-      this.notRegex = /^\!+(?!\()/;
-    })
-    // reset the referenced parsers
-    .capture('escape', escape)
-    .capture('slash', slash)
-    .capture('qmark', qmark)
-    .capture('star', star)
-    .capture('plus', plus)
-    .capture('dot', dot)
-
-    /**
-     * Override `text` parser
-     */
-
-    .capture('text', function() {
-      if (this.isInside('bracket')) return;
-      var pos = this.position();
-      var m = this.match(createNotRegex(this.options));
-      if (!m || !m[0]) return;
-
-      // escape regex boundary characters and simple brackets
-      var val = m[0].replace(/([[\]^$])/g, '\\$1');
-
-      return pos({
-        type: 'text',
-        val: val
-      });
-    });
-};
-
-/**
- * Create text regex
- */
-
-function textRegex(pattern) {
-  var notStr = regexNot.create(pattern, {contains: true, strictClose: false});
-  var prefix = '(?:[\\^]|\\\\|';
-  return toRegex(prefix + notStr + ')', {strictClose: false});
-}
-
-
-/***/ }),
-
-/***/ 4713:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var utils = module.exports;
-var path = __webpack_require__(5622);
-
-/**
- * Module dependencies
- */
-
-var Snapdragon = __webpack_require__(2403);
-utils.define = __webpack_require__(2209);
-utils.diff = __webpack_require__(8915);
-utils.extend = __webpack_require__(8710);
-utils.pick = __webpack_require__(9962);
-utils.typeOf = __webpack_require__(6961);
-utils.unique = __webpack_require__(340);
-
-/**
- * Returns true if the platform is windows, or `path.sep` is `\\`.
- * This is defined as a function to allow `path.sep` to be set in unit tests,
- * or by the user, if there is a reason to do so.
- * @return {Boolean}
- */
-
-utils.isWindows = function() {
-  return path.sep === '\\' || process.platform === 'win32';
-};
-
-/**
- * Get the `Snapdragon` instance to use
- */
-
-utils.instantiate = function(ast, options) {
-  var snapdragon;
-  // if an instance was created by `.parse`, use that instance
-  if (utils.typeOf(ast) === 'object' && ast.snapdragon) {
-    snapdragon = ast.snapdragon;
-  // if the user supplies an instance on options, use that instance
-  } else if (utils.typeOf(options) === 'object' && options.snapdragon) {
-    snapdragon = options.snapdragon;
-  // create a new instance
-  } else {
-    snapdragon = new Snapdragon(options);
-  }
-
-  utils.define(snapdragon, 'parse', function(str, options) {
-    var parsed = Snapdragon.prototype.parse.apply(this, arguments);
-    parsed.input = str;
-
-    // escape unmatched brace/bracket/parens
-    var last = this.parser.stack.pop();
-    if (last && this.options.strictErrors !== true) {
-      var open = last.nodes[0];
-      var inner = last.nodes[1];
-      if (last.type === 'bracket') {
-        if (inner.val.charAt(0) === '[') {
-          inner.val = '\\' + inner.val;
-        }
-
-      } else {
-        open.val = '\\' + open.val;
-        var sibling = open.parent.nodes[1];
-        if (sibling.type === 'star') {
-          sibling.loose = true;
-        }
-      }
-    }
-
-    // add non-enumerable parser reference
-    utils.define(parsed, 'parser', this.parser);
-    return parsed;
-  });
-
-  return snapdragon;
-};
-
-/**
- * Create the key to use for memoization. The key is generated
- * by iterating over the options and concatenating key-value pairs
- * to the pattern string.
- */
-
-utils.createKey = function(pattern, options) {
-  if (utils.typeOf(options) !== 'object') {
-    return pattern;
-  }
-  var val = pattern;
-  var keys = Object.keys(options);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    val += ';' + key + '=' + String(options[key]);
-  }
-  return val;
-};
-
-/**
- * Cast `val` to an array
- * @return {Array}
- */
-
-utils.arrayify = function(val) {
-  if (typeof val === 'string') return [val];
-  return val ? (Array.isArray(val) ? val : [val]) : [];
-};
-
-/**
- * Return true if `val` is a non-empty string
- */
-
-utils.isString = function(val) {
-  return typeof val === 'string';
-};
-
-/**
- * Return true if `val` is a non-empty string
- */
-
-utils.isObject = function(val) {
-  return utils.typeOf(val) === 'object';
-};
-
-/**
- * Returns true if the given `str` has special characters
- */
-
-utils.hasSpecialChars = function(str) {
-  return /(?:(?:(^|\/)[!.])|[*?+()|\[\]{}]|[+@]\()/.test(str);
-};
-
-/**
- * Escape regex characters in the given string
- */
-
-utils.escapeRegex = function(str) {
-  return str.replace(/[-[\]{}()^$|*+?.\\\/\s]/g, '\\$&');
-};
-
-/**
- * Normalize slashes in the given filepath.
- *
- * @param {String} `filepath`
- * @return {String}
- */
-
-utils.toPosixPath = function(str) {
-  return str.replace(/\\+/g, '/');
-};
-
-/**
- * Strip backslashes before special characters in a string.
- *
- * @param {String} `str`
- * @return {String}
- */
-
-utils.unescape = function(str) {
-  return utils.toPosixPath(str.replace(/\\(?=[*+?!.])/g, ''));
-};
-
-/**
- * Strip the prefix from a filepath
- * @param {String} `fp`
- * @return {String}
- */
-
-utils.stripPrefix = function(str) {
-  if (str.charAt(0) !== '.') {
-    return str;
-  }
-  var ch = str.charAt(1);
-  if (utils.isSlash(ch)) {
-    return str.slice(2);
-  }
-  return str;
-};
-
-/**
- * Returns true if the given str is an escaped or
- * unescaped path character
- */
-
-utils.isSlash = function(str) {
-  return str === '/' || str === '\\/' || str === '\\' || str === '\\\\';
-};
-
-/**
- * Returns a function that returns true if the given
- * pattern matches or contains a `filepath`
- *
- * @param {String} `pattern`
- * @return {Function}
- */
-
-utils.matchPath = function(pattern, options) {
-  return (options && options.contains)
-    ? utils.containsPattern(pattern, options)
-    : utils.equalsPattern(pattern, options);
-};
-
-/**
- * Returns true if the given (original) filepath or unixified path are equal
- * to the given pattern.
- */
-
-utils._equals = function(filepath, unixPath, pattern) {
-  return pattern === filepath || pattern === unixPath;
-};
-
-/**
- * Returns true if the given (original) filepath or unixified path contain
- * the given pattern.
- */
-
-utils._contains = function(filepath, unixPath, pattern) {
-  return filepath.indexOf(pattern) !== -1 || unixPath.indexOf(pattern) !== -1;
-};
-
-/**
- * Returns a function that returns true if the given
- * pattern is the same as a given `filepath`
- *
- * @param {String} `pattern`
- * @return {Function}
- */
-
-utils.equalsPattern = function(pattern, options) {
-  var unixify = utils.unixify(options);
-  options = options || {};
-
-  return function fn(filepath) {
-    var equal = utils._equals(filepath, unixify(filepath), pattern);
-    if (equal === true || options.nocase !== true) {
-      return equal;
-    }
-    var lower = filepath.toLowerCase();
-    return utils._equals(lower, unixify(lower), pattern);
-  };
-};
-
-/**
- * Returns a function that returns true if the given
- * pattern contains a `filepath`
- *
- * @param {String} `pattern`
- * @return {Function}
- */
-
-utils.containsPattern = function(pattern, options) {
-  var unixify = utils.unixify(options);
-  options = options || {};
-
-  return function(filepath) {
-    var contains = utils._contains(filepath, unixify(filepath), pattern);
-    if (contains === true || options.nocase !== true) {
-      return contains;
-    }
-    var lower = filepath.toLowerCase();
-    return utils._contains(lower, unixify(lower), pattern);
-  };
-};
-
-/**
- * Returns a function that returns true if the given
- * regex matches the `filename` of a file path.
- *
- * @param {RegExp} `re` Matching regex
- * @return {Function}
- */
-
-utils.matchBasename = function(re) {
-  return function(filepath) {
-    return re.test(path.basename(filepath));
-  };
-};
-
-/**
- * Determines the filepath to return based on the provided options.
- * @return {any}
- */
-
-utils.value = function(str, unixify, options) {
-  if (options && options.unixify === false) {
-    return str;
-  }
-  return unixify(str);
-};
-
-/**
- * Returns a function that normalizes slashes in a string to forward
- * slashes, strips `./` from beginning of paths, and optionally unescapes
- * special characters.
- * @return {Function}
- */
-
-utils.unixify = function(options) {
-  options = options || {};
-  return function(filepath) {
-    if (utils.isWindows() || options.unixify === true) {
-      filepath = utils.toPosixPath(filepath);
-    }
-    if (options.stripPrefix !== false) {
-      filepath = utils.stripPrefix(filepath);
-    }
-    if (options.unescape === true) {
-      filepath = utils.unescape(filepath);
-    }
-    return filepath;
-  };
-};
-
-
-/***/ }),
-
-/***/ 2209:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-/*!
- * define-property <https://github.com/jonschlinkert/define-property>
- *
- * Copyright (c) 2015-2018, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isobject = __webpack_require__(5509);
-var isDescriptor = __webpack_require__(567);
-var define = (typeof Reflect !== 'undefined' && Reflect.defineProperty)
-  ? Reflect.defineProperty
-  : Object.defineProperty;
-
-module.exports = function defineProperty(obj, key, val) {
-  if (!isobject(obj) && typeof obj !== 'function' && !Array.isArray(obj)) {
-    throw new TypeError('expected an object, function, or array');
-  }
-
-  if (typeof key !== 'string') {
-    throw new TypeError('expected "key" to be a string');
-  }
-
-  if (isDescriptor(val)) {
-    define(obj, key, val);
-    return obj;
-  }
-
-  define(obj, key, {
-    configurable: true,
-    enumerable: false,
-    writable: true,
-    value: val
-  });
-
-  return obj;
-};
-
-
-/***/ }),
-
-/***/ 8710:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var isExtendable = __webpack_require__(6007);
-var assignSymbols = __webpack_require__(8782);
-
-module.exports = Object.assign || function(obj/*, objects*/) {
-  if (obj === null || typeof obj === 'undefined') {
-    throw new TypeError('Cannot convert undefined or null to object');
-  }
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  for (var i = 1; i < arguments.length; i++) {
-    var val = arguments[i];
-    if (isString(val)) {
-      val = toObject(val);
-    }
-    if (isObject(val)) {
-      assign(obj, val);
-      assignSymbols(obj, val);
-    }
-  }
-  return obj;
-};
-
-function assign(a, b) {
-  for (var key in b) {
-    if (hasOwn(b, key)) {
-      a[key] = b[key];
-    }
-  }
-}
-
-function isString(val) {
-  return (val && typeof val === 'string');
-}
-
-function toObject(str) {
-  var obj = {};
-  for (var i in str) {
-    obj[i] = str[i];
-  }
-  return obj;
-}
-
-function isObject(val) {
-  return (val && typeof val === 'object') || isExtendable(val);
-}
-
-/**
- * Returns true if the given `key` is an own property of `obj`.
- */
-
-function hasOwn(obj, key) {
-  return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function isEnum(obj, key) {
-  return Object.prototype.propertyIsEnumerable.call(obj, key);
-}
-
-
-/***/ }),
-
-/***/ 6007:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-/*!
- * is-extendable <https://github.com/jonschlinkert/is-extendable>
- *
- * Copyright (c) 2015-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var isPlainObject = __webpack_require__(7810);
-
-module.exports = function isExtendable(val) {
-  return isPlainObject(val) || typeof val === 'function' || Array.isArray(val);
-};
 
 
 /***/ }),
@@ -44234,6 +43240,10 @@ module.exports = function isExtendable(val) {
 
 
 module.exports = function repeat(ele, num) {
+  if (Array.prototype.fill) {
+    return new Array(num).fill(ele);
+  }
+
   var arr = new Array(num);
 
   for (var i = 0; i < num; i++) {
@@ -45354,25 +44364,6 @@ if (process.platform === 'linux') {
     'SIGUNUSED'
   )
 }
-
-
-/***/ }),
-
-/***/ 7543:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = input => {
-	const isExtendedLengthPath = /^\\\\\?\\/.test(input);
-	const hasNonAscii = /[^\u0000-\u0080]+/.test(input); // eslint-disable-line no-control-regex
-
-	if (isExtendedLengthPath || hasNonAscii) {
-		return input;
-	}
-
-	return input.replace(/\\/g, '/');
-};
 
 
 /***/ }),
@@ -53513,308 +52504,6 @@ module.exports = function kindOf(val) {
 
 /***/ }),
 
-/***/ 1861:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-/*!
- * to-regex-range <https://github.com/jonschlinkert/to-regex-range>
- *
- * Copyright (c) 2015, 2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var repeat = __webpack_require__(6976);
-var isNumber = __webpack_require__(5680);
-var cache = {};
-
-function toRegexRange(min, max, options) {
-  if (isNumber(min) === false) {
-    throw new RangeError('toRegexRange: first argument is invalid.');
-  }
-
-  if (typeof max === 'undefined' || min === max) {
-    return String(min);
-  }
-
-  if (isNumber(max) === false) {
-    throw new RangeError('toRegexRange: second argument is invalid.');
-  }
-
-  options = options || {};
-  var relax = String(options.relaxZeros);
-  var shorthand = String(options.shorthand);
-  var capture = String(options.capture);
-  var key = min + ':' + max + '=' + relax + shorthand + capture;
-  if (cache.hasOwnProperty(key)) {
-    return cache[key].result;
-  }
-
-  var a = Math.min(min, max);
-  var b = Math.max(min, max);
-
-  if (Math.abs(a - b) === 1) {
-    var result = min + '|' + max;
-    if (options.capture) {
-      return '(' + result + ')';
-    }
-    return result;
-  }
-
-  var isPadded = padding(min) || padding(max);
-  var positives = [];
-  var negatives = [];
-
-  var tok = {min: min, max: max, a: a, b: b};
-  if (isPadded) {
-    tok.isPadded = isPadded;
-    tok.maxLen = String(tok.max).length;
-  }
-
-  if (a < 0) {
-    var newMin = b < 0 ? Math.abs(b) : 1;
-    var newMax = Math.abs(a);
-    negatives = splitToPatterns(newMin, newMax, tok, options);
-    a = tok.a = 0;
-  }
-
-  if (b >= 0) {
-    positives = splitToPatterns(a, b, tok, options);
-  }
-
-  tok.negatives = negatives;
-  tok.positives = positives;
-  tok.result = siftPatterns(negatives, positives, options);
-
-  if (options.capture && (positives.length + negatives.length) > 1) {
-    tok.result = '(' + tok.result + ')';
-  }
-
-  cache[key] = tok;
-  return tok.result;
-}
-
-function siftPatterns(neg, pos, options) {
-  var onlyNegative = filterPatterns(neg, pos, '-', false, options) || [];
-  var onlyPositive = filterPatterns(pos, neg, '', false, options) || [];
-  var intersected = filterPatterns(neg, pos, '-?', true, options) || [];
-  var subpatterns = onlyNegative.concat(intersected).concat(onlyPositive);
-  return subpatterns.join('|');
-}
-
-function splitToRanges(min, max) {
-  min = Number(min);
-  max = Number(max);
-
-  var nines = 1;
-  var stops = [max];
-  var stop = +countNines(min, nines);
-
-  while (min <= stop && stop <= max) {
-    stops = push(stops, stop);
-    nines += 1;
-    stop = +countNines(min, nines);
-  }
-
-  var zeros = 1;
-  stop = countZeros(max + 1, zeros) - 1;
-
-  while (min < stop && stop <= max) {
-    stops = push(stops, stop);
-    zeros += 1;
-    stop = countZeros(max + 1, zeros) - 1;
-  }
-
-  stops.sort(compare);
-  return stops;
-}
-
-/**
- * Convert a range to a regex pattern
- * @param {Number} `start`
- * @param {Number} `stop`
- * @return {String}
- */
-
-function rangeToPattern(start, stop, options) {
-  if (start === stop) {
-    return {pattern: String(start), digits: []};
-  }
-
-  var zipped = zip(String(start), String(stop));
-  var len = zipped.length, i = -1;
-
-  var pattern = '';
-  var digits = 0;
-
-  while (++i < len) {
-    var numbers = zipped[i];
-    var startDigit = numbers[0];
-    var stopDigit = numbers[1];
-
-    if (startDigit === stopDigit) {
-      pattern += startDigit;
-
-    } else if (startDigit !== '0' || stopDigit !== '9') {
-      pattern += toCharacterClass(startDigit, stopDigit);
-
-    } else {
-      digits += 1;
-    }
-  }
-
-  if (digits) {
-    pattern += options.shorthand ? '\\d' : '[0-9]';
-  }
-
-  return { pattern: pattern, digits: [digits] };
-}
-
-function splitToPatterns(min, max, tok, options) {
-  var ranges = splitToRanges(min, max);
-  var len = ranges.length;
-  var idx = -1;
-
-  var tokens = [];
-  var start = min;
-  var prev;
-
-  while (++idx < len) {
-    var range = ranges[idx];
-    var obj = rangeToPattern(start, range, options);
-    var zeros = '';
-
-    if (!tok.isPadded && prev && prev.pattern === obj.pattern) {
-      if (prev.digits.length > 1) {
-        prev.digits.pop();
-      }
-      prev.digits.push(obj.digits[0]);
-      prev.string = prev.pattern + toQuantifier(prev.digits);
-      start = range + 1;
-      continue;
-    }
-
-    if (tok.isPadded) {
-      zeros = padZeros(range, tok);
-    }
-
-    obj.string = zeros + obj.pattern + toQuantifier(obj.digits);
-    tokens.push(obj);
-    start = range + 1;
-    prev = obj;
-  }
-
-  return tokens;
-}
-
-function filterPatterns(arr, comparison, prefix, intersection, options) {
-  var res = [];
-
-  for (var i = 0; i < arr.length; i++) {
-    var tok = arr[i];
-    var ele = tok.string;
-
-    if (options.relaxZeros !== false) {
-      if (prefix === '-' && ele.charAt(0) === '0') {
-        if (ele.charAt(1) === '{') {
-          ele = '0*' + ele.replace(/^0\{\d+\}/, '');
-        } else {
-          ele = '0*' + ele.slice(1);
-        }
-      }
-    }
-
-    if (!intersection && !contains(comparison, 'string', ele)) {
-      res.push(prefix + ele);
-    }
-
-    if (intersection && contains(comparison, 'string', ele)) {
-      res.push(prefix + ele);
-    }
-  }
-  return res;
-}
-
-/**
- * Zip strings (`for in` can be used on string characters)
- */
-
-function zip(a, b) {
-  var arr = [];
-  for (var ch in a) arr.push([a[ch], b[ch]]);
-  return arr;
-}
-
-function compare(a, b) {
-  return a > b ? 1 : b > a ? -1 : 0;
-}
-
-function push(arr, ele) {
-  if (arr.indexOf(ele) === -1) arr.push(ele);
-  return arr;
-}
-
-function contains(arr, key, val) {
-  for (var i = 0; i < arr.length; i++) {
-    if (arr[i][key] === val) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function countNines(min, len) {
-  return String(min).slice(0, -len) + repeat('9', len);
-}
-
-function countZeros(integer, zeros) {
-  return integer - (integer % Math.pow(10, zeros));
-}
-
-function toQuantifier(digits) {
-  var start = digits[0];
-  var stop = digits[1] ? (',' + digits[1]) : '';
-  if (!stop && (!start || start === 1)) {
-    return '';
-  }
-  return '{' + start + stop + '}';
-}
-
-function toCharacterClass(a, b) {
-  return '[' + a + ((b - a === 1) ? '' : '-') + b + ']';
-}
-
-function padding(str) {
-  return /^-?(0+)\d/.exec(str);
-}
-
-function padZeros(val, tok) {
-  if (tok.isPadded) {
-    var diff = Math.abs(tok.maxLen - String(val).length);
-    switch (diff) {
-      case 0:
-        return '';
-      case 1:
-        return '0';
-      default: {
-        return '0{' + diff + '}';
-      }
-    }
-  }
-  return val;
-}
-
-/**
- * Expose `toRegexRange`
- */
-
-module.exports = toRegexRange;
-
-
-/***/ }),
-
 /***/ 6855:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -54995,13 +53684,67 @@ module.exports = () => {
 
 /***/ }),
 
+/***/ 5938:
+/***/ ((module) => {
+
+"use strict";
+
+/* eslint-disable yoda */
+module.exports = x => {
+	if (Number.isNaN(x)) {
+		return false;
+	}
+
+	// code points are derived from:
+	// http://www.unix.org/Public/UNIDATA/EastAsianWidth.txt
+	if (
+		x >= 0x1100 && (
+			x <= 0x115f ||  // Hangul Jamo
+			x === 0x2329 || // LEFT-POINTING ANGLE BRACKET
+			x === 0x232a || // RIGHT-POINTING ANGLE BRACKET
+			// CJK Radicals Supplement .. Enclosed CJK Letters and Months
+			(0x2e80 <= x && x <= 0x3247 && x !== 0x303f) ||
+			// Enclosed CJK Letters and Months .. CJK Unified Ideographs Extension A
+			(0x3250 <= x && x <= 0x4dbf) ||
+			// CJK Unified Ideographs .. Yi Radicals
+			(0x4e00 <= x && x <= 0xa4c6) ||
+			// Hangul Jamo Extended-A
+			(0xa960 <= x && x <= 0xa97c) ||
+			// Hangul Syllables
+			(0xac00 <= x && x <= 0xd7a3) ||
+			// CJK Compatibility Ideographs
+			(0xf900 <= x && x <= 0xfaff) ||
+			// Vertical Forms
+			(0xfe10 <= x && x <= 0xfe19) ||
+			// CJK Compatibility Forms .. Small Form Variants
+			(0xfe30 <= x && x <= 0xfe6b) ||
+			// Halfwidth and Fullwidth Forms
+			(0xff01 <= x && x <= 0xff60) ||
+			(0xffe0 <= x && x <= 0xffe6) ||
+			// Kana Supplement
+			(0x1b000 <= x && x <= 0x1b001) ||
+			// Enclosed Ideographic Supplement
+			(0x1f200 <= x && x <= 0x1f251) ||
+			// CJK Unified Ideographs Extension B .. Tertiary Ideographic Plane
+			(0x20000 <= x && x <= 0x3fffd)
+		)
+	) {
+		return true;
+	}
+
+	return false;
+};
+
+
+/***/ }),
+
 /***/ 3845:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
 const stripAnsi = __webpack_require__(7588);
-const isFullwidthCodePoint = __webpack_require__(4882);
+const isFullwidthCodePoint = __webpack_require__(5938);
 
 module.exports = str => {
 	if (typeof str !== 'string' || str.length === 0) {
@@ -55346,7 +54089,7 @@ const path = __webpack_require__(5622);
 const fs = __webpack_require__(7758);
 const writeFileAtomic = __webpack_require__(2221);
 const sortKeys = __webpack_require__(5603);
-const makeDir = __webpack_require__(9126);
+const makeDir = __webpack_require__(4867);
 const pify = __webpack_require__(4810);
 const detectIndent = __webpack_require__(3084);
 
@@ -55421,6 +54164,1643 @@ module.exports.sync = (filePath, data, options) => {
 
 /***/ }),
 
+/***/ 4867:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+const fs = __webpack_require__(5747);
+const path = __webpack_require__(5622);
+const pify = __webpack_require__(4810);
+const semver = __webpack_require__(1442);
+
+const defaults = {
+	mode: 0o777 & (~process.umask()),
+	fs
+};
+
+const useNativeRecursiveOption = semver.satisfies(process.version, '>=10.12.0');
+
+// https://github.com/nodejs/node/issues/8987
+// https://github.com/libuv/libuv/pull/1088
+const checkPath = pth => {
+	if (process.platform === 'win32') {
+		const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path.parse(pth).root, ''));
+
+		if (pathHasInvalidWinCharacters) {
+			const error = new Error(`Path contains invalid characters: ${pth}`);
+			error.code = 'EINVAL';
+			throw error;
+		}
+	}
+};
+
+const permissionError = pth => {
+	// This replicates the exception of `fs.mkdir` with native the
+	// `recusive` option when run on an invalid drive under Windows.
+	const error = new Error(`operation not permitted, mkdir '${pth}'`);
+	error.code = 'EPERM';
+	error.errno = -4048;
+	error.path = pth;
+	error.syscall = 'mkdir';
+	return error;
+};
+
+const makeDir = (input, options) => Promise.resolve().then(() => {
+	checkPath(input);
+	options = Object.assign({}, defaults, options);
+
+	// TODO: Use util.promisify when targeting Node.js 8
+	const mkdir = pify(options.fs.mkdir);
+	const stat = pify(options.fs.stat);
+
+	if (useNativeRecursiveOption && options.fs.mkdir === fs.mkdir) {
+		const pth = path.resolve(input);
+
+		return mkdir(pth, {
+			mode: options.mode,
+			recursive: true
+		}).then(() => pth);
+	}
+
+	const make = pth => {
+		return mkdir(pth, options.mode)
+			.then(() => pth)
+			.catch(error => {
+				if (error.code === 'EPERM') {
+					throw error;
+				}
+
+				if (error.code === 'ENOENT') {
+					if (path.dirname(pth) === pth) {
+						throw permissionError(pth);
+					}
+
+					if (error.message.includes('null bytes')) {
+						throw error;
+					}
+
+					return make(path.dirname(pth)).then(() => make(pth));
+				}
+
+				return stat(pth)
+					.then(stats => stats.isDirectory() ? pth : Promise.reject())
+					.catch(() => {
+						throw error;
+					});
+			});
+	};
+
+	return make(path.resolve(input));
+});
+
+module.exports = makeDir;
+module.exports.default = makeDir;
+
+module.exports.sync = (input, options) => {
+	checkPath(input);
+	options = Object.assign({}, defaults, options);
+
+	if (useNativeRecursiveOption && options.fs.mkdirSync === fs.mkdirSync) {
+		const pth = path.resolve(input);
+
+		fs.mkdirSync(pth, {
+			mode: options.mode,
+			recursive: true
+		});
+
+		return pth;
+	}
+
+	const make = pth => {
+		try {
+			options.fs.mkdirSync(pth, options.mode);
+		} catch (error) {
+			if (error.code === 'EPERM') {
+				throw error;
+			}
+
+			if (error.code === 'ENOENT') {
+				if (path.dirname(pth) === pth) {
+					throw permissionError(pth);
+				}
+
+				if (error.message.includes('null bytes')) {
+					throw error;
+				}
+
+				make(path.dirname(pth));
+				return make(pth);
+			}
+
+			try {
+				if (!options.fs.statSync(pth).isDirectory()) {
+					throw new Error('The path is not a directory');
+				}
+			} catch (_) {
+				throw error;
+			}
+		}
+
+		return pth;
+	};
+
+	return make(path.resolve(input));
+};
+
+
+/***/ }),
+
+/***/ 1442:
+/***/ ((module, exports) => {
+
+exports = module.exports = SemVer
+
+var debug
+/* istanbul ignore next */
+if (typeof process === 'object' &&
+    process.env &&
+    process.env.NODE_DEBUG &&
+    /\bsemver\b/i.test(process.env.NODE_DEBUG)) {
+  debug = function () {
+    var args = Array.prototype.slice.call(arguments, 0)
+    args.unshift('SEMVER')
+    console.log.apply(console, args)
+  }
+} else {
+  debug = function () {}
+}
+
+// Note: this is the semver.org version of the spec that it implements
+// Not necessarily the package version of this code.
+exports.SEMVER_SPEC_VERSION = '2.0.0'
+
+var MAX_LENGTH = 256
+var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
+  /* istanbul ignore next */ 9007199254740991
+
+// Max safe segment length for coercion.
+var MAX_SAFE_COMPONENT_LENGTH = 16
+
+// The actual regexps go on exports.re
+var re = exports.re = []
+var src = exports.src = []
+var R = 0
+
+// The following Regular Expressions can be used for tokenizing,
+// validating, and parsing SemVer version strings.
+
+// ## Numeric Identifier
+// A single `0`, or a non-zero digit followed by zero or more digits.
+
+var NUMERICIDENTIFIER = R++
+src[NUMERICIDENTIFIER] = '0|[1-9]\\d*'
+var NUMERICIDENTIFIERLOOSE = R++
+src[NUMERICIDENTIFIERLOOSE] = '[0-9]+'
+
+// ## Non-numeric Identifier
+// Zero or more digits, followed by a letter or hyphen, and then zero or
+// more letters, digits, or hyphens.
+
+var NONNUMERICIDENTIFIER = R++
+src[NONNUMERICIDENTIFIER] = '\\d*[a-zA-Z-][a-zA-Z0-9-]*'
+
+// ## Main Version
+// Three dot-separated numeric identifiers.
+
+var MAINVERSION = R++
+src[MAINVERSION] = '(' + src[NUMERICIDENTIFIER] + ')\\.' +
+                   '(' + src[NUMERICIDENTIFIER] + ')\\.' +
+                   '(' + src[NUMERICIDENTIFIER] + ')'
+
+var MAINVERSIONLOOSE = R++
+src[MAINVERSIONLOOSE] = '(' + src[NUMERICIDENTIFIERLOOSE] + ')\\.' +
+                        '(' + src[NUMERICIDENTIFIERLOOSE] + ')\\.' +
+                        '(' + src[NUMERICIDENTIFIERLOOSE] + ')'
+
+// ## Pre-release Version Identifier
+// A numeric identifier, or a non-numeric identifier.
+
+var PRERELEASEIDENTIFIER = R++
+src[PRERELEASEIDENTIFIER] = '(?:' + src[NUMERICIDENTIFIER] +
+                            '|' + src[NONNUMERICIDENTIFIER] + ')'
+
+var PRERELEASEIDENTIFIERLOOSE = R++
+src[PRERELEASEIDENTIFIERLOOSE] = '(?:' + src[NUMERICIDENTIFIERLOOSE] +
+                                 '|' + src[NONNUMERICIDENTIFIER] + ')'
+
+// ## Pre-release Version
+// Hyphen, followed by one or more dot-separated pre-release version
+// identifiers.
+
+var PRERELEASE = R++
+src[PRERELEASE] = '(?:-(' + src[PRERELEASEIDENTIFIER] +
+                  '(?:\\.' + src[PRERELEASEIDENTIFIER] + ')*))'
+
+var PRERELEASELOOSE = R++
+src[PRERELEASELOOSE] = '(?:-?(' + src[PRERELEASEIDENTIFIERLOOSE] +
+                       '(?:\\.' + src[PRERELEASEIDENTIFIERLOOSE] + ')*))'
+
+// ## Build Metadata Identifier
+// Any combination of digits, letters, or hyphens.
+
+var BUILDIDENTIFIER = R++
+src[BUILDIDENTIFIER] = '[0-9A-Za-z-]+'
+
+// ## Build Metadata
+// Plus sign, followed by one or more period-separated build metadata
+// identifiers.
+
+var BUILD = R++
+src[BUILD] = '(?:\\+(' + src[BUILDIDENTIFIER] +
+             '(?:\\.' + src[BUILDIDENTIFIER] + ')*))'
+
+// ## Full Version String
+// A main version, followed optionally by a pre-release version and
+// build metadata.
+
+// Note that the only major, minor, patch, and pre-release sections of
+// the version string are capturing groups.  The build metadata is not a
+// capturing group, because it should not ever be used in version
+// comparison.
+
+var FULL = R++
+var FULLPLAIN = 'v?' + src[MAINVERSION] +
+                src[PRERELEASE] + '?' +
+                src[BUILD] + '?'
+
+src[FULL] = '^' + FULLPLAIN + '$'
+
+// like full, but allows v1.2.3 and =1.2.3, which people do sometimes.
+// also, 1.0.0alpha1 (prerelease without the hyphen) which is pretty
+// common in the npm registry.
+var LOOSEPLAIN = '[v=\\s]*' + src[MAINVERSIONLOOSE] +
+                 src[PRERELEASELOOSE] + '?' +
+                 src[BUILD] + '?'
+
+var LOOSE = R++
+src[LOOSE] = '^' + LOOSEPLAIN + '$'
+
+var GTLT = R++
+src[GTLT] = '((?:<|>)?=?)'
+
+// Something like "2.*" or "1.2.x".
+// Note that "x.x" is a valid xRange identifer, meaning "any version"
+// Only the first item is strictly required.
+var XRANGEIDENTIFIERLOOSE = R++
+src[XRANGEIDENTIFIERLOOSE] = src[NUMERICIDENTIFIERLOOSE] + '|x|X|\\*'
+var XRANGEIDENTIFIER = R++
+src[XRANGEIDENTIFIER] = src[NUMERICIDENTIFIER] + '|x|X|\\*'
+
+var XRANGEPLAIN = R++
+src[XRANGEPLAIN] = '[v=\\s]*(' + src[XRANGEIDENTIFIER] + ')' +
+                   '(?:\\.(' + src[XRANGEIDENTIFIER] + ')' +
+                   '(?:\\.(' + src[XRANGEIDENTIFIER] + ')' +
+                   '(?:' + src[PRERELEASE] + ')?' +
+                   src[BUILD] + '?' +
+                   ')?)?'
+
+var XRANGEPLAINLOOSE = R++
+src[XRANGEPLAINLOOSE] = '[v=\\s]*(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
+                        '(?:\\.(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
+                        '(?:\\.(' + src[XRANGEIDENTIFIERLOOSE] + ')' +
+                        '(?:' + src[PRERELEASELOOSE] + ')?' +
+                        src[BUILD] + '?' +
+                        ')?)?'
+
+var XRANGE = R++
+src[XRANGE] = '^' + src[GTLT] + '\\s*' + src[XRANGEPLAIN] + '$'
+var XRANGELOOSE = R++
+src[XRANGELOOSE] = '^' + src[GTLT] + '\\s*' + src[XRANGEPLAINLOOSE] + '$'
+
+// Coercion.
+// Extract anything that could conceivably be a part of a valid semver
+var COERCE = R++
+src[COERCE] = '(?:^|[^\\d])' +
+              '(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '})' +
+              '(?:\\.(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '}))?' +
+              '(?:\\.(\\d{1,' + MAX_SAFE_COMPONENT_LENGTH + '}))?' +
+              '(?:$|[^\\d])'
+
+// Tilde ranges.
+// Meaning is "reasonably at or greater than"
+var LONETILDE = R++
+src[LONETILDE] = '(?:~>?)'
+
+var TILDETRIM = R++
+src[TILDETRIM] = '(\\s*)' + src[LONETILDE] + '\\s+'
+re[TILDETRIM] = new RegExp(src[TILDETRIM], 'g')
+var tildeTrimReplace = '$1~'
+
+var TILDE = R++
+src[TILDE] = '^' + src[LONETILDE] + src[XRANGEPLAIN] + '$'
+var TILDELOOSE = R++
+src[TILDELOOSE] = '^' + src[LONETILDE] + src[XRANGEPLAINLOOSE] + '$'
+
+// Caret ranges.
+// Meaning is "at least and backwards compatible with"
+var LONECARET = R++
+src[LONECARET] = '(?:\\^)'
+
+var CARETTRIM = R++
+src[CARETTRIM] = '(\\s*)' + src[LONECARET] + '\\s+'
+re[CARETTRIM] = new RegExp(src[CARETTRIM], 'g')
+var caretTrimReplace = '$1^'
+
+var CARET = R++
+src[CARET] = '^' + src[LONECARET] + src[XRANGEPLAIN] + '$'
+var CARETLOOSE = R++
+src[CARETLOOSE] = '^' + src[LONECARET] + src[XRANGEPLAINLOOSE] + '$'
+
+// A simple gt/lt/eq thing, or just "" to indicate "any version"
+var COMPARATORLOOSE = R++
+src[COMPARATORLOOSE] = '^' + src[GTLT] + '\\s*(' + LOOSEPLAIN + ')$|^$'
+var COMPARATOR = R++
+src[COMPARATOR] = '^' + src[GTLT] + '\\s*(' + FULLPLAIN + ')$|^$'
+
+// An expression to strip any whitespace between the gtlt and the thing
+// it modifies, so that `> 1.2.3` ==> `>1.2.3`
+var COMPARATORTRIM = R++
+src[COMPARATORTRIM] = '(\\s*)' + src[GTLT] +
+                      '\\s*(' + LOOSEPLAIN + '|' + src[XRANGEPLAIN] + ')'
+
+// this one has to use the /g flag
+re[COMPARATORTRIM] = new RegExp(src[COMPARATORTRIM], 'g')
+var comparatorTrimReplace = '$1$2$3'
+
+// Something like `1.2.3 - 1.2.4`
+// Note that these all use the loose form, because they'll be
+// checked against either the strict or loose comparator form
+// later.
+var HYPHENRANGE = R++
+src[HYPHENRANGE] = '^\\s*(' + src[XRANGEPLAIN] + ')' +
+                   '\\s+-\\s+' +
+                   '(' + src[XRANGEPLAIN] + ')' +
+                   '\\s*$'
+
+var HYPHENRANGELOOSE = R++
+src[HYPHENRANGELOOSE] = '^\\s*(' + src[XRANGEPLAINLOOSE] + ')' +
+                        '\\s+-\\s+' +
+                        '(' + src[XRANGEPLAINLOOSE] + ')' +
+                        '\\s*$'
+
+// Star ranges basically just allow anything at all.
+var STAR = R++
+src[STAR] = '(<|>)?=?\\s*\\*'
+
+// Compile to actual regexp objects.
+// All are flag-free, unless they were created above with a flag.
+for (var i = 0; i < R; i++) {
+  debug(i, src[i])
+  if (!re[i]) {
+    re[i] = new RegExp(src[i])
+  }
+}
+
+exports.parse = parse
+function parse (version, options) {
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
+  }
+
+  if (version instanceof SemVer) {
+    return version
+  }
+
+  if (typeof version !== 'string') {
+    return null
+  }
+
+  if (version.length > MAX_LENGTH) {
+    return null
+  }
+
+  var r = options.loose ? re[LOOSE] : re[FULL]
+  if (!r.test(version)) {
+    return null
+  }
+
+  try {
+    return new SemVer(version, options)
+  } catch (er) {
+    return null
+  }
+}
+
+exports.valid = valid
+function valid (version, options) {
+  var v = parse(version, options)
+  return v ? v.version : null
+}
+
+exports.clean = clean
+function clean (version, options) {
+  var s = parse(version.trim().replace(/^[=v]+/, ''), options)
+  return s ? s.version : null
+}
+
+exports.SemVer = SemVer
+
+function SemVer (version, options) {
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
+  }
+  if (version instanceof SemVer) {
+    if (version.loose === options.loose) {
+      return version
+    } else {
+      version = version.version
+    }
+  } else if (typeof version !== 'string') {
+    throw new TypeError('Invalid Version: ' + version)
+  }
+
+  if (version.length > MAX_LENGTH) {
+    throw new TypeError('version is longer than ' + MAX_LENGTH + ' characters')
+  }
+
+  if (!(this instanceof SemVer)) {
+    return new SemVer(version, options)
+  }
+
+  debug('SemVer', version, options)
+  this.options = options
+  this.loose = !!options.loose
+
+  var m = version.trim().match(options.loose ? re[LOOSE] : re[FULL])
+
+  if (!m) {
+    throw new TypeError('Invalid Version: ' + version)
+  }
+
+  this.raw = version
+
+  // these are actually numbers
+  this.major = +m[1]
+  this.minor = +m[2]
+  this.patch = +m[3]
+
+  if (this.major > MAX_SAFE_INTEGER || this.major < 0) {
+    throw new TypeError('Invalid major version')
+  }
+
+  if (this.minor > MAX_SAFE_INTEGER || this.minor < 0) {
+    throw new TypeError('Invalid minor version')
+  }
+
+  if (this.patch > MAX_SAFE_INTEGER || this.patch < 0) {
+    throw new TypeError('Invalid patch version')
+  }
+
+  // numberify any prerelease numeric ids
+  if (!m[4]) {
+    this.prerelease = []
+  } else {
+    this.prerelease = m[4].split('.').map(function (id) {
+      if (/^[0-9]+$/.test(id)) {
+        var num = +id
+        if (num >= 0 && num < MAX_SAFE_INTEGER) {
+          return num
+        }
+      }
+      return id
+    })
+  }
+
+  this.build = m[5] ? m[5].split('.') : []
+  this.format()
+}
+
+SemVer.prototype.format = function () {
+  this.version = this.major + '.' + this.minor + '.' + this.patch
+  if (this.prerelease.length) {
+    this.version += '-' + this.prerelease.join('.')
+  }
+  return this.version
+}
+
+SemVer.prototype.toString = function () {
+  return this.version
+}
+
+SemVer.prototype.compare = function (other) {
+  debug('SemVer.compare', this.version, this.options, other)
+  if (!(other instanceof SemVer)) {
+    other = new SemVer(other, this.options)
+  }
+
+  return this.compareMain(other) || this.comparePre(other)
+}
+
+SemVer.prototype.compareMain = function (other) {
+  if (!(other instanceof SemVer)) {
+    other = new SemVer(other, this.options)
+  }
+
+  return compareIdentifiers(this.major, other.major) ||
+         compareIdentifiers(this.minor, other.minor) ||
+         compareIdentifiers(this.patch, other.patch)
+}
+
+SemVer.prototype.comparePre = function (other) {
+  if (!(other instanceof SemVer)) {
+    other = new SemVer(other, this.options)
+  }
+
+  // NOT having a prerelease is > having one
+  if (this.prerelease.length && !other.prerelease.length) {
+    return -1
+  } else if (!this.prerelease.length && other.prerelease.length) {
+    return 1
+  } else if (!this.prerelease.length && !other.prerelease.length) {
+    return 0
+  }
+
+  var i = 0
+  do {
+    var a = this.prerelease[i]
+    var b = other.prerelease[i]
+    debug('prerelease compare', i, a, b)
+    if (a === undefined && b === undefined) {
+      return 0
+    } else if (b === undefined) {
+      return 1
+    } else if (a === undefined) {
+      return -1
+    } else if (a === b) {
+      continue
+    } else {
+      return compareIdentifiers(a, b)
+    }
+  } while (++i)
+}
+
+// preminor will bump the version up to the next minor release, and immediately
+// down to pre-release. premajor and prepatch work the same way.
+SemVer.prototype.inc = function (release, identifier) {
+  switch (release) {
+    case 'premajor':
+      this.prerelease.length = 0
+      this.patch = 0
+      this.minor = 0
+      this.major++
+      this.inc('pre', identifier)
+      break
+    case 'preminor':
+      this.prerelease.length = 0
+      this.patch = 0
+      this.minor++
+      this.inc('pre', identifier)
+      break
+    case 'prepatch':
+      // If this is already a prerelease, it will bump to the next version
+      // drop any prereleases that might already exist, since they are not
+      // relevant at this point.
+      this.prerelease.length = 0
+      this.inc('patch', identifier)
+      this.inc('pre', identifier)
+      break
+    // If the input is a non-prerelease version, this acts the same as
+    // prepatch.
+    case 'prerelease':
+      if (this.prerelease.length === 0) {
+        this.inc('patch', identifier)
+      }
+      this.inc('pre', identifier)
+      break
+
+    case 'major':
+      // If this is a pre-major version, bump up to the same major version.
+      // Otherwise increment major.
+      // 1.0.0-5 bumps to 1.0.0
+      // 1.1.0 bumps to 2.0.0
+      if (this.minor !== 0 ||
+          this.patch !== 0 ||
+          this.prerelease.length === 0) {
+        this.major++
+      }
+      this.minor = 0
+      this.patch = 0
+      this.prerelease = []
+      break
+    case 'minor':
+      // If this is a pre-minor version, bump up to the same minor version.
+      // Otherwise increment minor.
+      // 1.2.0-5 bumps to 1.2.0
+      // 1.2.1 bumps to 1.3.0
+      if (this.patch !== 0 || this.prerelease.length === 0) {
+        this.minor++
+      }
+      this.patch = 0
+      this.prerelease = []
+      break
+    case 'patch':
+      // If this is not a pre-release version, it will increment the patch.
+      // If it is a pre-release it will bump up to the same patch version.
+      // 1.2.0-5 patches to 1.2.0
+      // 1.2.0 patches to 1.2.1
+      if (this.prerelease.length === 0) {
+        this.patch++
+      }
+      this.prerelease = []
+      break
+    // This probably shouldn't be used publicly.
+    // 1.0.0 "pre" would become 1.0.0-0 which is the wrong direction.
+    case 'pre':
+      if (this.prerelease.length === 0) {
+        this.prerelease = [0]
+      } else {
+        var i = this.prerelease.length
+        while (--i >= 0) {
+          if (typeof this.prerelease[i] === 'number') {
+            this.prerelease[i]++
+            i = -2
+          }
+        }
+        if (i === -1) {
+          // didn't increment anything
+          this.prerelease.push(0)
+        }
+      }
+      if (identifier) {
+        // 1.2.0-beta.1 bumps to 1.2.0-beta.2,
+        // 1.2.0-beta.fooblz or 1.2.0-beta bumps to 1.2.0-beta.0
+        if (this.prerelease[0] === identifier) {
+          if (isNaN(this.prerelease[1])) {
+            this.prerelease = [identifier, 0]
+          }
+        } else {
+          this.prerelease = [identifier, 0]
+        }
+      }
+      break
+
+    default:
+      throw new Error('invalid increment argument: ' + release)
+  }
+  this.format()
+  this.raw = this.version
+  return this
+}
+
+exports.inc = inc
+function inc (version, release, loose, identifier) {
+  if (typeof (loose) === 'string') {
+    identifier = loose
+    loose = undefined
+  }
+
+  try {
+    return new SemVer(version, loose).inc(release, identifier).version
+  } catch (er) {
+    return null
+  }
+}
+
+exports.diff = diff
+function diff (version1, version2) {
+  if (eq(version1, version2)) {
+    return null
+  } else {
+    var v1 = parse(version1)
+    var v2 = parse(version2)
+    var prefix = ''
+    if (v1.prerelease.length || v2.prerelease.length) {
+      prefix = 'pre'
+      var defaultResult = 'prerelease'
+    }
+    for (var key in v1) {
+      if (key === 'major' || key === 'minor' || key === 'patch') {
+        if (v1[key] !== v2[key]) {
+          return prefix + key
+        }
+      }
+    }
+    return defaultResult // may be undefined
+  }
+}
+
+exports.compareIdentifiers = compareIdentifiers
+
+var numeric = /^[0-9]+$/
+function compareIdentifiers (a, b) {
+  var anum = numeric.test(a)
+  var bnum = numeric.test(b)
+
+  if (anum && bnum) {
+    a = +a
+    b = +b
+  }
+
+  return a === b ? 0
+    : (anum && !bnum) ? -1
+    : (bnum && !anum) ? 1
+    : a < b ? -1
+    : 1
+}
+
+exports.rcompareIdentifiers = rcompareIdentifiers
+function rcompareIdentifiers (a, b) {
+  return compareIdentifiers(b, a)
+}
+
+exports.major = major
+function major (a, loose) {
+  return new SemVer(a, loose).major
+}
+
+exports.minor = minor
+function minor (a, loose) {
+  return new SemVer(a, loose).minor
+}
+
+exports.patch = patch
+function patch (a, loose) {
+  return new SemVer(a, loose).patch
+}
+
+exports.compare = compare
+function compare (a, b, loose) {
+  return new SemVer(a, loose).compare(new SemVer(b, loose))
+}
+
+exports.compareLoose = compareLoose
+function compareLoose (a, b) {
+  return compare(a, b, true)
+}
+
+exports.rcompare = rcompare
+function rcompare (a, b, loose) {
+  return compare(b, a, loose)
+}
+
+exports.sort = sort
+function sort (list, loose) {
+  return list.sort(function (a, b) {
+    return exports.compare(a, b, loose)
+  })
+}
+
+exports.rsort = rsort
+function rsort (list, loose) {
+  return list.sort(function (a, b) {
+    return exports.rcompare(a, b, loose)
+  })
+}
+
+exports.gt = gt
+function gt (a, b, loose) {
+  return compare(a, b, loose) > 0
+}
+
+exports.lt = lt
+function lt (a, b, loose) {
+  return compare(a, b, loose) < 0
+}
+
+exports.eq = eq
+function eq (a, b, loose) {
+  return compare(a, b, loose) === 0
+}
+
+exports.neq = neq
+function neq (a, b, loose) {
+  return compare(a, b, loose) !== 0
+}
+
+exports.gte = gte
+function gte (a, b, loose) {
+  return compare(a, b, loose) >= 0
+}
+
+exports.lte = lte
+function lte (a, b, loose) {
+  return compare(a, b, loose) <= 0
+}
+
+exports.cmp = cmp
+function cmp (a, op, b, loose) {
+  switch (op) {
+    case '===':
+      if (typeof a === 'object')
+        a = a.version
+      if (typeof b === 'object')
+        b = b.version
+      return a === b
+
+    case '!==':
+      if (typeof a === 'object')
+        a = a.version
+      if (typeof b === 'object')
+        b = b.version
+      return a !== b
+
+    case '':
+    case '=':
+    case '==':
+      return eq(a, b, loose)
+
+    case '!=':
+      return neq(a, b, loose)
+
+    case '>':
+      return gt(a, b, loose)
+
+    case '>=':
+      return gte(a, b, loose)
+
+    case '<':
+      return lt(a, b, loose)
+
+    case '<=':
+      return lte(a, b, loose)
+
+    default:
+      throw new TypeError('Invalid operator: ' + op)
+  }
+}
+
+exports.Comparator = Comparator
+function Comparator (comp, options) {
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
+  }
+
+  if (comp instanceof Comparator) {
+    if (comp.loose === !!options.loose) {
+      return comp
+    } else {
+      comp = comp.value
+    }
+  }
+
+  if (!(this instanceof Comparator)) {
+    return new Comparator(comp, options)
+  }
+
+  debug('comparator', comp, options)
+  this.options = options
+  this.loose = !!options.loose
+  this.parse(comp)
+
+  if (this.semver === ANY) {
+    this.value = ''
+  } else {
+    this.value = this.operator + this.semver.version
+  }
+
+  debug('comp', this)
+}
+
+var ANY = {}
+Comparator.prototype.parse = function (comp) {
+  var r = this.options.loose ? re[COMPARATORLOOSE] : re[COMPARATOR]
+  var m = comp.match(r)
+
+  if (!m) {
+    throw new TypeError('Invalid comparator: ' + comp)
+  }
+
+  this.operator = m[1]
+  if (this.operator === '=') {
+    this.operator = ''
+  }
+
+  // if it literally is just '>' or '' then allow anything.
+  if (!m[2]) {
+    this.semver = ANY
+  } else {
+    this.semver = new SemVer(m[2], this.options.loose)
+  }
+}
+
+Comparator.prototype.toString = function () {
+  return this.value
+}
+
+Comparator.prototype.test = function (version) {
+  debug('Comparator.test', version, this.options.loose)
+
+  if (this.semver === ANY) {
+    return true
+  }
+
+  if (typeof version === 'string') {
+    version = new SemVer(version, this.options)
+  }
+
+  return cmp(version, this.operator, this.semver, this.options)
+}
+
+Comparator.prototype.intersects = function (comp, options) {
+  if (!(comp instanceof Comparator)) {
+    throw new TypeError('a Comparator is required')
+  }
+
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
+  }
+
+  var rangeTmp
+
+  if (this.operator === '') {
+    rangeTmp = new Range(comp.value, options)
+    return satisfies(this.value, rangeTmp, options)
+  } else if (comp.operator === '') {
+    rangeTmp = new Range(this.value, options)
+    return satisfies(comp.semver, rangeTmp, options)
+  }
+
+  var sameDirectionIncreasing =
+    (this.operator === '>=' || this.operator === '>') &&
+    (comp.operator === '>=' || comp.operator === '>')
+  var sameDirectionDecreasing =
+    (this.operator === '<=' || this.operator === '<') &&
+    (comp.operator === '<=' || comp.operator === '<')
+  var sameSemVer = this.semver.version === comp.semver.version
+  var differentDirectionsInclusive =
+    (this.operator === '>=' || this.operator === '<=') &&
+    (comp.operator === '>=' || comp.operator === '<=')
+  var oppositeDirectionsLessThan =
+    cmp(this.semver, '<', comp.semver, options) &&
+    ((this.operator === '>=' || this.operator === '>') &&
+    (comp.operator === '<=' || comp.operator === '<'))
+  var oppositeDirectionsGreaterThan =
+    cmp(this.semver, '>', comp.semver, options) &&
+    ((this.operator === '<=' || this.operator === '<') &&
+    (comp.operator === '>=' || comp.operator === '>'))
+
+  return sameDirectionIncreasing || sameDirectionDecreasing ||
+    (sameSemVer && differentDirectionsInclusive) ||
+    oppositeDirectionsLessThan || oppositeDirectionsGreaterThan
+}
+
+exports.Range = Range
+function Range (range, options) {
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
+  }
+
+  if (range instanceof Range) {
+    if (range.loose === !!options.loose &&
+        range.includePrerelease === !!options.includePrerelease) {
+      return range
+    } else {
+      return new Range(range.raw, options)
+    }
+  }
+
+  if (range instanceof Comparator) {
+    return new Range(range.value, options)
+  }
+
+  if (!(this instanceof Range)) {
+    return new Range(range, options)
+  }
+
+  this.options = options
+  this.loose = !!options.loose
+  this.includePrerelease = !!options.includePrerelease
+
+  // First, split based on boolean or ||
+  this.raw = range
+  this.set = range.split(/\s*\|\|\s*/).map(function (range) {
+    return this.parseRange(range.trim())
+  }, this).filter(function (c) {
+    // throw out any that are not relevant for whatever reason
+    return c.length
+  })
+
+  if (!this.set.length) {
+    throw new TypeError('Invalid SemVer Range: ' + range)
+  }
+
+  this.format()
+}
+
+Range.prototype.format = function () {
+  this.range = this.set.map(function (comps) {
+    return comps.join(' ').trim()
+  }).join('||').trim()
+  return this.range
+}
+
+Range.prototype.toString = function () {
+  return this.range
+}
+
+Range.prototype.parseRange = function (range) {
+  var loose = this.options.loose
+  range = range.trim()
+  // `1.2.3 - 1.2.4` => `>=1.2.3 <=1.2.4`
+  var hr = loose ? re[HYPHENRANGELOOSE] : re[HYPHENRANGE]
+  range = range.replace(hr, hyphenReplace)
+  debug('hyphen replace', range)
+  // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
+  range = range.replace(re[COMPARATORTRIM], comparatorTrimReplace)
+  debug('comparator trim', range, re[COMPARATORTRIM])
+
+  // `~ 1.2.3` => `~1.2.3`
+  range = range.replace(re[TILDETRIM], tildeTrimReplace)
+
+  // `^ 1.2.3` => `^1.2.3`
+  range = range.replace(re[CARETTRIM], caretTrimReplace)
+
+  // normalize spaces
+  range = range.split(/\s+/).join(' ')
+
+  // At this point, the range is completely trimmed and
+  // ready to be split into comparators.
+
+  var compRe = loose ? re[COMPARATORLOOSE] : re[COMPARATOR]
+  var set = range.split(' ').map(function (comp) {
+    return parseComparator(comp, this.options)
+  }, this).join(' ').split(/\s+/)
+  if (this.options.loose) {
+    // in loose mode, throw out any that are not valid comparators
+    set = set.filter(function (comp) {
+      return !!comp.match(compRe)
+    })
+  }
+  set = set.map(function (comp) {
+    return new Comparator(comp, this.options)
+  }, this)
+
+  return set
+}
+
+Range.prototype.intersects = function (range, options) {
+  if (!(range instanceof Range)) {
+    throw new TypeError('a Range is required')
+  }
+
+  return this.set.some(function (thisComparators) {
+    return thisComparators.every(function (thisComparator) {
+      return range.set.some(function (rangeComparators) {
+        return rangeComparators.every(function (rangeComparator) {
+          return thisComparator.intersects(rangeComparator, options)
+        })
+      })
+    })
+  })
+}
+
+// Mostly just for testing and legacy API reasons
+exports.toComparators = toComparators
+function toComparators (range, options) {
+  return new Range(range, options).set.map(function (comp) {
+    return comp.map(function (c) {
+      return c.value
+    }).join(' ').trim().split(' ')
+  })
+}
+
+// comprised of xranges, tildes, stars, and gtlt's at this point.
+// already replaced the hyphen ranges
+// turn into a set of JUST comparators.
+function parseComparator (comp, options) {
+  debug('comp', comp, options)
+  comp = replaceCarets(comp, options)
+  debug('caret', comp)
+  comp = replaceTildes(comp, options)
+  debug('tildes', comp)
+  comp = replaceXRanges(comp, options)
+  debug('xrange', comp)
+  comp = replaceStars(comp, options)
+  debug('stars', comp)
+  return comp
+}
+
+function isX (id) {
+  return !id || id.toLowerCase() === 'x' || id === '*'
+}
+
+// ~, ~> --> * (any, kinda silly)
+// ~2, ~2.x, ~2.x.x, ~>2, ~>2.x ~>2.x.x --> >=2.0.0 <3.0.0
+// ~2.0, ~2.0.x, ~>2.0, ~>2.0.x --> >=2.0.0 <2.1.0
+// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0 <1.3.0
+// ~1.2.3, ~>1.2.3 --> >=1.2.3 <1.3.0
+// ~1.2.0, ~>1.2.0 --> >=1.2.0 <1.3.0
+function replaceTildes (comp, options) {
+  return comp.trim().split(/\s+/).map(function (comp) {
+    return replaceTilde(comp, options)
+  }).join(' ')
+}
+
+function replaceTilde (comp, options) {
+  var r = options.loose ? re[TILDELOOSE] : re[TILDE]
+  return comp.replace(r, function (_, M, m, p, pr) {
+    debug('tilde', comp, _, M, m, p, pr)
+    var ret
+
+    if (isX(M)) {
+      ret = ''
+    } else if (isX(m)) {
+      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
+    } else if (isX(p)) {
+      // ~1.2 == >=1.2.0 <1.3.0
+      ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
+    } else if (pr) {
+      debug('replaceTilde pr', pr)
+      ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
+            ' <' + M + '.' + (+m + 1) + '.0'
+    } else {
+      // ~1.2.3 == >=1.2.3 <1.3.0
+      ret = '>=' + M + '.' + m + '.' + p +
+            ' <' + M + '.' + (+m + 1) + '.0'
+    }
+
+    debug('tilde return', ret)
+    return ret
+  })
+}
+
+// ^ --> * (any, kinda silly)
+// ^2, ^2.x, ^2.x.x --> >=2.0.0 <3.0.0
+// ^2.0, ^2.0.x --> >=2.0.0 <3.0.0
+// ^1.2, ^1.2.x --> >=1.2.0 <2.0.0
+// ^1.2.3 --> >=1.2.3 <2.0.0
+// ^1.2.0 --> >=1.2.0 <2.0.0
+function replaceCarets (comp, options) {
+  return comp.trim().split(/\s+/).map(function (comp) {
+    return replaceCaret(comp, options)
+  }).join(' ')
+}
+
+function replaceCaret (comp, options) {
+  debug('caret', comp, options)
+  var r = options.loose ? re[CARETLOOSE] : re[CARET]
+  return comp.replace(r, function (_, M, m, p, pr) {
+    debug('caret', comp, _, M, m, p, pr)
+    var ret
+
+    if (isX(M)) {
+      ret = ''
+    } else if (isX(m)) {
+      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
+    } else if (isX(p)) {
+      if (M === '0') {
+        ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
+      } else {
+        ret = '>=' + M + '.' + m + '.0 <' + (+M + 1) + '.0.0'
+      }
+    } else if (pr) {
+      debug('replaceCaret pr', pr)
+      if (M === '0') {
+        if (m === '0') {
+          ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
+                ' <' + M + '.' + m + '.' + (+p + 1)
+        } else {
+          ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
+                ' <' + M + '.' + (+m + 1) + '.0'
+        }
+      } else {
+        ret = '>=' + M + '.' + m + '.' + p + '-' + pr +
+              ' <' + (+M + 1) + '.0.0'
+      }
+    } else {
+      debug('no pr')
+      if (M === '0') {
+        if (m === '0') {
+          ret = '>=' + M + '.' + m + '.' + p +
+                ' <' + M + '.' + m + '.' + (+p + 1)
+        } else {
+          ret = '>=' + M + '.' + m + '.' + p +
+                ' <' + M + '.' + (+m + 1) + '.0'
+        }
+      } else {
+        ret = '>=' + M + '.' + m + '.' + p +
+              ' <' + (+M + 1) + '.0.0'
+      }
+    }
+
+    debug('caret return', ret)
+    return ret
+  })
+}
+
+function replaceXRanges (comp, options) {
+  debug('replaceXRanges', comp, options)
+  return comp.split(/\s+/).map(function (comp) {
+    return replaceXRange(comp, options)
+  }).join(' ')
+}
+
+function replaceXRange (comp, options) {
+  comp = comp.trim()
+  var r = options.loose ? re[XRANGELOOSE] : re[XRANGE]
+  return comp.replace(r, function (ret, gtlt, M, m, p, pr) {
+    debug('xRange', comp, ret, gtlt, M, m, p, pr)
+    var xM = isX(M)
+    var xm = xM || isX(m)
+    var xp = xm || isX(p)
+    var anyX = xp
+
+    if (gtlt === '=' && anyX) {
+      gtlt = ''
+    }
+
+    if (xM) {
+      if (gtlt === '>' || gtlt === '<') {
+        // nothing is allowed
+        ret = '<0.0.0'
+      } else {
+        // nothing is forbidden
+        ret = '*'
+      }
+    } else if (gtlt && anyX) {
+      // we know patch is an x, because we have any x at all.
+      // replace X with 0
+      if (xm) {
+        m = 0
+      }
+      p = 0
+
+      if (gtlt === '>') {
+        // >1 => >=2.0.0
+        // >1.2 => >=1.3.0
+        // >1.2.3 => >= 1.2.4
+        gtlt = '>='
+        if (xm) {
+          M = +M + 1
+          m = 0
+          p = 0
+        } else {
+          m = +m + 1
+          p = 0
+        }
+      } else if (gtlt === '<=') {
+        // <=0.7.x is actually <0.8.0, since any 0.7.x should
+        // pass.  Similarly, <=7.x is actually <8.0.0, etc.
+        gtlt = '<'
+        if (xm) {
+          M = +M + 1
+        } else {
+          m = +m + 1
+        }
+      }
+
+      ret = gtlt + M + '.' + m + '.' + p
+    } else if (xm) {
+      ret = '>=' + M + '.0.0 <' + (+M + 1) + '.0.0'
+    } else if (xp) {
+      ret = '>=' + M + '.' + m + '.0 <' + M + '.' + (+m + 1) + '.0'
+    }
+
+    debug('xRange return', ret)
+
+    return ret
+  })
+}
+
+// Because * is AND-ed with everything else in the comparator,
+// and '' means "any version", just remove the *s entirely.
+function replaceStars (comp, options) {
+  debug('replaceStars', comp, options)
+  // Looseness is ignored here.  star is always as loose as it gets!
+  return comp.trim().replace(re[STAR], '')
+}
+
+// This function is passed to string.replace(re[HYPHENRANGE])
+// M, m, patch, prerelease, build
+// 1.2 - 3.4.5 => >=1.2.0 <=3.4.5
+// 1.2.3 - 3.4 => >=1.2.0 <3.5.0 Any 3.4.x will do
+// 1.2 - 3.4 => >=1.2.0 <3.5.0
+function hyphenReplace ($0,
+  from, fM, fm, fp, fpr, fb,
+  to, tM, tm, tp, tpr, tb) {
+  if (isX(fM)) {
+    from = ''
+  } else if (isX(fm)) {
+    from = '>=' + fM + '.0.0'
+  } else if (isX(fp)) {
+    from = '>=' + fM + '.' + fm + '.0'
+  } else {
+    from = '>=' + from
+  }
+
+  if (isX(tM)) {
+    to = ''
+  } else if (isX(tm)) {
+    to = '<' + (+tM + 1) + '.0.0'
+  } else if (isX(tp)) {
+    to = '<' + tM + '.' + (+tm + 1) + '.0'
+  } else if (tpr) {
+    to = '<=' + tM + '.' + tm + '.' + tp + '-' + tpr
+  } else {
+    to = '<=' + to
+  }
+
+  return (from + ' ' + to).trim()
+}
+
+// if ANY of the sets match ALL of its comparators, then pass
+Range.prototype.test = function (version) {
+  if (!version) {
+    return false
+  }
+
+  if (typeof version === 'string') {
+    version = new SemVer(version, this.options)
+  }
+
+  for (var i = 0; i < this.set.length; i++) {
+    if (testSet(this.set[i], version, this.options)) {
+      return true
+    }
+  }
+  return false
+}
+
+function testSet (set, version, options) {
+  for (var i = 0; i < set.length; i++) {
+    if (!set[i].test(version)) {
+      return false
+    }
+  }
+
+  if (version.prerelease.length && !options.includePrerelease) {
+    // Find the set of versions that are allowed to have prereleases
+    // For example, ^1.2.3-pr.1 desugars to >=1.2.3-pr.1 <2.0.0
+    // That should allow `1.2.3-pr.2` to pass.
+    // However, `1.2.4-alpha.notready` should NOT be allowed,
+    // even though it's within the range set by the comparators.
+    for (i = 0; i < set.length; i++) {
+      debug(set[i].semver)
+      if (set[i].semver === ANY) {
+        continue
+      }
+
+      if (set[i].semver.prerelease.length > 0) {
+        var allowed = set[i].semver
+        if (allowed.major === version.major &&
+            allowed.minor === version.minor &&
+            allowed.patch === version.patch) {
+          return true
+        }
+      }
+    }
+
+    // Version has a -pre, but it's not one of the ones we like.
+    return false
+  }
+
+  return true
+}
+
+exports.satisfies = satisfies
+function satisfies (version, range, options) {
+  try {
+    range = new Range(range, options)
+  } catch (er) {
+    return false
+  }
+  return range.test(version)
+}
+
+exports.maxSatisfying = maxSatisfying
+function maxSatisfying (versions, range, options) {
+  var max = null
+  var maxSV = null
+  try {
+    var rangeObj = new Range(range, options)
+  } catch (er) {
+    return null
+  }
+  versions.forEach(function (v) {
+    if (rangeObj.test(v)) {
+      // satisfies(v, range, options)
+      if (!max || maxSV.compare(v) === -1) {
+        // compare(max, v, true)
+        max = v
+        maxSV = new SemVer(max, options)
+      }
+    }
+  })
+  return max
+}
+
+exports.minSatisfying = minSatisfying
+function minSatisfying (versions, range, options) {
+  var min = null
+  var minSV = null
+  try {
+    var rangeObj = new Range(range, options)
+  } catch (er) {
+    return null
+  }
+  versions.forEach(function (v) {
+    if (rangeObj.test(v)) {
+      // satisfies(v, range, options)
+      if (!min || minSV.compare(v) === 1) {
+        // compare(min, v, true)
+        min = v
+        minSV = new SemVer(min, options)
+      }
+    }
+  })
+  return min
+}
+
+exports.minVersion = minVersion
+function minVersion (range, loose) {
+  range = new Range(range, loose)
+
+  var minver = new SemVer('0.0.0')
+  if (range.test(minver)) {
+    return minver
+  }
+
+  minver = new SemVer('0.0.0-0')
+  if (range.test(minver)) {
+    return minver
+  }
+
+  minver = null
+  for (var i = 0; i < range.set.length; ++i) {
+    var comparators = range.set[i]
+
+    comparators.forEach(function (comparator) {
+      // Clone to avoid manipulating the comparator's semver object.
+      var compver = new SemVer(comparator.semver.version)
+      switch (comparator.operator) {
+        case '>':
+          if (compver.prerelease.length === 0) {
+            compver.patch++
+          } else {
+            compver.prerelease.push(0)
+          }
+          compver.raw = compver.format()
+          /* fallthrough */
+        case '':
+        case '>=':
+          if (!minver || gt(minver, compver)) {
+            minver = compver
+          }
+          break
+        case '<':
+        case '<=':
+          /* Ignore maximum versions */
+          break
+        /* istanbul ignore next */
+        default:
+          throw new Error('Unexpected operation: ' + comparator.operator)
+      }
+    })
+  }
+
+  if (minver && range.test(minver)) {
+    return minver
+  }
+
+  return null
+}
+
+exports.validRange = validRange
+function validRange (range, options) {
+  try {
+    // Return '*' instead of '' so that truthiness works.
+    // This will throw if it's invalid anyway
+    return new Range(range, options).range || '*'
+  } catch (er) {
+    return null
+  }
+}
+
+// Determine if version is less than all the versions possible in the range
+exports.ltr = ltr
+function ltr (version, range, options) {
+  return outside(version, range, '<', options)
+}
+
+// Determine if version is greater than all the versions possible in the range.
+exports.gtr = gtr
+function gtr (version, range, options) {
+  return outside(version, range, '>', options)
+}
+
+exports.outside = outside
+function outside (version, range, hilo, options) {
+  version = new SemVer(version, options)
+  range = new Range(range, options)
+
+  var gtfn, ltefn, ltfn, comp, ecomp
+  switch (hilo) {
+    case '>':
+      gtfn = gt
+      ltefn = lte
+      ltfn = lt
+      comp = '>'
+      ecomp = '>='
+      break
+    case '<':
+      gtfn = lt
+      ltefn = gte
+      ltfn = gt
+      comp = '<'
+      ecomp = '<='
+      break
+    default:
+      throw new TypeError('Must provide a hilo val of "<" or ">"')
+  }
+
+  // If it satisifes the range it is not outside
+  if (satisfies(version, range, options)) {
+    return false
+  }
+
+  // From now on, variable terms are as if we're in "gtr" mode.
+  // but note that everything is flipped for the "ltr" function.
+
+  for (var i = 0; i < range.set.length; ++i) {
+    var comparators = range.set[i]
+
+    var high = null
+    var low = null
+
+    comparators.forEach(function (comparator) {
+      if (comparator.semver === ANY) {
+        comparator = new Comparator('>=0.0.0')
+      }
+      high = high || comparator
+      low = low || comparator
+      if (gtfn(comparator.semver, high.semver, options)) {
+        high = comparator
+      } else if (ltfn(comparator.semver, low.semver, options)) {
+        low = comparator
+      }
+    })
+
+    // If the edge version comparator has a operator then our version
+    // isn't outside it
+    if (high.operator === comp || high.operator === ecomp) {
+      return false
+    }
+
+    // If the lowest version comparator has an operator and our version
+    // is less than it then it isn't higher than the range
+    if ((!low.operator || low.operator === comp) &&
+        ltefn(version, low.semver)) {
+      return false
+    } else if (low.operator === ecomp && ltfn(version, low.semver)) {
+      return false
+    }
+  }
+  return true
+}
+
+exports.prerelease = prerelease
+function prerelease (version, options) {
+  var parsed = parse(version, options)
+  return (parsed && parsed.prerelease.length) ? parsed.prerelease : null
+}
+
+exports.intersects = intersects
+function intersects (r1, r2, options) {
+  r1 = new Range(r1, options)
+  r2 = new Range(r2, options)
+  return r1.intersects(r2)
+}
+
+exports.coerce = coerce
+function coerce (version) {
+  if (version instanceof SemVer) {
+    return version
+  }
+
+  if (typeof version !== 'string') {
+    return null
+  }
+
+  var match = version.match(re[COERCE])
+
+  if (match == null) {
+    return null
+  }
+
+  return parse(match[1] +
+    '.' + (match[2] || '0') +
+    '.' + (match[3] || '0'))
+}
+
+
+/***/ }),
+
 /***/ 6440:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
@@ -55481,99 +55861,6 @@ module.exports.sync = (fp, data, opts) => {
 	data = opts.normalize ? normalize(data) : data;
 
 	writeJsonFile.sync(fp, data, opts);
-};
-
-
-/***/ }),
-
-/***/ 6973:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-const fs = __webpack_require__(5747);
-const path = __webpack_require__(5622);
-const pify = __webpack_require__(2067);
-
-const defaults = {
-	mode: 0o777 & (~process.umask()),
-	fs
-};
-
-// https://github.com/nodejs/node/issues/8987
-// https://github.com/libuv/libuv/pull/1088
-const checkPath = pth => {
-	if (process.platform === 'win32') {
-		const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path.parse(pth).root, ''));
-
-		if (pathHasInvalidWinCharacters) {
-			const err = new Error(`Path contains invalid characters: ${pth}`);
-			err.code = 'EINVAL';
-			throw err;
-		}
-	}
-};
-
-module.exports = (input, opts) => Promise.resolve().then(() => {
-	checkPath(input);
-	opts = Object.assign({}, defaults, opts);
-
-	const mkdir = pify(opts.fs.mkdir);
-	const stat = pify(opts.fs.stat);
-
-	const make = pth => {
-		return mkdir(pth, opts.mode)
-			.then(() => pth)
-			.catch(err => {
-				if (err.code === 'ENOENT') {
-					if (err.message.includes('null bytes') || path.dirname(pth) === pth) {
-						throw err;
-					}
-
-					return make(path.dirname(pth)).then(() => make(pth));
-				}
-
-				return stat(pth)
-					.then(stats => stats.isDirectory() ? pth : Promise.reject())
-					.catch(() => {
-						throw err;
-					});
-			});
-	};
-
-	return make(path.resolve(input));
-});
-
-module.exports.sync = (input, opts) => {
-	checkPath(input);
-	opts = Object.assign({}, defaults, opts);
-
-	const make = pth => {
-		try {
-			opts.fs.mkdirSync(pth, opts.mode);
-		} catch (err) {
-			if (err.code === 'ENOENT') {
-				if (err.message.includes('null bytes') || path.dirname(pth) === pth) {
-					throw err;
-				}
-
-				make(path.dirname(pth));
-				return make(pth);
-			}
-
-			try {
-				if (!opts.fs.statSync(pth).isDirectory()) {
-					throw new Error('The path is not a directory');
-				}
-			} catch (_) {
-				throw err;
-			}
-		}
-
-		return pth;
-	};
-
-	return make(path.resolve(input));
 };
 
 
@@ -55680,7 +55967,7 @@ const path = __webpack_require__(5622);
 const fs = __webpack_require__(7758);
 const writeFileAtomic = __webpack_require__(2221);
 const sortKeys = __webpack_require__(5603);
-const makeDir = __webpack_require__(6973);
+const makeDir = __webpack_require__(9126);
 const pify = __webpack_require__(2067);
 const detectIndent = __webpack_require__(3084);
 
@@ -56260,10 +56547,7 @@ function cleanAppName(name, prefix = LABEL_PREFIX) {
   const scopePrefix = /^@[\w-]+\//;
   const labelPrefix = new RegExp(`^${prefix}`);
   const versionSuffix = /@[0-9.]{5,12}(-[\\w.]+)?$/;
-  const cleanName = name
-    .replace(labelPrefix, '')
-    .replace(scopePrefix, '')
-    .replace(versionSuffix, '');
+  const cleanName = name.replace(labelPrefix, '').replace(scopePrefix, '').replace(versionSuffix, '');
 
   if (!cleanName || !/^[0-9a-z-]{2,50}$/g.test(cleanName)) {
     throw new Error(`Invalid app name "${cleanName}"`);

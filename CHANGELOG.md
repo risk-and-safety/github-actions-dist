@@ -3,6 +3,44 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.7.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.1...github-actions@3.7.0) (2021-04-28)
+
+
+### Features
+
+* **client-fuse:** bump to 6.0.0 ([a8b6bb8](https://github.com/risk-and-safety/platform/commit/a8b6bb82daaaaacdcc21bf3236321d76fb92dcf9))
+
+
+
+
+
+## [3.6.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.0...github-actions@3.6.1) (2021-04-08)
+
+
+### Bug Fixes
+
+* **server:** bump Node to 14.16.1 for security issues ([ba7e8bc](https://github.com/risk-and-safety/platform/commit/ba7e8bcc3d7b0941a4fb7dd5aec38d00153d2544))
+
+
+
+
+
+# [3.6.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.4.1...github-actions@3.6.0) (2021-04-07)
+
+
+### Bug Fixes
+
+* **changelog:** allow skipping pkg after adding conventionalGraduate ([1b122c4](https://github.com/risk-and-safety/platform/commit/1b122c40adcac3ec1bd1cb03f902590680ffa182))
+
+
+### Features
+
+* **build:** add SonarCloud analysis to main branch ([33d1c40](https://github.com/risk-and-safety/platform/commit/33d1c40e47d9c962c509fd615da844b48d05f81e))
+
+
+
+
+
 ## [3.4.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.4.0...github-actions@3.4.1) (2021-04-02)
 
 **Note:** Version bump only for package github-actions
