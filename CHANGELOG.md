@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.7.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.1...github-actions@3.7.0) (2021-04-28)
+
+
+### Features
+
+* **client-fuse:** bump to 6.0.0 ([a8b6bb8](https://github.com/risk-and-safety/platform/commit/a8b6bb82daaaaacdcc21bf3236321d76fb92dcf9))
+
+
+
+
+
 ## [3.6.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.0...github-actions@3.6.1) (2021-04-08)
 
 
