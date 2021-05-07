@@ -18,14 +18,18 @@ inputs:
     description: S3 website suffix excluding env prefix [dev,qa,prod,hc]. Ignored if website is defined.
     required: false
     default: riskandsafety.com
+  website-dir:
+    description: S3 directory to prepend when putting files.
+    required: false
+    default: ''
   zip-file:
     description: Path to the zip file. If not provided it will pull the staged zip from S3.
     required: false
     default: "false"
-  dry-run:
-    description: Preview the S3 delete and put commands
+  stage-next-zip-file:
+    description: Indicates if the zip file should be staged for the next environment.
     required: false
-    default: "false"
+    default: "true"
 outputs:
   url:
     description: URL to the deployed version.json file
