@@ -9892,7 +9892,7 @@ async function findImage(params) {
 
   const dockerName = cleanAppName(params.dockerName || app);
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : env;
-  const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}`;
+  const tagPattern = `${tagPrefix}-[0-9a-f]{7,8}-[0-9]+T[0-9]+`;
   const gitHubClient = github.getOctokit(GITHUB_TOKEN);
   const [latestImage] = await findImages({
     gitHubClient,
