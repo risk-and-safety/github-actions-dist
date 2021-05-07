@@ -9519,7 +9519,12 @@ async function dockerRelease(params) {
   const tagPrefix = params.tagPrefix ? validateNamespace(params.tagPrefix) : await getEnv();
   const commit = await getShortCommit();
   const stagingTag = await getStagingTag();
-  const tag = deploy ? `${tagPrefix}-${commit}` : stagingTag;
+  // ISO 8601 basic date format (YYYYMMDDThhmmss) since Docker tags don't allow colons
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:-]/g, '')
+    .replace(/\.\d+Z$/, '');
+  const tag = deploy ? `${tagPrefix}-${commit}-${timestamp}` : stagingTag;
 
   await dockerLogin({ username, password, registry });
 
