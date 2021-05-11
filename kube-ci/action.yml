@@ -1,0 +1,37 @@
+name: Kube CI
+description: Copies Kubernetes yaml files in git repository to a new namespace based on th git branch
+inputs:
+  repo:
+    description: Fluxcd Kubernetes manifest git repository
+    required: true
+  ssh-deploy-key:
+    description: SSH key for writing to the git repository
+    required: false
+  repo-branch:
+    description: Fluxcd Kubernetes manifest git repository branch
+    required: false
+    default: "master"
+  src-dir:
+    description: Kubernetes manifest git repository directory to pull from
+    required: true
+    default: "dev/apps/"
+  dest-dir:
+    description: Kubernetes manifest git repository directory for the new namespace (defaults to dev/{namespace})
+    required: false
+  namespace:
+    description: The destination namespace (eg branch name)
+    required: true
+  s3-subdomain:
+    description: The subdomain for the S3 website
+    required: false
+    default: "ci"
+  labels:
+    description: "Comma delimited list or serialized JSON array (eg [{ label: 'app-a'}, ...])"
+    required: true
+  dry-run:
+    description: Don't push to git repository
+    required: false
+    default: "false"
+runs:
+  using: node12
+  main: index.js
