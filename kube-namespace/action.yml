@@ -1,0 +1,48 @@
+name: Kube Namespace
+description: Copies Kubernetes manifests to a new namespace in a git repository
+inputs:
+  repo:
+    description: Kubernetes manifest git repository
+    required: true
+  ssh-deploy-key:
+    description: SSH key for writing to the Kubernetes manifest git repository
+    required: false
+  repo-branch:
+    description: git repository branch to checkout
+    required: false
+    default: "master"
+  src-dir:
+    description: git repository directory to pull from
+    required: true
+    default: "dev/apps/"
+  dest-dir:
+    description: git repository directory for the new namespace. Defaults to the sibling directory of src-dir (eg dev/{namespace}/)
+    required: false
+  namespace:
+    description: New namespace and subdomain
+    required: true
+  website-suffix:
+    description: Website suffix to prefix with the subdomain
+    required: true
+  s3-bucket:
+    description: S3 website bucket
+    required: true
+  files:
+    description: List of files or directories to copy over before the labels.
+    required: false
+  labels:
+    description: "Comma delimited list or serialized JSON array (eg [{ label: 'app-a'}, ...])"
+    required: false
+  aws-cognito-client-id:
+    description: AWS Cognito client ID for adding OAuth2 callback URLs
+    required: false
+  aws-cognito-user-pool-id:
+    description: AWS Cognito user pool ID for adding OAuth2 callback URLs
+    required: false
+  dry-run:
+    description: Don't push to git repository
+    required: false
+    default: "false"
+runs:
+  using: node12
+  main: index.js
