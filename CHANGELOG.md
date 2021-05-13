@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.8.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.0...github-actions@3.8.1) (2021-05-12)
+
+
+### Bug Fixes
+
+* **actions:** Slack message error on delete ([c281c85](https://github.com/risk-and-safety/platform/commit/c281c85864cba5a2c0d266db51c147c6c788aa72))
+
+
+
+
+
+# [3.8.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.1...github-actions@3.8.0) (2021-05-07)
+
+
+### Bug Fixes
+
+* Revert jest to 26.6.0 to fix localhost issues ([fea7898](https://github.com/risk-and-safety/platform/commit/fea7898034f9540d50e48767c478d48111943157))
+
+
+### Features
+
+* **client-fuse:** bump to 6.0.0 ([a8b6bb8](https://github.com/risk-and-safety/platform/commit/a8b6bb82daaaaacdcc21bf3236321d76fb92dcf9))
+* **deploy:** add Docker tag suffix -timestamp for Flux v2 ([1b10115](https://github.com/risk-and-safety/platform/commit/1b10115889619e49ecd51613252eb9a553ecf927))
+
+
+
+
+
 # [3.7.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.1...github-actions@3.7.0) (2021-04-28)
 
 
