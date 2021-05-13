@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.8.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.0...github-actions@3.8.1) (2021-05-12)
+
+
+### Bug Fixes
+
+* **actions:** Slack message error on delete ([c281c85](https://github.com/risk-and-safety/platform/commit/c281c85864cba5a2c0d266db51c147c6c788aa72))
+
+
+
+
+
 # [3.8.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.6.1...github-actions@3.8.0) (2021-05-07)
 
 
