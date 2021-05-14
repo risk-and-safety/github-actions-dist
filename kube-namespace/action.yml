@@ -10,14 +10,21 @@ inputs:
   repo-branch:
     description: git repository branch to checkout
     required: false
-    default: "master"
+    default: master
   src-dir:
     description: git repository directory to pull from
-    required: true
-    default: "dev/apps/"
+    required: false
+    default: dev/apps/
   dest-dir:
     description: git repository directory for the new namespace. Defaults to the sibling directory of src-dir (eg dev/{namespace}/)
     required: false
+  tag-prefix:
+    description: Image tag prefix that Fluxcd will look for (eg 'glob:ci-*')
+    required: false
+    default: ci
+  tag-suffix:
+    description: Image tag prefix for Fluxcd to check for newest
+    required: true
   namespace:
     description: New namespace and subdomain
     required: true

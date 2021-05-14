@@ -12650,11 +12650,13 @@ async function dockerRelease(params) {
   const commit = await getShortCommit();
   const stagingTag = await getStagingTag();
   // ISO 8601 basic date format (YYYYMMDDThhmmss) since Docker tags don't allow colons
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:-]/g, '')
-    .replace(/\.\d+Z$/, '');
-  const tag = deploy ? `${tagPrefix}-${commit}-${timestamp}` : stagingTag;
+  const tagSuffix =
+    params.tagSuffix ||
+    new Date()
+      .toISOString()
+      .replace(/[:-]/g, '')
+      .replace(/\.\d+Z$/, '');
+  const tag = deploy ? `${tagPrefix}-${commit}-${tagSuffix}` : stagingTag;
 
   await dockerLogin({ username, password, registry });
 
@@ -13494,6 +13496,7 @@ const params = {
   app: core.getInput('app', { required: true }),
   dockerName: core.getInput('docker-name'),
   tagPrefix: core.getInput('tag-prefix'),
+  tagSuffix: core.getInput('tag-suffix'),
   deploy: core.getInput('deploy') === 'true',
   path: core.getInput('path'),
   labels: inputList(core.getInput('labels')),
