@@ -12369,15 +12369,15 @@ async function setSshKey(repo, user, sshKey) {
 
   const sshKeyFile = sshKey.endsWith('\n') ? sshKey : `${sshKey}\n`;
 
-  await fs.outputFile(`${HOME}/.ssh/actions_repo_deploy_key`, sshKeyFile);
-  await sh(`chmod 600 ${HOME}/.ssh/actions_repo_deploy_key`);
+  await fs.outputFile(`${HOME}/.ssh/deploy_key`, sshKeyFile);
+  await sh(`chmod 600 ${HOME}/.ssh/deploy_key`);
 
   await fs.outputFile(
     `${HOME}/.ssh/config`,
     `Host ${repoName}
 HostName github.com
 User "${user.username}"
-IdentityFile ${HOME}/.ssh/actions_repo_deploy_key
+IdentityFile ${HOME}/.ssh/deploy_key
 IdentitiesOnly yes
 StrictHostKeyChecking no`,
   );
