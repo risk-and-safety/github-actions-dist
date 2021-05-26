@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.8.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.1...github-actions@3.8.2) (2021-05-26)
+
+
+### Bug Fixes
+
+* **build:** don't publish npm for GitHub Actions changelog ([7e89bc2](https://github.com/risk-and-safety/platform/commit/7e89bc23f8c1ad9e8a3b468704d54d40909d615e))
+
+
+
+
+
 ## [3.8.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.0...github-actions@3.8.1) (2021-05-12)
 
 
