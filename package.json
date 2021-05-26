@@ -1,7 +1,7 @@
 {
   "name": "github-actions",
   "version": "3.8.3",
-  "description": "Common GitHub Actions",
+  "description": "Shared RSS GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
   "homepage": "https://riskandsafety.com",
