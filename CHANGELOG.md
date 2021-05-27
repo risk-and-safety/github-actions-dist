@@ -3,6 +3,33 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.8.5](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.4...github-actions@3.8.5) (2021-05-27)
+
+
+### Bug Fixes
+
+* **build:** change Octoki REST calls after @actions/github v5 upgrade CUD-25 ([89d9509](https://github.com/risk-and-safety/platform/commit/89d95092ac7c8f696bbd99813a366357717bdba7))
+
+
+
+
+
+## [3.8.4](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.3...github-actions@3.8.4) (2021-05-27)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
+## [3.8.3](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.2...github-actions@3.8.3) (2021-05-26)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
 ## [3.8.2](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.1...github-actions@3.8.2) (2021-05-26)
 
 
