@@ -58629,7 +58629,7 @@ async function findByLabels({ gitHubClient, include = [], packageJsonKeys = ['la
   const pullRequest = github.context.payload.pull_request;
 
   if (pullRequest) {
-    const { data } = await gitHubClient.pulls.get({
+    const { data } = await gitHubClient.rest.pulls.get({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       pull_number: pullRequest.number,
