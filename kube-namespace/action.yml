@@ -16,7 +16,7 @@ inputs:
     default: master
   src-dirs:
     description: git repository directories to copy from
-    required: true
+    required: false
     default: dev/apps/
   shared-label:
     description: Kubernetes name=value "shared" label to always copy
@@ -25,7 +25,7 @@ inputs:
     description: "Srialized JSON array of Kubernetes app labels to copy (eg [{ label: 'app-a'}, ...])"
     required: false
   dest-dir:
-    description: git repository directory for the new namespace. Defaults to the sibling directory of src-dir (eg dev/{namespace}/)
+    description: git repository directory for the new namespace
     required: true
   tag-prefix:
     description: Image tag prefix that Fluxcd will look for (eg 'glob:ci-*')
@@ -33,7 +33,7 @@ inputs:
     default: ci
   tag-suffix:
     description: Image tag prefix for Fluxcd to check for newest
-    required: true
+    required: false
   website-suffix:
     description: Website suffix to prefix with the subdomain
     required: true
@@ -46,6 +46,10 @@ inputs:
   aws-cognito-user-pool-id:
     description: AWS Cognito user pool ID for adding OAuth2 callback URLs
     required: false
+  cleanup:
+    description: Indicates if the Kubernetes namespace and AWS Congito URL should be deleted
+    required: false
+    default: "false"
   dry-run:
     description: Don't push to git repository
     required: false
