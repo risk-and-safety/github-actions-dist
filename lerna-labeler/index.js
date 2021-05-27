@@ -56166,10 +56166,10 @@ async function addLabelsToPr(gitHubClient, labels) {
   };
 
   try {
-    await gitHubClient.issues.addLabels(params);
+    await gitHubClient.rest.issues.addLabels(params);
   } catch (err) {
     warning(`retrying addLabels after failure: ${err.message}`);
-    await gitHubClient.issues.addLabels(params);
+    await gitHubClient.rest.issues.addLabels(params);
   }
 }
 
