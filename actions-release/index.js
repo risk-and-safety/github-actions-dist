@@ -13375,7 +13375,7 @@ module.exports.validateEnv = function validateEnv(env) {
 };
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+  if (!namespace || !/^[a-z][a-z0-9-]{1,62}$/g.test(namespace)) {
     throw new Error(`Invalid namespace name "${namespace}"`);
   }
 
