@@ -1,0 +1,59 @@
+name: Kube Namespace
+description: Copies Kubernetes manifests to a new namespace in a git repository
+inputs:
+  namespace:
+    description: New namespace and subdomain
+    required: true
+  repo:
+    description: Kubernetes manifest git repository
+    required: true
+  ssh-deploy-key:
+    description: SSH key for writing to the Kubernetes manifest git repository
+    required: false
+  repo-branch:
+    description: git repository branch to checkout
+    required: false
+    default: master
+  src-dirs:
+    description: git repository directories to copy from
+    required: false
+    default: dev/apps/
+  shared-label:
+    description: Kubernetes name=value "shared" label to always copy
+    required: false
+  app-labels:
+    description: "Srialized JSON array of Kubernetes app labels to copy (eg [{ label: 'app-a'}, ...])"
+    required: false
+  dest-dir:
+    description: git repository directory for the new namespace
+    required: true
+  tag-prefix:
+    description: Image tag prefix that Fluxcd will look for (eg 'glob:ci-*')
+    required: false
+    default: ci
+  tag-suffix:
+    description: Image tag prefix for Fluxcd to check for newest
+    required: false
+  website-suffix:
+    description: Website suffix to prefix with the subdomain
+    required: true
+  s3-bucket:
+    description: S3 website bucket
+    required: true
+  aws-cognito-client-id:
+    description: AWS Cognito client ID for adding OAuth2 callback URLs
+    required: false
+  aws-cognito-user-pool-id:
+    description: AWS Cognito user pool ID for adding OAuth2 callback URLs
+    required: false
+  cleanup:
+    description: Indicates if the Kubernetes namespace and AWS Congito URL should be deleted
+    required: false
+    default: "false"
+  dry-run:
+    description: Don't push to git repository
+    required: false
+    default: "false"
+runs:
+  using: node12
+  main: index.js

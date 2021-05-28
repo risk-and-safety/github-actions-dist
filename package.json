@@ -1,6 +1,6 @@
 {
   "name": "github-actions",
-  "version": "3.8.4",
+  "version": "3.8.5",
   "description": "Shared Risk and Safety GitHub Actions",
   "author": "Risk and Safety Solutions",
   "repository": "https://github.com/risk-and-safety/platform",
@@ -31,6 +31,7 @@
     "conventional-changelog-angular": "5.0.12",
     "date-fns": "2.21.3",
     "fs-extra": "10.0.0",
+    "js-yaml": "4.1.0",
     "lodash.capitalize": "4.2.1",
     "lodash.kebabcase": "4.1.1",
     "mime-types": "2.1.30",
