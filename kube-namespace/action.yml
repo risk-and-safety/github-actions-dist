@@ -1,6 +1,10 @@
 name: Kube Namespace
 description: Copies Kubernetes manifests to a new namespace in a git repository
 inputs:
+  prefix:
+    description: Namespace prefix and image tag prefix (for Fluxcd will look at, eg 'glob:ci-*')
+    required: false
+    default: ci
   namespace:
     description: New namespace and subdomain
     required: true
@@ -27,10 +31,6 @@ inputs:
   dest-dir:
     description: git repository directory for the new namespace
     required: true
-  tag-prefix:
-    description: Image tag prefix that Fluxcd will look for (eg 'glob:ci-*')
-    required: false
-    default: ci
   tag-suffix:
     description: Image tag prefix for Fluxcd to check for newest
     required: false
@@ -51,7 +51,7 @@ inputs:
     required: false
     default: "false"
   dry-run:
-    description: Don't push to git repository
+    description: Skip the git push to the repo for integration tests
     required: false
     default: "false"
 runs:
