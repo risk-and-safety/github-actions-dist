@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.8.6](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.5...github-actions@3.8.6) (2021-06-04)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
 ## [3.8.5](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.4...github-actions@3.8.5) (2021-05-27)
 
 
