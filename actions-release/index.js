@@ -13030,10 +13030,27 @@ module.exports.LABEL_PREFIX = 'deploy:';
 /* eslint-disable no-await-in-loop */
 const { info } = __nccwpck_require__(2186);
 const github = __nccwpck_require__(5438);
+const fs = __nccwpck_require__(5630);
+const os = __nccwpck_require__(2087);
 
 const { exec, sh } = __nccwpck_require__(7845);
 
 const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
+const HOME = os.homedir();
+
+async function addCommit(message) {
+  await sh(`git add -N .`);
+
+  const changes = (await exec(`git diff --exit-code >/dev/null || echo true`)) === 'true';
+
+  if (!changes) {
+    info('no changes found');
+    return;
+  }
+
+  await sh(`git add .`);
+  await sh(`git commit -m "${message}"`);
+}
 
 async function getShortCommit() {
   if (github.context.payload) {
@@ -13181,17 +13198,61 @@ async function gitMerge(params = {}) {
   }
 }
 
+async function setSshKey(repo, user, sshKey) {
+  const repoName = repo.split('/').pop();
+
+  await fs.ensureDir(`${HOME}/.ssh/`);
+
+  const sshKeyFile = sshKey.endsWith('\n') ? sshKey : `${sshKey}\n`;
+
+  await fs.outputFile(`${HOME}/.ssh/deploy_key`, sshKeyFile);
+  await sh(`chmod 600 ${HOME}/.ssh/deploy_key`);
+
+  await fs.outputFile(
+    `${HOME}/.ssh/config`,
+    `Host ${repoName}
+HostName github.com
+User "${user.username}"
+IdentityFile ${HOME}/.ssh/deploy_key
+IdentitiesOnly yes
+StrictHostKeyChecking no`,
+  );
+
+  // https://stackoverflow.com/questions/7927750/specify-an-ssh-key-for-git-push-for-a-given-domain
+  return repo.replace('github.com', repoName);
+}
+
+// Warning: This does change the current directory
+async function gitInit(dir, repo, user, sshKey) {
+  const dirExists = fs.existsSync(dir);
+
+  if (!dirExists) {
+    await fs.ensureDir(dir);
+  }
+
+  process.chdir(dir);
+
+  if (!dirExists) {
+    const originUrl = sshKey ? await setSshKey(repo, user, sshKey) : repo;
+    await sh(`git init && git remote add origin "${originUrl}"`);
+    await setGitUser(user);
+  }
+}
+
 module.exports.ENV_BRANCHES = ENV_BRANCHES;
+module.exports.addCommit = addCommit;
+module.exports.findGitTags = findGitTags;
+module.exports.findGitVersion = findGitVersion;
 module.exports.getShortCommit = getShortCommit;
 module.exports.getSrcBranch = getSrcBranch;
 module.exports.getDestBranch = getDestBranch;
 module.exports.getEnv = getEnv;
-module.exports.findGitTags = findGitTags;
-module.exports.findGitVersion = findGitVersion;
 module.exports.getGitUser = getGitUser;
 module.exports.setGitUser = setGitUser;
 module.exports.trueUpGitHistory = trueUpGitHistory;
 module.exports.gitMerge = gitMerge;
+module.exports.setSshKey = setSshKey;
+module.exports.gitInit = gitInit;
 
 
 /***/ }),
@@ -13314,7 +13375,7 @@ module.exports.validateEnv = function validateEnv(env) {
 };
 
 module.exports.validateNamespace = function validateNamespace(namespace) {
-  if (!namespace || !/^[a-z-]{2,50}$/g.test(namespace)) {
+  if (!namespace || !/^[a-z][a-z0-9-]{1,62}$/g.test(namespace)) {
     throw new Error(`Invalid namespace name "${namespace}"`);
   }
 
