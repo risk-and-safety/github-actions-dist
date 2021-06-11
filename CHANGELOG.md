@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.9.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.6...github-actions@3.9.0) (2021-06-08)
+
+
+### Features
+
+* **build:** deploy to e2e on open PR ([14dd84b](https://github.com/risk-and-safety/platform/commit/14dd84ba08a68fd9f2e932411abd29577108570c))
+
+
+
+
+
+## [3.8.6](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.5...github-actions@3.8.6) (2021-06-04)
+
+**Note:** Version bump only for package github-actions
+
+
+
+
+
 ## [3.8.5](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.4...github-actions@3.8.5) (2021-05-27)
 
 
