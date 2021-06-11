@@ -26,6 +26,10 @@ inputs:
     description: Indicates the Docker image should be tagged for deployment (eg 'prod-12345678')
     required: false
     default: 'true'
+  stage-next-image:
+    description: Indicates the Docker image should be staged for the next environment (eg RC_qa)
+    required: false
+    default: 'true'
   path:
     description: Docker build directory. If not provided, the staged Docker image will be tagged for deployment.
     required: false

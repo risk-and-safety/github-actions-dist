@@ -12699,7 +12699,14 @@ const { cleanPath, cleanAppName, validateNamespace } = __nccwpck_require__(2613)
 
 async function dockerRelease(params) {
   const { owner, repo } = github.context.repo;
-  const { deploy = true, labels = [], password, registry = 'docker.pkg.github.com', username } = params;
+  const {
+    deploy = true,
+    stageNextImage = true,
+    labels = [],
+    password,
+    registry = 'docker.pkg.github.com',
+    username,
+  } = params;
   const path = params.path && cleanPath(params.path);
   const app = cleanAppName(params.app);
   const dockerName = cleanAppName(params.dockerName || app);
@@ -12725,7 +12732,7 @@ async function dockerRelease(params) {
     await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${tag}`);
   }
 
-  if (deploy) {
+  if (deploy && stageNextImage) {
     // Tag for staging to the next environment
     const nextStagingTag = await getStagingTag(await getDestBranch());
     await sh(`docker tag ${dockerImage}:${stagingTag} ${dockerImage}:${nextStagingTag}`);
@@ -13556,6 +13563,7 @@ const params = {
   tagPrefix: core.getInput('tag-prefix'),
   tagSuffix: core.getInput('tag-suffix'),
   deploy: core.getInput('deploy') === 'true',
+  stageNextImage: core.getInput('stage-next-image') === 'true',
   path: core.getInput('path'),
   labels: inputList(core.getInput('labels')),
   registry: core.getInput('registry'),
