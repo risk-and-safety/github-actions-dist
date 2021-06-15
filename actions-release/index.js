@@ -13047,11 +13047,9 @@ const ENV_BRANCHES = ['master', 'qa', 'prod', 'hc'];
 const HOME = os.homedir();
 
 async function addCommit(message) {
-  await sh(`git add -N .`);
+  const changedFiles = await exec(`git status --porcelain`);
 
-  const changes = (await exec(`git diff --exit-code >/dev/null || echo true`)) === 'true';
-
-  if (!changes) {
+  if (!changedFiles) {
     info('no changes found');
     return;
   }
