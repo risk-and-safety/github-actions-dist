@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.9.1](https://github.com/risk-and-safety/platform/compare/github-actions@3.9.0...github-actions@3.9.1) (2021-06-16)
+
+
+### Bug Fixes
+
+* **ci:** run CI steps on label change, avoid db scripts with NODE_ENV=ci ([6576db8](https://github.com/risk-and-safety/platform/commit/6576db8848ccf98cbc0f84771d76d5e6a93df3db))
+
+
+
+
+
 # [3.9.0](https://github.com/risk-and-safety/platform/compare/github-actions@3.8.6...github-actions@3.9.0) (2021-06-08)
 
 
