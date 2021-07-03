@@ -25,15 +25,14 @@ inputs:
   shared-label:
     description: Kubernetes name=value "shared" label to always copy
     required: false
-  app-labels:
-    description: "Srialized JSON array of Kubernetes app labels to copy (eg [{ label: 'app-a'}, ...])"
+  app-jsons:
+    description: |
+      Srialized JSON array of Kubernetes app labels, images and webContexts to copy
+      (eg [{ label: 'app-a', image: 'ghcr.io/app-a:latest' }, { label: 'app-b', webContext: '/context' }])"
     required: false
   dest-dir:
     description: git repository directory for the new namespace
     required: true
-  tag-suffix:
-    description: Image tag prefix for Fluxcd to check for newest
-    required: false
   website-suffix:
     description: Website suffix to prefix with the subdomain
     required: true
