@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.9.5](https://github.com/risk-and-safety/platform/compare/github-actions@3.9.4...github-actions@3.9.5) (2021-07-01)
+
+
+### Bug Fixes
+
+* **ci:** update graph ConfigMap URLs even if graph doesn't change ([528bc0f](https://github.com/risk-and-safety/platform/commit/528bc0f7b5ac49011a0fbdf7e227e5b6d69363aa))
+
+
+
+
+
 ## [3.9.4](https://github.com/risk-and-safety/platform/compare/github-actions@3.9.3...github-actions@3.9.4) (2021-06-24)
 
 **Note:** Version bump only for package github-actions

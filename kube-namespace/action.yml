@@ -1,8 +1,8 @@
 name: Kube Namespace
 description: Copies Kubernetes manifests to a new namespace in a git repository
 inputs:
-  prefix:
-    description: Namespace prefix and image tag prefix (for Fluxcd will look at, eg 'glob:ci-*')
+  ci-env:
+    description: NODE_ENV, Namespace prefix and image tag prefix (for Fluxcd will look at, eg 'glob:ci-*')
     required: false
     default: ci
   namespace:
