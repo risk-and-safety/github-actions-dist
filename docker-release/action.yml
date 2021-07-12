@@ -19,9 +19,6 @@ inputs:
   tag-prefix:
     description: Image tag prefix that Fluxcd will look for (eg 'glob:dev-*'). Defaults to the env [dev,qa,prod,hc]
     required: false
-  tag-suffix:
-    description: Image tag prefix for Fluxcd to check for newest. Defaults to ISO basic date format YYYYMMDDThhmmss
-    required: false
   deploy:
     description: Indicates the Docker image should be tagged for deployment (eg 'prod-12345678')
     required: false
